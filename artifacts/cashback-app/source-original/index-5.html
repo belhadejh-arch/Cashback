@@ -1,0 +1,1650 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#3b1c11">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="CASH BACK">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>html,body{margin:0}</style>
+<title>CASH BACK</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap">
+<style>
+/* Layout: one narrow column, dark-brown header band, bottom tab bar per role. Warm cream ground, white cards, orange-red actions, gold accents. Single committed light look. */
+:root{
+  --bg:#faf3ec; --surface:#ffffff; --ink:#1d1310; --mute:#7b6a61; --line:#eadfd5;
+  --brand:#d83a0c; --on-brand:#ffffff; --soft:#fdeadd;
+  --head:#3b1c11; --gold:#f9b93a;
+  --blue:#f9b93a; --on-blue:#2a1405; --danger:#b3261e;
+  --warn-bg:#fff1d6; --warn:#7a4a00;
+  --offer-a:#f26100; --offer-b:#3f1d11;
+  --font:'Cairo',system-ui,'Segoe UI',Tahoma,sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.55;
+  padding-block:0 88px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));}
+#app{max-width:560px;margin:0 auto;min-width:0}
+button,input,select{font-family:inherit;font-size:1rem}
+.hdr{background:var(--head);color:#fff;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;margin-top:12px;border-radius:10px}
+.hdr b{display:block;font-weight:800;font-size:1.15rem;letter-spacing:.02em;color:var(--gold)}
+.hdr small{opacity:.8}
+.sy{background:none;border:0;color:#fff;font:inherit;font-size:.75rem;opacity:.9;margin-inline-start:10px;padding:2px 4px;cursor:pointer}
+.sy::before{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;margin-inline-end:5px;background:#a89a90}
+.sy.on::before{background:#4ade80}
+.sy.err::before{background:#ff6b5a}
+.ver{display:inline-block;font-size:.7rem;font-weight:800;border:1px solid currentColor;border-radius:99px;padding:0 8px;margin-inline-start:8px;vertical-align:middle;letter-spacing:.04em}
+.ver-line{text-align:center;color:var(--blue);font-weight:600;font-size:.9rem;margin:-14px 0 20px}
+.link{background:none;border:0;color:inherit;font-weight:600;text-decoration:underline;cursor:pointer;padding:6px}
+main{display:flex;flex-direction:column;gap:12px;padding-block:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;min-width:0}
+.card.hero{background:linear-gradient(135deg,var(--offer-a),var(--offer-b));color:#fff;border-color:transparent}
+.card.hero .k{color:inherit;opacity:.8}
+h2{font-size:1.05rem;margin:0 0 6px;font-weight:800;text-wrap:balance}
+h3{font-size:.95rem;margin:6px 0 0;font-weight:800}
+.k{color:var(--mute);font-size:.88rem}
+.big{font-size:2rem;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.2}
+.line{display:flex;justify-content:space-between;gap:12px;padding:4px 0;font-variant-numeric:tabular-nums}
+.line>span{color:var(--mute)}
+.line.b>b,.line.b>span{color:var(--ink);font-weight:800}
+.line.pos>b{color:var(--brand)}
+.err{color:var(--danger);margin:6px 0 0;font-size:.92rem}
+.note{background:var(--warn-bg);color:var(--warn);border-radius:10px;padding:10px 12px;font-size:.9rem}
+.btn{display:block;width:100%;border:0;border-radius:10px;padding:12px;background:var(--brand);color:var(--on-brand);font-weight:800;cursor:pointer;margin-top:8px}
+.btn.alt{background:var(--blue);color:var(--on-blue)}
+.btn.danger{background:var(--danger);color:#fff}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn:focus-visible,.tabs button:focus-visible,.link:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
+.pair{display:flex;gap:8px}.pair>*{flex:1}
+label{display:block;margin-top:10px;color:var(--mute);font-size:.88rem}
+input,select{display:block;width:100%;margin-top:4px;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+.tabs{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--surface);border-top:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-bottom:env(safe-area-inset-bottom,0px)}
+.tabs button{flex:1;background:none;border:0;border-top:3px solid transparent;padding:13px 4px;color:var(--mute);font-weight:600;cursor:pointer}
+.tabs button.on{color:var(--brand);border-top-color:var(--brand);font-weight:800}
+.code{font-size:2.6rem;font-weight:800;letter-spacing:.3em;text-align:center;font-variant-numeric:tabular-nums;direction:ltr}
+.bar{height:8px;background:var(--line);border-radius:4px;overflow:hidden;margin-top:6px}
+.bar>i{display:block;height:100%;background:var(--brand)}
+.pill{display:inline-block;padding:1px 10px;border-radius:99px;font-size:.82rem;font-weight:600;background:var(--soft);color:var(--brand)}
+.pill.off{background:var(--warn-bg);color:var(--warn)}
+.home{min-height:80vh;display:flex;flex-direction:column;justify-content:center;gap:4px}
+.logo{font-size:2.4rem;font-weight:800;text-align:center;color:var(--brand);letter-spacing:.03em}
+.tag{text-align:center;color:var(--mute);margin-bottom:22px}
+.pick{display:block;width:100%;text-align:right;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;font-weight:600;color:var(--ink);cursor:pointer}
+.mono{direction:ltr;unicode-bidi:plaintext;display:inline-block}
+.seg{display:flex;gap:6px;margin:6px 0 12px}.seg button{flex:1;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--mute);font-weight:700;cursor:pointer}.seg button.on{background:var(--brand);color:var(--on-brand);border-color:var(--brand)}
+.sub{color:var(--mute);font-size:.85rem;margin-top:6px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.cphoto{display:block;width:100%;max-height:260px;object-fit:contain;background:#000;border-radius:8px;margin-bottom:8px}
+[hidden]{display:none!important}
+.card.cv{color:#fff;border:0;background-size:cover;background-position:center}.card.cv .k,.card.cv .line>span,.card.cv .line.b>span{color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.55)}.card.cv .line.b>span{font-size:1.1rem}.card.cv .btn.ghost{background:rgba(255,255,255,.93);color:#3b1c11;border-color:transparent}.cvthumb{width:100%;height:110px;object-fit:cover;border-radius:10px;margin:6px 0}
+.filebtn{position:relative;overflow:hidden;cursor:pointer;font-size:1rem;text-align:center}
+.filebtn input{position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;border:0;opacity:0;cursor:pointer}
+.search input{border-radius:99px;padding:12px 18px;background:var(--surface);margin:0}
+.carousel{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:4px}
+.offer{flex:0 0 86%;min-width:0;scroll-snap-align:start;border-radius:16px;padding:16px;background:linear-gradient(135deg,var(--offer-a),var(--offer-b));border:1px solid var(--line)}
+.offer,.offer h2{color:#fff}
+.offer .k{color:rgba(255,255,255,.82)}
+.offer h2{font-size:1.15rem;margin:2px 0}
+.offer p{margin:0}
+.obtn{background:var(--blue);color:var(--on-blue);border:0;border-radius:99px;padding:8px 20px;font-weight:800;margin-top:12px;cursor:pointer}
+.cats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px 6px}
+.cat{background:none;border:0;color:var(--ink);display:flex;flex-direction:column;align-items:center;gap:6px;font-size:.8rem;cursor:pointer;min-width:0;padding:0}
+.cat i{display:grid;place-items:center;width:58px;height:58px;border-radius:50%;background:var(--surface);border:1px solid var(--line);color:var(--brand)}
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}
+.chip{flex:0 0 auto;padding:6px 14px;border-radius:99px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.chip.on{background:var(--brand);color:var(--on-brand);border-color:transparent;font-weight:800}
+.sec{display:flex;justify-content:space-between;align-items:baseline}
+.tabs{align-items:flex-end}
+.fab{flex:0 0 78px;position:relative}
+.tabs .fab button{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);width:68px;height:68px;border-radius:50%;border:4px solid var(--bg);background:var(--brand);color:var(--on-brand);display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:800;font-size:.72rem;padding:0;flex:none}
+#shotimg{display:block;max-width:100%;max-height:220px;border-radius:8px;margin-top:10px}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(76px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;max-width:90vw;z-index:30;font-weight:600;opacity:0;pointer-events:none;transition:opacity .2s}
+#toast.show{opacity:1}
+@media (prefers-reduced-motion:reduce){#toast{transition:none}}
+
+/* ===== تصميم جديد (حسب الملف المرسل): هيدر برتقالي، بحث غائر، بانر كبير، أيقونات نيومورفيزم، زر كاميرا في النص ===== */
+:root{--bg:#fff8ef;--brand:#f45116;--offer-a:#ff7200;--offer-b:#9f3d0b}
+.hdr{background:linear-gradient(135deg,#ff6900,#e84b0b);border-radius:0 0 28px 28px;padding:20px 20px;min-height:104px;position:relative;overflow:hidden;box-shadow:0 10px 25px rgba(220,70,0,.25);margin-top:0}
+.hdr::before{content:"";position:absolute;width:330px;height:330px;border-radius:50%;background:rgba(255,255,255,.06);left:-130px;top:-190px;pointer-events:none}
+.hdr>*{position:relative}
+.hdr b{font-size:1.35rem;font-weight:900;color:#fff;letter-spacing:1px;white-space:nowrap}
+.hdr .ver{color:#ffd166;border-color:#ffcc66;font-size:.8rem;font-weight:600;padding:2px 12px}
+.search input{height:60px;border:0;background:#fffdf9;box-shadow:inset 5px 5px 10px #e4d8cd,inset -5px -5px 10px #fff;padding:0 24px;font-size:1.02rem}
+.offer{border-radius:25px;padding:24px;min-height:200px;background:linear-gradient(135deg,#ff7200,#9f3d0b);border:0;box-shadow:0 10px 22px rgba(150,60,0,.22);display:flex;flex-direction:column;position:relative;overflow:hidden}
+.offer::before{content:"";position:absolute;width:300px;height:300px;border-radius:50%;background:rgba(255,255,255,.07);left:-130px;bottom:-190px;pointer-events:none}
+.offer>*{position:relative}
+.offer h2{font-size:1.45rem;font-weight:900;margin:6px 0}
+.offer p{font-size:1rem}
+.obtn{margin-top:auto;align-self:flex-start;background:#ffb82e;color:#251400;border-radius:35px;padding:14px 28px;font-size:1.05rem;font-weight:900;box-shadow:0 6px 0 #ce8c08,0 10px 18px rgba(0,0,0,.16);transition:.12s}
+.obtn:active{transform:translateY(5px);box-shadow:0 2px 0 #ce8c08}
+.offer{border-radius:20px;padding:14px 16px;min-height:0;gap:2px}
+.offer h2{font-size:1.1rem;margin:2px 0}
+.offer p{font-size:.82rem;line-height:1.4}
+.offer .k{font-size:.75rem}
+.obtn{margin-top:8px;padding:8px 20px;font-size:.9rem;border-radius:25px;box-shadow:0 4px 0 #ce8c08,0 6px 12px rgba(0,0,0,.14)}
+.obtn:active{transform:translateY(3px);box-shadow:0 1px 0 #ce8c08}
+h3{font-size:1.3rem;font-weight:900;margin:10px 0 4px}
+.cats{gap:24px 8px;padding-block:6px}
+.cat{font-size:.95rem}
+.cat i{width:72px;height:72px;border:0;box-shadow:7px 7px 17px #e5d9cf,-7px -7px 17px #fff;transition:.2s}
+.cat:active i{box-shadow:inset 5px 5px 12px #ded3c9,inset -5px -5px 12px #fff;transform:scale(.96)}
+.sec .link{color:var(--brand);font-weight:800;text-decoration:none}
+.tabs{border-top:0;box-shadow:0 -5px 20px rgba(0,0,0,.08);background:rgba(255,255,255,.97)}
+.tabs:has(.fab){min-height:78px}
+.tabs button{border-top:0}
+.tabs button.on{color:var(--brand);font-weight:900}
+.tabs .fab button{width:76px;height:76px;bottom:14px;border:7px solid #fff8ef;background:linear-gradient(145deg,#ff6500,#e74608);box-shadow:0 7px 18px rgba(230,70,0,.35);font-weight:900}
+
+.soc-or{display:flex;align-items:center;gap:10px;margin:16px 0 8px;color:var(--mute);font-size:.85rem}.soc-or:before,.soc-or:after{content:"";flex:1;height:1px;background:var(--line)}
+.soc{display:flex;justify-content:center;gap:18px;margin:6px 0 14px}.soc button{width:58px;height:58px;border-radius:50%;border:0;background:#fff;box-shadow:0 4px 12px rgba(0,0,0,.14),inset 0 -2px 4px rgba(0,0,0,.05);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}.soc button:active{transform:scale(.94)}
+.inst{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:60;background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.22);padding:12px 14px;display:none;gap:10px;align-items:center}
+.inst.show{display:flex}.inst img{width:44px;height:44px;border-radius:10px;flex:none}.inst .t{flex:1;min-width:0;font-size:.88rem;line-height:1.45}.inst .t b{display:block;font-size:.95rem}
+.inst button{border:0;border-radius:10px;padding:9px 14px;font-weight:700;cursor:pointer;font-family:inherit}
+.inst .go{background:linear-gradient(135deg,#ff8a2a,#e8590c);color:#fff}.inst .no{background:transparent;color:var(--mute);padding:9px 6px}
+</style>
+
+</head>
+<body>
+<div id="app" dir="rtl" lang="ar"></div>
+<div id="toast" role="status" aria-live="polite" dir="rtl"></div>
+<div id="inst" class="inst" dir="rtl" role="dialog"></div>
+
+<script>
+/* ---------- محرك الحسابات (نفس محرك التطبيق، مختبر على مثال الملف) ---------- */
+const r2 = x => Math.round(x * 100) / 100;
+const uid = p => p + Math.random().toString(36).slice(2, 9);
+const find = (arr, id, msg) => { const x = arr.find(a => a.id === id); if (!x) throw new Error(msg); return x; };
+const log = (actor, action, detail) => S.audit.unshift({ t: Date.now(), actor, action, detail: String(detail ?? '') });
+const cbExp = () => (S.settings.cbpayMin || 10) * 60000;
+const cbLive = t => t.status === 'pending' && Date.now() - t.at <= cbExp();
+
+const initial = () => ({
+  settings: { commission: 6, cashback: 4, invoiceMinutes: 15, claimHours: 24, autoApprove: true, minTopup: 50, minPayout: 10, refBonus: 1, refMin: 20, cancelMin: 30, minSettle: 20, cbpayMin: 10 }, notes: [], payouts: [],
+  platform: 0,
+  merchants: [{ id: 'm1', name: 'مطعم الأصيل', cat: 'restaurants', status: 'active', barPrefix: '', barLen: 0, digital: 0, funded: 0, real: 0, bank: 0, bankName: '', bankAccount: '' }],
+  customers: [{ id: 'c1', name: 'أحمد', wallet: 0 }],
+  topups: [], invoices: [], txns: [], audit: [], banks: [], claims: [], cbpays: [], settles: []
+});
+
+const normPhone = p => { let d = String(p || '').replace(/[\u0660-\u0669]/g, x => x.charCodeAt(0) - 1632).replace(/\D/g, ''); if (d.startsWith('00218')) d = '0' + d.slice(5); else if (d.startsWith('218')) d = '0' + d.slice(3); else if (d.length === 9 && d[0] === '9') d = '0' + d; return /^09[24]\d{7}$/.test(d) ? d : ''; };
+const MGR_PHONE = '0946563895';
+const getRef = () => { try { return localStorage.getItem('cb_ref') || ''; } catch (e) { return ''; } };
+try { const q = new URLSearchParams(location.search).get('ref'); if (q && /^[\w-]{3,40}$/.test(q)) localStorage.setItem('cb_ref', q); } catch (e) {}
+const notify = (to, text) => { (S.notes = S.notes || []).unshift({ id: uid('n'), to, text, t: Date.now(), read: false }); if (S.notes.length > 300) S.notes.length = 300; };
+const meId = () => (auth.profile && auth.profile.role === 'admin') || isAdmin() ? 'admin' : ui.actor;
+const unreadCount = id => (S.notes || []).filter(n => n.to === id && !n.read).length;
+const hashStr = s => { let x = 5381; for (let i = 0; i < s.length; i += 7) x = ((x << 5) + x + s.charCodeAt(i)) | 0; return (x >>> 0) + ':' + s.length; };
+
+const L = {
+  addMerchant(name, cat, phone, id) {
+    if (!name.trim()) throw new Error('اكتب اسم المحل');
+    const ph = normPhone(phone);
+    if (!ph) throw new Error('اكتب رقم ليبيانا صحيح (يبدأ بـ 092 أو 094، مثال 0921234567)');
+    if (S.merchants.some(x => x.phone === ph)) throw new Error('رقم الهاتف مستخدم لمحل آخر');
+    const m = { id: id || uid('m'), name: name.trim(), phone: ph, cat: cat || 'shops', status: 'pending', barPrefix: '', barLen: 0, digital: 0, funded: 0, real: 0, bank: 0, bankName: '', bankAccount: '' };
+    S.merchants.push(m); log('system', 'تسجيل تاجر', m.name); notify('admin', 'تاجر جديد بانتظار التفعيل: ' + m.name); return m;
+  },
+  addCustomer(name, phone, id, refId) {
+    if (!name.trim()) throw new Error('اكتب الاسم');
+    const ph = normPhone(phone);
+    if (!ph) throw new Error('اكتب رقم ليبيانا صحيح (يبدأ بـ 092 أو 094، مثال 0921234567)');
+    if (S.customers.some(x => x.phone === ph)) throw new Error('رقم الهاتف مستخدم لحساب آخر');
+    const c = { id: id || uid('c'), name: name.trim(), phone: ph, wallet: 0 };
+    if (refId && refId !== c.id && S.customers.some(x => x.id === refId)) c.ref = refId;
+    S.customers.push(c); log('system', 'تسجيل زبون', c.name); return c;
+  },
+  setMerchantLoc(mid, lat, lng) {
+    const m = find(S.merchants, mid, 'تاجر غير موجود');
+    if (lat === null) { delete m.lat; delete m.lng; log(mid, 'مسح موقع المحل', ''); return; }
+    lat = Number(lat); lng = Number(lng);
+    if (!isFinite(lat) || !isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) throw new Error('الموقع غير صحيح');
+    m.lat = Math.round(lat * 1e4) / 1e4; m.lng = Math.round(lng * 1e4) / 1e4; log(mid, 'تحديد موقع المحل', '');
+  },
+  setMerchantCat(mid, cat) {
+    const m = find(S.merchants, mid, 'تاجر غير موجود');
+    if (cat) m.cat = cat;
+    log(mid, 'تحديث نوع النشاط', m.cat);
+  },
+  requestTopup(mid, amount, ref, photo) {
+    amount = Number(amount);
+    if (!(amount > 0)) throw new Error('المبلغ غير صحيح');
+    const minT = S.settings.minTopup || 0;
+    if (amount < minT) throw new Error('أقل مبلغ للشحن ' + minT + ' د.ل');
+    const m = find(S.merchants, mid, 'تاجر غير موجود');
+    ref = String(ref || '').trim();
+    if (!S.settings.topAcct) throw new Error('المدير لم يضف حساب الشحن بعد. حاول لاحقاً');
+    if (!photo) throw new Error('صوّر إيصال التحويل البنكي أولاً');
+    if (ref && ref.length < 4) throw new Error('رقم العملية قصير. اتركه فاضي أو اكتبه كامل');
+    if (ref && S.topups.some(x => x.status !== 'rejected' && String(x.ref || '').toLowerCase() === ref.toLowerCase())) throw new Error('رقم العملية هذا مستخدم من قبل');
+    const t = { id: uid('t'), mid, amount, ref, phone: m.phone || '', status: 'pending', at: Date.now() };
+    if (photo) {
+      const ph = hashStr(photo);
+      if (S.topups.some(x => x.status !== 'rejected' && x.ph === ph)) throw new Error('هذي الصورة مستخدمة في طلب شحن سابق');
+      t.photo = photo; t.ph = ph; t.bank = true;
+    }
+    S.topups.unshift(t); log(mid, 'طلب شحن', amount); notify('admin', `طلب شحن جديد: ${m.name} • ${amount} د.ل${ref ? ' (عملية ' + ref + ')' : ' (إيصال بنكي)'}`); return t;
+  },
+  approveTopup(id) {
+    const t = find(S.topups, id, 'الطلب غير موجود');
+    if (t.status !== 'pending') throw new Error('الطلب تمت معالجته');
+    const m = find(S.merchants, t.mid, 'تاجر غير موجود');
+    m.digital = r2(m.digital + t.amount); m.funded = r2((m.funded || 0) + t.amount);
+    t.status = 'approved';
+    log('admin', 'موافقة شحن', `${m.name} ${t.amount} (عملية ${t.ref || '-'})`);
+    notify(m.id, `تمت الموافقة على شحنك ${t.amount} د.ل. رصيدك الآن ${m.digital} د.ل`);
+  },
+  rejectTopup(id) {
+    const t = find(S.topups, id, 'الطلب غير موجود');
+    if (t.status !== 'pending') throw new Error('الطلب تمت معالجته');
+    t.status = 'rejected'; log('admin', 'رفض شحن', `${t.mid} ${t.amount}`); notify(t.mid, `تم رفض طلب الشحن ${t.amount} د.ل. تواصل مع المدير`);
+  },
+  requestPayout(cid, amount) {
+    const c = find(S.customers, cid, 'زبون غير موجود');
+    amount = Number(amount);
+    if (!(amount > 0)) throw new Error('المبلغ غير صحيح');
+    const mn = S.settings.minPayout || 0;
+    if (amount < mn) throw new Error('أقل مبلغ للتحويل ' + mn + ' د.ل');
+    if (amount > c.wallet) throw new Error('رصيدك غير كافٍ');
+    if (S.payouts.some(x => x.cid === cid && x.status === 'pending')) throw new Error('عندك طلب تحويل قيد المراجعة، استنى لين يتم');
+    c.wallet = r2(c.wallet - amount);
+    const t = { id: uid('p'), cid, amount, phone: c.phone || '', status: 'pending', at: Date.now() };
+    S.payouts.unshift(t); log(cid, 'طلب تحويل رصيد', amount); notify('admin', `طلب تحويل رصيد: ${c.name} • ${amount} د.ل إلى ${c.phone}`); return t;
+  },
+  approvePayout(id) {
+    const t = find(S.payouts, id, 'الطلب غير موجود');
+    if (t.status !== 'pending') throw new Error('الطلب تمت معالجته');
+    t.status = 'done'; log('admin', 'تحويل رصيد لزبون', `${t.phone} ${t.amount}`); notify(t.cid, `تم تحويل ${t.amount} د.ل رصيد ليبيانا لرقمك ${t.phone}`);
+  },
+  rejectPayout(id) {
+    const t = find(S.payouts, id, 'الطلب غير موجود');
+    if (t.status !== 'pending') throw new Error('الطلب تمت معالجته');
+    const c = find(S.customers, t.cid, 'زبون غير موجود');
+    c.wallet = r2(c.wallet + t.amount); t.status = 'rejected'; log('admin', 'رفض تحويل رصيد', `${t.phone} ${t.amount}`); notify(t.cid, `تم رفض طلب التحويل ${t.amount} د.ل ورجع لمحفظتك`);
+  },
+  // ===== دفع بالكاش باك عند التاجر + سحب مع الشركة =====
+  requestCbPay(cid, mid, amount) {
+    const c = find(S.customers, cid, 'زبون غير موجود'), m = find(S.merchants, mid, 'اختر المحل');
+    amount = r2(Number(amount));
+    if (!(amount > 0)) throw new Error('المبلغ غير صحيح');
+    if (m.status !== 'active') throw new Error('هذا المحل غير مفعّل');
+    if (amount > c.wallet) throw new Error('رصيدك غير كافٍ');
+    if (S.cbpays.some(x => x.cid === cid && cbLive(x))) throw new Error('عندك طلب دفع بانتظار التاجر');
+    const t = { id: uid('b'), cid, mid, amount, status: 'pending', at: Date.now() };
+    S.cbpays.unshift(t); log(cid, 'طلب دفع بكاش باك', `${m.name} ${amount}`);
+    notify(mid, `طلب دفع بكاش باك: ${c.name} • ${amount} د.ل. افتح الرئيسية للقبول`); return t;
+  },
+  cancelCbPay(id, cid) {
+    const t = find(S.cbpays, id, 'الطلب غير موجود');
+    if (t.cid !== cid) throw new Error('غير مسموح');
+    if (t.status !== 'pending') throw new Error('الطلب تمت معالجته');
+    t.status = 'canceled'; log(cid, 'إلغاء طلب دفع بكاش باك', t.amount);
+  },
+  reviewCbPay(id, ok, mid) {
+    const t = find(S.cbpays, id, 'الطلب غير موجود');
+    if (t.mid !== mid) throw new Error('غير مسموح');
+    if (t.status !== 'pending') throw new Error('الطلب تمت معالجته');
+    const m = find(S.merchants, t.mid, 'تاجر غير موجود'), c = find(S.customers, t.cid, 'زبون غير موجود');
+    if (!ok) { t.status = 'rejected'; log(m.id, 'رفض دفع بكاش باك', t.amount); notify(c.id, `${m.name} رفض طلب الدفع بكاش باك ${t.amount} د.ل`); return; }
+    if (!cbLive(t)) throw new Error('انتهت مدة الطلب. اطلب من الزبون يرسل طلب جديد');
+    if (c.wallet < t.amount) throw new Error('رصيد الزبون غير كافٍ الآن');
+    c.wallet = r2(c.wallet - t.amount); m.cbIn = r2((m.cbIn || 0) + t.amount);
+    t.status = 'done'; t.done = Date.now();
+    log(m.id, 'قبول دفع بكاش باك', `${c.name} ${t.amount}`);
+    notify(c.id, `تم الدفع ${t.amount} د.ل من كاش باك عند ${m.name}. رصيدك ${c.wallet} د.ل`);
+    return t;
+  },
+  setTopBank(o) {
+    const bank = String(o.bank || '').trim(), holder = String(o.holder || '').trim(), acct = String(o.acct || '').trim();
+    if (!bank && !holder && !acct) { S.settings.topBank = S.settings.topHolder = S.settings.topAcct = ''; log('admin', 'إلغاء حساب الشحن البنكي', ''); return; }
+    if (!bank || !holder || acct.length < 6) throw new Error('اكتب اسم المصرف واسم صاحب الحساب ورقم الحساب');
+    S.settings.topBank = bank; S.settings.topHolder = holder; S.settings.topAcct = acct;
+    log('admin', 'تعديل حساب الشحن البنكي', bank + ' ****' + acct.slice(-4));
+  },
+  setMinSettle(v) {
+    v = Number(v);
+    if (!(v >= 0)) throw new Error('الحد الأدنى للسحب غير صحيح');
+    S.settings.minSettle = v; log('admin', 'تعديل أقل مبلغ للسحب', v);
+  },
+  requestSettle(mid, o) {
+    const m = find(S.merchants, mid, 'تاجر غير موجود');
+    if (S.settles.some(x => x.mid === mid && x.status === 'pending')) throw new Error('عندك طلب سحب قيد المراجعة');
+    const items = S.cbpays.filter(x => x.mid === mid && x.status === 'done' && !x.sid);
+    const sum = r2(items.reduce((a, x) => a + x.amount, 0));
+    const min = S.settings.minSettle || 0;
+    if (!items.length || sum <= 0) throw new Error('ما عندك كاش باك مستلم للسحب');
+    if (sum < min) throw new Error('أقل مبلغ للسحب ' + min + ' د.ل');
+    const bank = String(o.bank || '').trim(), acct = String(o.acct || '').trim(), holder = String(o.holder || '').trim();
+    if (!bank || acct.length < 6 || !holder) throw new Error('اكتب اسم المصرف ورقم الحساب واسم صاحب الحساب');
+    const no = 'S' + String(S.settles.length + 1).padStart(4, '0');
+    const t = { id: uid('s'), no, mid, amount: sum, items: items.map(x => x.id), bank, acct, holder, status: 'pending', at: Date.now() };
+    items.forEach(x => { x.sid = t.id; });
+    m.cbIn = Math.max(0, r2((m.cbIn || 0) - sum));
+    m.payBank = bank; m.payAcct = acct; m.payName = holder;
+    S.settles.unshift(t); log(mid, 'طلب سحب', `${no} ${sum}`);
+    notify('admin', `طلب سحب ${no}: ${m.name} • ${sum} د.ل`); return t;
+  },
+  approveSettle(id, ref) {
+    const t = find(S.settles, id, 'الطلب غير موجود');
+    if (t.status !== 'pending') throw new Error('الطلب تمت معالجته');
+    ref = String(ref || '').trim();
+    if (ref.length < 4) throw new Error('اكتب رقم/مرجع التحويل البنكي');
+    t.status = 'paid'; t.ref = ref; t.paidAt = Date.now();
+    log('admin', 'سحب مدفوعة', `${t.no} ${t.amount} (مرجع ${ref})`);
+    notify(t.mid, `تم تحويل ${t.amount} د.ل لحسابك البنكي (سحب ${t.no}، مرجع ${ref})`);
+  },
+  rejectSettle(id) {
+    const t = find(S.settles, id, 'الطلب غير موجود');
+    if (t.status !== 'pending') throw new Error('الطلب تمت معالجته');
+    const m = find(S.merchants, t.mid, 'تاجر غير موجود');
+    t.status = 'rejected'; m.cbIn = r2((m.cbIn || 0) + t.amount);
+    t.items.forEach(i => { const x = S.cbpays.find(y => y.id === i); if (x) x.sid = null; });
+    log('admin', 'رفض سحب', `${t.no} ${t.amount}`);
+    notify(t.mid, `تم رفض طلب السحب ${t.no} ورجع المبلغ ${t.amount} د.ل لرصيد كاش باك المستلم`);
+  },
+  canDelete(role, eid) {
+    if (role === 'customer') {
+      const c = find(S.customers, eid, 'الحساب غير موجود');
+      if (c.wallet >= 0.01) throw new Error('رصيدك ' + c.wallet + ' د.ل. اصرفه عند المحلات (المحفظة ← ادفع بالكاش باك) ثم احذف');
+      if (S.payouts.some(x => x.cid === eid && x.status === 'pending')) throw new Error('عندك طلب تحويل قيد المراجعة، استنى لين يتم');
+      if (S.cbpays.some(x => x.cid === eid && cbLive(x))) throw new Error('عندك طلب دفع بكاش باك بانتظار التاجر');
+      if (S.claims.some(x => x.cid === eid && x.status === 'pending')) throw new Error('عندك فاتورة قيد المراجعة، استنى لين تنتهي');
+    } else {
+      const m = find(S.merchants, eid, 'الحساب غير موجود');
+      if (m.digital >= 0.01) throw new Error('رصيد محفظتك ' + m.digital + ' د.ل. تواصل مع المدير لسحب الرصيد قبل الحذف');
+      if ((m.cbIn || 0) >= 0.01 || S.settles.some(x => x.mid === eid && x.status === 'pending')) throw new Error('عندك كاش باك مستلم أو سحب قيد المراجعة. اطلب السحب واستلمها قبل الحذف');
+      if (S.topups.some(x => x.mid === eid && x.status === 'pending')) throw new Error('عندك طلب شحن قيد المراجعة');
+      if (S.claims.some(x => x.mid === eid && x.status === 'pending')) throw new Error('فيه فواتير زبائن قيد المراجعة على محلك');
+    }
+  },
+  deleteAccount(role, eid) {
+    L.canDelete(role, eid);
+    if (role === 'customer') {
+      S.customers = S.customers.filter(x => x.id !== eid);
+      S.claims = S.claims.filter(x => x.cid !== eid);
+      S.payouts = S.payouts.filter(x => x.cid !== eid);
+    } else {
+      S.merchants = S.merchants.filter(x => x.id !== eid);
+      S.topups = S.topups.filter(x => x.mid !== eid);
+    }
+    S.notes = (S.notes || []).filter(n => n.to !== eid);
+    log('system', 'حذف حساب', role === 'customer' ? 'زبون' : 'تاجر');
+  },
+  createInvoice(mid, amount) {
+    amount = Number(amount);
+    if (!(amount > 0)) throw new Error('المبلغ غير صحيح');
+    find(S.merchants, mid, 'تاجر غير موجود');
+    let code; do { code = String(Math.floor(100000 + Math.random() * 900000)); } while (S.invoices.some(i => i.code === code));
+    const inv = { id: uid('inv'), code, mid, amount, exp: Date.now() + S.settings.invoiceMinutes * 60000, used: false };
+    S.invoices.unshift(inv); log(mid, 'إنشاء فاتورة', `${code} / ${amount}`); return inv;
+  },
+  // طلب كاش باك بفاتورة مصورة. منع التكرار: نفس المحل + نفس رقم الفاتورة، أو نفس المحل + نفس الباركود.
+  submitClaim(cid, o) {
+    const c = find(S.customers, cid, 'زبون غير موجود');
+    const m = find(S.merchants, o.mid, 'اختر محل من القائمة. الكاش باك فقط من المحلات المسجلة في التطبيق.');
+    if (m.status !== 'active') throw new Error('هذا المحل مش مفعّل في التطبيق. الكاش باك فقط من المحلات المسجلة والمفعّلة.');
+    const norm = s => String(s || '').trim().toLowerCase().replace(/\s+/g, '');
+    const no = String(o.no || '').trim(), bar = String(o.barcode || '').trim(), amount = Number(o.amount);
+    if (!no) throw new Error('اكتب رقم الفاتورة');
+    if (!o.date || !o.time) throw new Error('اكتب تاريخ الفاتورة وساعتها');
+    if (!bar) throw new Error('اكتب رقم الباركود المطبوع تحت الخطوط');
+    if (!(amount > 0)) throw new Error('المبلغ غير صحيح');
+    if (!o.photo) throw new Error('صوّر الفاتورة أولاً');
+    const bp = (m.barPrefix || '').toLowerCase(), bl = Number(m.barLen) || 0;
+    if ((bp && !bar.toLowerCase().startsWith(bp)) || (bl && bar.length !== bl)) throw new Error('الباركود ما يطابق فواتير هذا المحل. تأكد إنك اخترت المحل الصحيح.');
+    const at = new Date(o.date + 'T' + o.time).getTime();
+    if (isNaN(at)) throw new Error('التاريخ أو الساعة غير صحيحة');
+    if (at > Date.now() + 5 * 60000) throw new Error('تاريخ الفاتورة في المستقبل');
+    const hours = S.settings.claimHours || 24;
+    if (Date.now() - at > hours * 3600000) throw new Error(`انتهت مدة المطالبة (${hours} ساعة من وقت الفاتورة)`);
+    if (S.claims.some(x => x.mid === m.id && x.status !== 'rejected' && (norm(x.no) === norm(no) || norm(x.barcode) === norm(bar)))) throw new Error('هذي الفاتورة مسجلة من قبل');
+    const ph = hashStr(o.photo);
+    if (S.claims.some(x => x.status !== 'rejected' && x.ph === ph)) throw new Error('هذي الصورة مستخدمة في فاتورة سابقة');
+    const maxDaily = S.settings.maxDaily || 5, maxInv = S.settings.maxInvoice || 2000;
+    if (S.claims.filter(x => x.cid === c.id && x.status !== 'rejected' && x.created > Date.now() - 86400000).length >= maxDaily) throw new Error(`وصلت للحد اليومي (${maxDaily} فواتير في 24 ساعة)`);
+    const cl = { id: uid('cl'), mid: m.id, cid: c.id, no, barcode: bar, date: o.date, time: o.time, at, amount, photo: o.photo, ph, status: 'pending', created: Date.now() };
+    let review = '';
+    if (!(bp || bl)) review = 'لم تُضبط شروط الباركود لهذا المحل';
+    else if (amount > maxInv) review = `المبلغ أكبر من ${maxInv} د.ل`;
+    else if (S.settings.autoApprove === false) review = 'اعتماد المدير مفعّل';
+    if (review) { cl.review = review; notify('admin', `فاتورة بانتظار المراجعة: ${c.name} • ${m.name} • ${amount} د.ل`); notify(c.id, `فاتورتك من ${m.name} قيد المراجعة`); } else L.settleClaim(cl);
+    S.claims.unshift(cl); log(c.id, 'طلب كاش باك بفاتورة', `${m.name} #${no} / ${amount}`); return cl;
+  },
+  // إلغاء عملية خاطئة: يسمح للتاجر خلال مدة قصيرة، ويرجع كل شيء كما كان
+  cancelTx(mid, id) {
+    const i = S.txns.findIndex(x => x.id === id && x.mid === mid); if (i < 0) throw new Error('العملية غير موجودة');
+    const tx = S.txns[i], lim = S.settings.cancelMin || 0;
+    if (Date.now() - tx.t > lim * 60000) throw new Error('انتهت مدة الإلغاء (' + lim + ' دقيقة). تواصل مع المدير');
+    const m = find(S.merchants, mid, 'تاجر غير موجود'), c = S.customers.find(x => x.id === tx.cid);
+    if (!c) throw new Error('حساب الزبون محذوف. تواصل مع المدير');
+    const b = tx.refb || 0, inv = b ? S.customers.find(x => x.id === c.ref) : null;
+    if (tx.method === 'wallet') {
+      if (m.digital < tx.amount) throw new Error('رصيد محفظتك أقل من مبلغ العملية');
+      m.digital = r2(m.digital - tx.amount); c.wallet = r2(c.wallet + tx.amount);
+    } else {
+      const mg = r2(tx.fee - tx.cashback);
+      if (c.wallet < tx.cashback + b) throw new Error('الزبون صرف جزء من الكاش باك. تواصل مع المدير');
+      if (inv && inv.wallet < b) throw new Error('مكافأة الدعوة انصرفت. تواصل مع المدير');
+      if (S.platform < mg + b * 2) throw new Error('تعذر الإلغاء الآن. تواصل مع المدير');
+      m.digital = r2(m.digital + tx.fee); S.platform = r2(S.platform - mg); c.wallet = r2(c.wallet - tx.cashback);
+      if (b) { c.wallet = r2(c.wallet - b); if (inv) { inv.wallet = r2(inv.wallet - b); inv.refEarn = r2(Math.max(0, (inv.refEarn || 0) - b)); } S.platform = r2(S.platform + b * 2); c.refPaid = false; }
+    }
+    if (tx.cl) { const cl = S.claims.find(x => x.id === tx.cl); if (cl) { cl.status = 'cancelled'; cl.cashback = 0; } }
+    S.txns.splice(i, 1);
+    notify(c.id, `تم إلغاء عملية ${tx.amount} د.ل من ${m.name} وتم عكس الكاش باك`); notify('admin', `إلغاء عملية: ${m.name} • ${tx.amount} د.ل`);
+    log(mid, 'إلغاء عملية', `${c.name} ${tx.amount}`);
+  },
+  // مكافأة الدعوة: أول عملية للمدعو (بحد أدنى) تعطي كل من الداعي والمدعو مكافأة من محفظة المدير
+  refReward(c, amount) {
+    const b = S.settings.refBonus || 0;
+    if (!b || !c.ref || c.refPaid || amount < (S.settings.refMin || 0)) return 0;
+    const inv = S.customers.find(x => x.id === c.ref);
+    if (!inv || S.platform < b * 2) return 0;
+    c.refPaid = true; S.platform = r2(S.platform - b * 2);
+    inv.wallet = r2(inv.wallet + b); c.wallet = r2(c.wallet + b); inv.refEarn = r2((inv.refEarn || 0) + b);
+    notify(inv.id, `صاحبك ${c.name} اشترى أول مرة. نزلت لك مكافأة دعوة ${b} د.ل`); notify(c.id, `مكافأة دعوة ${b} د.ل نزلت في رصيدك`);
+    log('system', 'مكافأة دعوة', `${inv.name} ← ${c.name} ${b}`); return b;
+  },
+  // اعتماد الفاتورة: ينقص رقمي المحل بقيمة الفاتورة، والكاش باك من محفظة CASH BACK إلى محفظة الزبون
+  settleClaim(cl) {
+    const m = find(S.merchants, cl.mid, 'تاجر غير موجود'), c = find(S.customers, cl.cid, 'زبون غير موجود');
+    const fee = r2(cl.amount * S.settings.commission / 100), cb = r2(cl.amount * S.settings.cashback / 100), mg = r2(fee - cb);
+    if (m.digital < fee) throw new Error('رصيد المحل غير كافٍ لدفع العمولة، لازم يشحن محفظته');
+    const was = m.digital;
+    m.digital = r2(m.digital - fee); S.platform = r2(S.platform + mg); c.wallet = r2(c.wallet + cb);
+    cl.status = 'approved'; cl.cashback = cb;
+    notify(c.id, `نزل في رصيدك كاش باك ${cb} د.ل من ${m.name}`); notify(m.id, `عملية جديدة ${cl.amount} د.ل (عمولة ${fee} د.ل)`);
+    if (was > 20 && m.digital <= 20) notify(m.id, 'رصيدك قارب على الانتهاء، اشحن محفظتك');
+    const tx = { id: uid('x'), t: Date.now(), mid: m.id, cid: c.id, amount: cl.amount, cashback: cb, fee, method: 'claim' };
+    tx.cl = cl.id; S.txns.unshift(tx); tx.refb = L.refReward(c, cl.amount); log('system', 'كاش باك بفاتورة', `${m.name} #${cl.no} / ${cl.amount} كاش باك ${cb}`); return tx;
+  },
+  reviewClaim(id, ok) {
+    const cl = find(S.claims, id, 'الطلب غير موجود');
+    if (cl.status !== 'pending') throw new Error('الطلب تمت معالجته');
+    if (ok) { const tx = L.settleClaim(cl); log('admin', 'اعتماد فاتورة', `${cl.no} / ${cl.amount}`); return tx; }
+    cl.status = 'rejected'; log('admin', 'رفض فاتورة', `${cl.no} / ${cl.amount}`); notify(cl.cid, `تم رفض فاتورتك رقم ${cl.no}`); return true;
+  },
+  setAutoApprove(on) { S.settings.autoApprove = !!on; log('admin', 'اعتماد الفواتير', on ? 'تلقائي' : 'مراجعة المدير'); },
+  setBarcodeFormat(mid, prefix, len) {
+    const m = find(S.merchants, mid, 'تاجر غير موجود');
+    prefix = String(prefix || '').trim(); len = String(len || '').trim();
+    if (prefix && !/^[A-Za-z0-9-]{1,12}$/.test(prefix)) throw new Error('البادئة حروف وأرقام فقط (حتى 12)');
+    if (len && !/^\d{1,20}$/.test(len)) throw new Error('الطول لازم يكون رقم');
+    m.barPrefix = prefix; m.barLen = len ? Number(len) : 0;
+    log('admin', 'شروط باركود المحل', `${m.name}: ${prefix || '-'} / ${m.barLen || '-'}`);
+  },
+  setMerchantStatus(mid) {
+    const m = find(S.merchants, mid, 'تاجر غير موجود');
+    m.status = m.status === 'active' ? 'suspended' : 'active';
+    notify(m.id, m.status === 'active' ? 'تم تفعيل حسابك، تقدر تستقبل الزبائن' : 'تم إيقاف حسابك، تواصل مع المدير');
+    log('admin', m.status === 'active' ? 'تفعيل محل' : 'إيقاف محل', m.name);
+  },
+  setLimits(maxInvoice, maxDaily) {
+    maxInvoice = Number(maxInvoice); maxDaily = Number(maxDaily);
+    if (!(maxInvoice > 0) || !(maxDaily >= 1)) throw new Error('الحدود غير صحيحة');
+    S.settings.maxInvoice = maxInvoice; S.settings.maxDaily = Math.floor(maxDaily);
+    log('admin', 'تعديل الحدود', `${maxInvoice} د.ل / ${S.settings.maxDaily} فواتير`);
+  },
+  setClaimHours(hh) {
+    hh = Number(hh);
+    if (!(hh > 0 && hh <= 720)) throw new Error('مدة المطالبة لازم تكون بين 1 و720 ساعة');
+    S.settings.claimHours = hh; log('admin', 'تعديل مدة المطالبة', hh + ' ساعة');
+  },
+  checkInvoice(code) {
+    const inv = S.invoices.find(i => i.code === code);
+    if (!inv) throw new Error('كود الفاتورة غير صحيح');
+    if (inv.used) throw new Error('الفاتورة مدفوعة من قبل');
+    if (Date.now() > inv.exp) throw new Error('انتهت صلاحية الفاتورة');
+    return inv;
+  },
+  // method: 'card' (كاش باك للزبون) أو 'wallet' (دفع من رصيد محفظة الزبون، بدون كاش باك)
+  payInvoice(code, cid, method = 'card') {
+    const inv = L.checkInvoice(code);
+    const m = find(S.merchants, inv.mid, 'تاجر غير موجود');
+    const c = find(S.customers, cid, 'زبون غير موجود');
+    let cb = 0, fee = 0;
+    if (method === 'wallet') {
+      throw new Error('غير متاح');
+      if (c.wallet < inv.amount) throw new Error('رصيد محفظتك غير كافٍ لهذه الفاتورة');
+      c.wallet = r2(c.wallet - inv.amount); m.digital = r2(m.digital + inv.amount);
+      notify(m.id, `استلمت ${inv.amount} د.ل من محفظة زبون`);
+    } else {
+      fee = r2(inv.amount * S.settings.commission / 100); cb = r2(inv.amount * S.settings.cashback / 100);
+      if (m.digital < fee) throw new Error('رصيد التاجر غير كافٍ لدفع العمولة، لازم يشحن محفظته');
+      const was = m.digital;
+      m.digital = r2(m.digital - fee); S.platform = r2(S.platform + r2(fee - cb)); c.wallet = r2(c.wallet + cb);
+      notify(c.id, `نزل في رصيدك كاش باك ${cb} د.ل من ${m.name}`); notify(m.id, `عملية جديدة ${inv.amount} د.ل (عمولة ${fee} د.ل)`);
+      if (was > 20 && m.digital <= 20) notify(m.id, 'رصيدك قارب على الانتهاء، اشحن محفظتك');
+    }
+    inv.used = true;
+    const tx = { id: uid('x'), t: Date.now(), mid: m.id, cid, amount: inv.amount, cashback: cb, fee, method };
+    S.txns.unshift(tx); if (method !== 'wallet') tx.refb = L.refReward(c, inv.amount); log(cid, 'دفع فاتورة', `${m.name} ${inv.amount} (${method === 'wallet' ? 'محفظة' : 'بطاقة'}) كاش باك ${cb}`); return tx;
+  },
+  addBank(o) {
+    if (!o.name.trim() || !o.number.trim()) throw new Error('اسم البنك ورقم الحساب مطلوبين');
+    const b = { id: uid('b'), name: o.name.trim(), holder: o.holder.trim(), number: o.number.trim(), kind: o.kind, hasKey: !!o.hasKey, status: 'غير مربوط' };
+    S.banks.push(b); log('admin', 'إضافة حساب بنكي', `${b.name} ****${b.number.slice(-4)}`); return b;
+  },
+  linkBank(id) {
+    const b = find(S.banks, id, 'الحساب غير موجود');
+    if (!b.hasKey) throw new Error('أدخل مفتاح الربط (API Key) أولاً');
+    b.status = 'مربوط (تجريبي)'; log('admin', 'ربط حساب بنكي', b.name);
+  },
+  removeBank(id) {
+    const b = find(S.banks, id, 'الحساب غير موجود');
+    S.banks = S.banks.filter(x => x.id !== id); log('admin', 'حذف حساب بنكي', b.name);
+  },
+  setMinTopup(v) {
+    v = Number(v);
+    if (!(v >= 0)) throw new Error('الحد الأدنى للشحن غير صحيح');
+    S.settings.minTopup = v; log('admin', 'الحد الأدنى للشحن', v + ' د.ل');
+  },
+  readNotes(id) { (S.notes || []).forEach(n => { if (n.to === id) n.read = true; }); },
+  setRates(c, k) {
+    c = Number(c); k = Number(k);
+    if (!(c >= 0) || !(k >= 0) || k > c) throw new Error('النسب غير صحيحة (الكاش باك لازم ما يزيد عن العمولة)');
+    S.settings.commission = c; S.settings.cashback = k; log('admin', 'تعديل النسب', `${c}% / ${k}%`);
+  }
+};
+
+/* ---------- مكان بوابة الدفع (فاضي حالياً) ----------
+   لما تتوفر وثائق البوابة نملأ charge و refund هنا فقط.
+   الربط الحقيقي لازم يتم من خادم، مش من المتصفح، لأن المفاتيح السرية ما تنحط في صفحة ويب. */
+const paymentProvider = {
+  name: 'غير مربوط',
+  async charge({ amount, invoiceCode, customerId }) {
+    return { ok: true, reference: 'MOCK-' + Date.now(), mock: true };
+  },
+  async refund({ reference, amount }) {
+    return { ok: false, error: 'الاسترجاع غير مفعّل بعد' };
+  }
+};
+
+/* ---------- التخزين على هذا الجهاز ---------- */
+const KEY = 'cashback_web_v1';
+let S = (() => { try { const v = localStorage.getItem(KEY); if (v) return JSON.parse(v); } catch (e) {} return initial(); })();
+const norm = () => {
+  if (!S.claims) S.claims = [];
+  if (!S.notes) S.notes = [];
+  if (!S.payouts) S.payouts = [];
+  if (!S.cbpays) S.cbpays = [];
+  if (!S.settles) S.settles = [];
+  if (S.settings.minSettle === undefined) S.settings.minSettle = 20;
+  if (S.settings.cbpayMin === undefined) S.settings.cbpayMin = 10;
+  if (S.settings.minPayout === undefined) S.settings.minPayout = 10;
+  if (S.settings.minTopup === undefined) S.settings.minTopup = 50;
+  if (S.settings.refBonus === undefined) S.settings.refBonus = 1;
+  if (S.settings.refMin === undefined) S.settings.refMin = 20;
+  if (S.settings.cancelMin === undefined) S.settings.cancelMin = 30;
+  S.merchants.forEach(m => { if (!m.cat) m.cat = m.id === 'm1' ? 'restaurants' : 'shops'; if (!m.status) m.status = 'active'; if (m.barLen === undefined) { m.barLen = 0; m.barPrefix = ''; } if (typeof m.cbIn !== 'number') m.cbIn = 0; });
+};
+norm();
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { toast('تعذر حفظ البيانات (الذاكرة ممتلئة)'); } schedulePush(); };
+
+/* ---------- المزامنة مع Firebase (قاعدة بيانات مشتركة بين الأجهزة) ---------- */
+const FB_CONFIG = {
+  apiKey: "AIzaSyA6kiJzWhgYZ-eTX-oBIYhKVLomIXHbnyA",
+  authDomain: "studio-5817063024-c14a2.firebaseapp.com",
+  projectId: "studio-5817063024-c14a2",
+  storageBucket: "studio-5817063024-c14a2.firebasestorage.app",
+  messagingSenderId: "682218596807",
+  appId: "1:682218596807:web:05f9ae90848de238a111e2"
+};
+const sync = { st: 'off', msg: 'غير متصل: البيانات على هذا الجهاز فقط' };
+const photoCache = {}, photoUp = new Set(), photoReq = new Set(), coverCache = {}, coverReq = new Set();
+let stateLoaded = false, fdb = null, rev = 0, pushing = false, dirty = false, pushT = null, deferRender = false, retryT = null;
+const stripS = () => JSON.stringify(S, (k, v) => k === 'photo' ? undefined : v);
+const loadJs = src => new Promise((ok, no) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = () => no(new Error('load')); document.head.appendChild(s); });
+function setSync(st, msg) {
+  const was = sync.st; sync.st = st; sync.msg = msg;
+  const e = document.getElementById('syncb');
+  if (e) { e.className = 'sy ' + st; e.textContent = st === 'on' ? 'متصل' : st === 'err' ? 'خطأ بالاتصال' : 'غير متصل'; }
+  if (st === 'err' && was !== 'err') toast(msg);
+}
+function fbErr(e) {
+  const c = e && e.code || '';
+  if (c === 'permission-denied') return 'Firebase رفض الوصول: عدّل قواعد Firestore (Rules) وانشرها';
+  if (c === 'failed-precondition' || c === 'not-found') return 'أنشئ قاعدة Firestore Database في مشروع Firebase أولاً';
+  if (c === 'unavailable') return 'لا يوجد إنترنت أو الاتصال محجوب';
+  return 'خطأ Firebase: ' + (c || (e && e.message) || 'غير معروف');
+}
+function softRender() {
+  const a = document.activeElement;
+  if (a && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName)) { deferRender = true; return; }
+  render();
+}
+function adopt(json, r) {
+  const old = {}; (S.claims || []).forEach(c => { if (c.photo) old[c.id] = c.photo; });
+  const oldT = {}; (S.topups || []).forEach(c => { if (c.photo) oldT[c.id] = c.photo; });
+  S = JSON.parse(json); rev = r; norm();
+  S.claims.forEach(c => { const q = old[c.id] || photoCache[c.id]; if (q) c.photo = q; });
+  S.topups.forEach(c => { const q = oldT[c.id] || photoCache[c.id]; if (q) c.photo = q; });
+  try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {}
+}
+function syncPhotos() {
+  if (!fdb) return;
+  [...S.claims, ...S.topups].forEach(c => {
+    if (c.photo && !photoUp.has(c.id)) {
+      photoUp.add(c.id);
+      fdb.collection('photos').doc(c.id).set({ data: c.photo }).catch(e => { photoUp.delete(c.id); setSync('err', fbErr(e)); });
+    }
+  });
+}
+function fetchPhotos() {
+  if (!fdb) return;
+  document.querySelectorAll('[data-ph]').forEach(el => {
+    const id = el.dataset.ph; if (photoReq.has(id)) return; photoReq.add(id);
+    fdb.collection('photos').doc(id).get().then(d => {
+      if (!d.exists) return;
+      photoCache[id] = d.data().data; const c = S.claims.find(x => x.id === id) || S.topups.find(x => x.id === id); if (c) c.photo = photoCache[id]; softRender();
+    }).catch(() => photoReq.delete(id));
+  });
+}
+function fetchCovers() {
+  if (!fdb) return;
+  document.querySelectorAll('[data-cv]').forEach(el => {
+    const id = el.dataset.cv; if (coverReq.has(id)) return; coverReq.add(id);
+    fdb.collection('photos').doc('cover_' + id).get().then(d => {
+      if (!d.exists) return;
+      coverCache[id] = d.data().data; softRender();
+    }).catch(() => coverReq.delete(id));
+  });
+}
+function schedulePush() {
+  if (!fdb) return;
+  dirty = true; clearTimeout(pushT); pushT = setTimeout(pushNow, 400);
+}
+async function pushNow() {
+  if (!fdb) return;
+  if (pushing) { dirty = true; return; }
+  pushing = true; dirty = false;
+  try {
+    syncPhotos();
+    const ref = fdb.collection('cashback').doc('state');
+    const json = stripS(), base = rev; let conflict = null;
+    const nr = await fdb.runTransaction(async tx => {
+      conflict = null;
+      const d = await tx.get(ref); const cur = d.exists ? d.data() : { rev: 0 };
+      if (cur.rev !== base) { conflict = cur; return null; }
+      tx.set(ref, { json, rev: base + 1, t: Date.now() }); return base + 1;
+    });
+    if (nr) { rev = nr; setSync('on', 'متصل بقاعدة البيانات'); }
+    else { adopt(conflict.json, conflict.rev); dirty = false; softRender(); toast('البيانات تحدّثت من جهاز ثاني. راجع وأعد العملية لو لزم'); }
+  } catch (e) {
+    setSync('err', fbErr(e)); dirty = true; clearTimeout(retryT); retryT = setTimeout(pushNow, 8000);
+  }
+  pushing = false;
+  if (dirty && sync.st === 'on') schedulePush();
+}
+/* ---------- حسابات الدخول (Firebase Authentication) ---------- */
+const ADMIN_EMAIL = 'admin@cb.invalid';
+const MAIL_DOMAIN = '@cb.invalid';
+let fbdb = null, fbAuth = null, unsub = null;
+const auth = { ready: false, user: null, profile: null, profileErr: '', mode: 'login', want: null, busy: false, creating: false, fail: '', pend: null };
+const FB_LOGIN = false; // يظهر أيقونة فيسبوك
+const FB_READY = false; // true بعد ربط فيسبوك في Firebase Authentication
+const hasPw = u => !!(u && (u.providerData || []).some(p => p && p.providerId === 'password'));
+const isSocial = u => !!(u && (u.providerData || []).some(p => p && p.providerId && p.providerId !== 'password'));
+const provFor = id => id === 'facebook.com' ? new firebase.auth.FacebookAuthProvider() : new firebase.auth.GoogleAuthProvider();
+const isAdmin = () => !!(auth.user && auth.user.email === ADMIN_EMAIL);
+const normEmail = s => {
+  const e = String(s || '').trim().toLowerCase();
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e) && !e.endsWith(MAIL_DOMAIN) ? e : '';
+};
+function authErr(e) {
+  const c = (e && e.code) || '';
+  if (c === 'auth/email-already-in-use') return 'هذا الإيميل مسجّل من قبل. اضغط «دخول».';
+  if (['auth/invalid-credential', 'auth/wrong-password', 'auth/user-not-found', 'auth/invalid-login-credentials'].includes(c)) return 'الإيميل أو كلمة السر غير صحيحة';
+  if (c === 'auth/weak-password') return 'كلمة السر قصيرة (6 أحرف على الأقل)';
+  if (c === 'auth/unauthorized-domain') return 'هذا الموقع غير مضاف في Firebase (Authentication > Settings > Authorized domains)';
+  if (c === 'auth/account-exists-with-different-credential') return 'هذا الإيميل مسجّل بطريقة ثانية. ادخل بالإيميل وكلمة السر.';
+  if (c === 'auth/user-disabled') return 'هذا الحساب موقوف';
+  if (c === 'auth/operation-not-allowed' || c === 'auth/admin-restricted-operation') return 'طريقة الدخول هذي غير مفعّلة في Firebase Authentication';
+  if (c === 'auth/network-request-failed') return 'لا يوجد إنترنت أو الاتصال محجوب';
+  if (c === 'auth/too-many-requests') return 'محاولات كثيرة. انتظر قليلاً وجرّب.';
+  if (c === 'auth/invalid-email') return 'الإيميل غير صالح';
+  return e && e.code ? fbErr(e) : (e && e.message) || 'حدث خطأ';
+}
+function stopSync() {
+  if (unsub) { try { unsub(); } catch (e) {} unsub = null; }
+  fdb = null; rev = 0; dirty = false; clearTimeout(pushT);
+  setSync('off', 'غير متصل: سجّل الدخول');
+}
+async function startSync() {
+  if (fdb || !fbdb) return;
+  const ref = fbdb.collection('cashback').doc('state');
+  await fbdb.runTransaction(async tx => { const d = await tx.get(ref); if (!d.exists) tx.set(ref, { json: stripS(), rev: 1, t: Date.now() }); });
+  fdb = fbdb;
+  setSync('on', 'متصل بقاعدة البيانات');
+  syncPhotos();
+  await new Promise(res => {
+    let first = true; const done = () => { if (first) { first = false; res(); } };
+    unsub = ref.onSnapshot(d => {
+      if (d.exists && !d.metadata.hasPendingWrites) {
+        const x = d.data();
+        if (x.rev > rev && !dirty && !pushing) {
+          const b0 = unreadCount(meId()); adopt(x.json, x.rev);
+          if (!first && unreadCount(meId()) > b0) { const nn = (S.notes || []).find(n => n.to === meId() && !n.read); if (nn) { toast('🔔 ' + nn.text); ding(); } }
+          if (!first) softRender();
+        }
+      }
+      if (sync.st !== 'on') setSync('on', 'متصل بقاعدة البيانات');
+      stateLoaded = true; done();
+    }, e => { setSync('err', fbErr(e)); done(); });
+  });
+}
+async function afterLogin(u) {
+  if (u.email === ADMIN_EMAIL && location.hash !== '#admin') { try { await fbAuth.signOut(); } catch (e) {} return; }
+  auth.user = u; auth.ready = true; auth.profile = null; auth.profileErr = ''; auth.pend = null;
+  try {
+    if (u.email === ADMIN_EMAIL) auth.profile = { role: 'admin' };
+    else {
+      const d = await fbdb.collection('users').doc(u.uid).get();
+      if (d.exists) auth.profile = d.data(); else if (isSocial(u)) { auth.pend = { name: u.displayName || '' }; render(); return; } else auth.profileErr = 'حسابك غير مكتمل. اتصل بالمدير.';
+    }
+    if (auth.want && auth.profile && auth.profile.role !== 'admin' && auth.profile.role !== auth.want) {
+      auth.fail = auth.profile.role === 'merchant' ? 'هذا حساب تاجر. ارجع واختر «أنا تاجر».' : 'هذا حساب زبون. ارجع واختر «أنا زبون».';
+      auth.profile = null; await fbAuth.signOut(); return;
+    }
+    await startSync();
+    if (auth.profile && auth.profile.role !== 'admin') { ui.role = auth.profile.role; ui.actor = auth.profile.eid; }
+    ui.tab = auth.profile && auth.profile.role === 'admin' ? 'overview' : 'home';
+  } catch (e) { auth.profileErr = fbErr(e); setSync('err', fbErr(e)); }
+  render();
+}
+async function fbInit() {
+  try {
+    if (!window.firebase || !firebase.auth || !firebase.firestore) {
+      const v = '10.12.2';
+      const srcs = [
+        ['app', 'firestore', 'auth'].map(n => `https://cdnjs.cloudflare.com/ajax/libs/firebase/${v}/firebase-${n}-compat.min.js`),
+        ['app', 'firestore', 'auth'].map(n => `https://cdn.jsdelivr.net/npm/firebase@${v}/firebase-${n}-compat.js`)
+      ];
+      let loaded = false;
+      for (const list of srcs) { try { for (const s of list) await loadJs(s); if (window.firebase && firebase.firestore && firebase.auth) { loaded = true; break; } } catch (e) {} }
+      if (!loaded) throw { code: '', message: 'تعذر تحميل مكتبة Firebase' };
+    }
+    firebase.initializeApp(FB_CONFIG);
+    fbdb = firebase.firestore();
+    try { fbdb.settings({ experimentalAutoDetectLongPolling: true }); } catch (e) {}
+    fbAuth = firebase.auth();
+    try { const w = localStorage.getItem('cb_want'); if (w) { auth.want = w; localStorage.removeItem('cb_want'); } } catch (e) {}
+    try { fbAuth.getRedirectResult().catch(e => { auth.fail = authErr(e); render(); }); } catch (e) {}
+    fbAuth.onAuthStateChanged(async u => {
+      if (auth.creating) return;
+      if (!u) { auth.user = null; auth.profile = null; auth.pend = null; auth.ready = true; stopSync(); render(); return; }
+      await afterLogin(u);
+    });
+  } catch (e) { auth.ready = true; auth.fail = 'تعذر الاتصال بالخادم: ' + ((e && e.message) || 'غير معروف'); setSync('err', auth.fail); render(); }
+}
+const keyGet = id => { try { return localStorage.getItem('cb_key_' + id); } catch (e) { return null; } };
+
+/* ---------- أدوات العرض ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmt = n => Number(n || 0).toLocaleString('en-US', { maximumFractionDigits: 2 }) + ' د.ل';
+const hm = t => { const d = new Date(t); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
+const dstr = t => { const d = new Date(t); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0') + ' ' + hm(t); };
+const line = (a, b, cls = '') => `<div class="line ${cls}"><span>${a}</span><b>${b}</b></div>`;
+let pendingRestore = null;
+const delCard = () => `<div class="card"><h2>حذف حسابي</h2>` + (ui.confirmDel ? `<p class="err">سيتم حذف حسابك وبياناتك نهائياً ولا يمكن التراجع.</p>${hasPw(auth.user) ? '<label for="del_pw">كلمة السر</label><input id="del_pw" type="password" autocomplete="current-password" dir="ltr">' : '<p class="k">سيُطلب منك تأكيد دخولك بحسابك قبل الحذف.</p>'}<label for="del_word">اكتب «حذف» للتأكيد</label><input id="del_word" autocomplete="off"><div class="pair"><button class="btn danger" data-act="dodel">احذف حسابي</button><button class="btn ghost" data-act="canceldel">إلغاء</button></div>` : `<p class="k">حذف حسابك وبياناتك نهائياً. لازم رصيدك صفر وما يكون عندك طلبات معلّقة.</p><button class="btn danger" data-act="askdel">حذف حسابي</button>`) + `</div>`;
+const ui = { confirmDel: false, role: null, actor: null, tab: '', last: null, confirmReset: false, confirmRestore: false, claimPhoto: null, q: '', cat: 'all', claimMid: null, rp: '7' };
+let audioCtx = null;
+const soundOn = () => { try { return localStorage.getItem('cb_snd') !== '0'; } catch (e) { return true; } };
+function unlockAudio() { try { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') audioCtx.resume(); } catch (e) {} }
+['touchstart', 'click', 'keydown'].forEach(ev => document.addEventListener(ev, unlockAudio, { passive: true }));
+function ding(force) {
+  if (!force && !soundOn()) return;
+  try {
+    unlockAudio(); if (!audioCtx) return;
+    const t0 = audioCtx.currentTime;
+    [[880, 0], [1320, 0.18], [1760, 0.36]].forEach(([f, d]) => {
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = 'sine'; o.frequency.value = f; o.connect(g); g.connect(audioCtx.destination);
+      g.gain.setValueAtTime(0.0001, t0 + d); g.gain.exponentialRampToValueAtTime(0.5, t0 + d + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t0 + d + 0.4);
+      o.start(t0 + d); o.stop(t0 + d + 0.45);
+    });
+    if (navigator.vibrate) navigator.vibrate([150, 70, 150]);
+  } catch (e) {}
+}
+const inviteLink = c => location.origin + location.pathname + '?ref=' + c.id;
+const inviteCard = c => { const b = S.settings.refBonus || 0; if (!b) return ''; const n = S.customers.filter(x => x.ref === c.id).length;
+  return `<div class="card"><h2>ادعُ صاحبك واربح</h2><p class="k">شارك رابطك. كي صاحبك يسجل ويشتري أول مرة (من ${S.settings.refMin || 0} د.ل)، ينزل لكل واحد منكم <b>${b} د.ل</b> في المحفظة.</p>
+  ${line('اللي سجلوا برابطك', n)}${line('مكافآت ربحتها', fmt(c.refEarn || 0), 'pos')}
+  <button class="btn" data-act="invite">شارك رابط الدعوة</button></div>`; };
+const sndCard = () => `<div class="card"><h2>صوت الإشعارات</h2><p class="k">يرن التطبيق عند وصول إشعار جديد وهو مفتوح.</p><div class="pair"><button class="btn ${soundOn() ? '' : 'ghost'}" data-act="snd">${soundOn() ? '🔔 الصوت شغّال' : '🔕 الصوت مقفول'}</button><button class="btn ghost" data-act="sndtest">جرّب الصوت</button></div></div>`;
+let toastT;
+function toast(msg) {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 3200);
+}
+function run(fn) {
+  try { const r = fn(); save(); render(); return r === undefined ? true : r; }
+  catch (e) { toast(e.message); return null; }
+}
+
+/* ---------- الشاشات ---------- */
+function notesBody() {
+  const me = meId(), list = (S.notes || []).filter(n => n.to === me).slice(0, 50);
+  return `<div class="card"><h2>الإشعارات</h2><p class="k">آخر ${list.length} إشعار</p></div>` + (list.map(n => `<div class="card" style="padding:12px;${n.read ? '' : 'border-inline-start:4px solid #d83a0c'}">${line(esc(new Date(n.t).toLocaleDateString('en-GB')) + ' ' + hm(n.t), n.read ? '' : '<span class="pill">جديد</span>', 'b')}<div>${esc(n.text)}</div></div>`).join('') || '<p class="k">ما فيش إشعارات بعد.</p>');
+}
+function shell(sub, tabs, body, center) {
+  if (ui.tab === 'notes') body = notesBody();
+  const unread = unreadCount(meId());
+  const btn = ([k, l]) => `<button data-act="tab" data-v="${k}" class="${ui.tab === k ? 'on' : ''}">${l}</button>`;
+  const fab = center ? `<div class="fab"><button data-act="${center.act}" aria-label="${center.label}"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8a2 2 0 0 1 2-2h2l1.5-2h7L17 6h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="13" r="3.5"/></svg><span>${center.label}</span></button></div>` : '';
+  const nav = center ? tabs.slice(0, 2).map(btn).join('') + fab + tabs.slice(2).map(btn).join('') : tabs.map(btn).join('');
+  return `<div class="hdr"><div><b>CASH BACK<span class="ver">v2.0</span></b><small>${sub}</small><button class="sy ${sync.st}" id="syncb" data-act="syncinfo">${sync.st === 'on' ? 'متصل' : sync.st === 'err' ? 'خطأ بالاتصال' : 'غير متصل'}</button></div><div style="display:flex;align-items:center;gap:6px"><button class="link" data-act="tab" data-v="notes" aria-label="الإشعارات" style="text-decoration:none;font-size:1.35rem;position:relative">🔔${unread ? `<span style="position:absolute;top:-4px;inset-inline-end:-6px;min-width:18px;height:18px;border-radius:9px;background:#f9b93a;color:#3b1c11;font-size:.72rem;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 4px">${unread > 99 ? '99+' : unread}</span>` : ''}</button><button class="link" data-act="exit">خروج</button></div></div>
+  <main>${body}</main>
+  <nav class="tabs">${nav}</nav>`;
+}
+
+function exportBackup() {
+  const d = new Date(), p2 = n => String(n).padStart(2, '0');
+  const name = `cashback-backup-${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}.json`;
+  const blob = new Blob([JSON.stringify({ app: 'cashback', v: 1, at: Date.now(), state: JSON.parse(stripS()) })], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+}
+function repairHtml(role) {
+  const mer = role === 'merchant';
+  return `<div class="home"><div class="logo">CASH BACK</div>
+    <div class="card" style="width:100%;text-align:right"><h2>أعد تفعيل حسابك</h2>
+    <p class="k">بيانات حسابك انمسحت (تم مسح البيانات). اكتب رقم ليبيانا واضغط الزر لإعادة إنشاء ${mer ? 'محلك' : 'حسابك'}. الرصيد القديم ما يرجع.${mer ? ' الحساب يرجع بانتظار موافقة المدير.' : ''}</p>
+    <label for="rp_phone">رقم ليبيانا (092 أو 094)</label><input id="rp_phone" type="tel" inputmode="tel" dir="ltr" placeholder="0921234567" autocomplete="tel">
+    <button class="btn" data-act="repair">إعادة إنشاء الحساب</button></div>
+    <button class="btn ghost" data-act="exit">تسجيل الخروج</button></div>`;
+}
+function noteHtml() { return auth.fail ? `<div class="note" style="margin-bottom:10px">${esc(auth.fail)}</div>` : ''; }
+function loadingHtml(msg, withExit) {
+  return `<div class="home"><div class="logo">CASH BACK</div><div class="tag">${esc(msg)}</div>${withExit ? '<button class="btn ghost" data-act="exit">تسجيل الخروج</button>' : ''}</div>`;
+}
+
+const SOC_G = '<svg viewBox="0 0 48 48" width="26" height="26" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>';
+const SOC_F = '<svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#1877F2"/><path fill="#fff" d="M13.4 19.5v-6.6h2.2l.35-2.6H13.4V8.65c0-.75.2-1.25 1.3-1.25h1.35V5.1c-.25-.03-1.05-.1-2-.1-2 0-3.35 1.2-3.35 3.45v1.85H8.5v2.6h2.2v6.6z"/></svg>';
+const socialHtml = () => `<div class="soc-or"><span>أو سجّل بواسطة</span></div><div class="soc"><button type="button" data-act="social" data-v="google" aria-label="المتابعة بحساب Google">${SOC_G}</button>${FB_LOGIN ? `<button type="button" data-act="social" data-v="facebook" aria-label="المتابعة بحساب Facebook">${SOC_F}</button>` : ''}</div>`;
+function completeHtml() {
+  const head = `<div class="logo">CASH BACK</div><div class="tag">كاش باك على كل بيعة</div>`;
+  if (!auth.want) return `<div class="home">${head}${noteHtml()}<div class="card" style="width:100%;text-align:right"><h2>أكمل تسجيلك</h2><p class="k">تم الدخول بحسابك. اختر نوع حسابك:</p></div><button class="btn" data-act="want" data-v="customer">أنا زبون</button><button class="btn alt" data-act="want" data-v="merchant">أنا تاجر</button><button class="btn ghost" data-act="socialcancel">إلغاء</button></div>`;
+  const mer = auth.want === 'merchant', off = auth.busy ? 'disabled' : '';
+  return `<div class="home">${head}<h2 style="text-align:center;margin:0 0 6px">${mer ? 'إكمال حساب التاجر' : 'إكمال حساب الزبون'}</h2>${noteHtml()}
+    <div class="card"><p class="k" style="margin-top:0">تم تأكيد حسابك. باقي بيانات بسيطة:</p>
+      <label for="a_name">${mer ? 'اسم المحل' : 'الاسم'}</label><input id="a_name" autocomplete="name" value="${mer ? '' : esc(auth.pend ? auth.pend.name : '')}">
+      <label for="a_phone">رقم ليبيانا (092 أو 094)</label><input id="a_phone" type="tel" inputmode="tel" dir="ltr" placeholder="0921234567" autocomplete="tel">
+      ${mer ? `<label for="reg_cat">نوع النشاط</label><select id="reg_cat">${CATS.map(([k, n]) => `<option value="${k}">${n}</option>`).join('')}</select>` : ''}
+      <button class="btn ${mer ? 'alt' : ''}" data-act="socialfinish" ${off}>إنشاء حساب ${mer ? 'تاجر' : 'زبون'}</button>
+      ${mer ? '<p class="sub">حساب التاجر يظهر للزبائن بعد موافقة المدير.</p>' : ''}
+    </div>
+    <button class="btn ghost" data-act="socialcancel">إلغاء</button>
+  </div>`;
+}
+function authHtml() {
+  const head = `<div class="logo">CASH BACK</div><div class="tag">كاش باك على كل بيعة</div><div class="ver-line">الإصدار 2.0 • تحديث أكتوبر 2026</div>`;
+  if (!auth.want) return `<div class="home">${head}${noteHtml()}
+    <button class="btn" data-act="want" data-v="customer">أنا زبون</button>
+    <button class="btn alt" data-act="want" data-v="merchant">أنا تاجر</button>
+    <div class="note" style="margin-top:18px">نسخة تجريبية. الدفع والبنوك محاكاة.</div></div>`;
+  const mer = auth.want === 'merchant', su = auth.mode === 'signup', off = auth.busy ? 'disabled' : '';
+  return `<div class="home">${head}
+    <h2 style="text-align:center;margin:0 0 6px">${mer ? 'حساب التاجر' : 'حساب الزبون'}</h2>
+    <div class="seg"><button class="${su ? '' : 'on'}" data-act="authmode" data-v="login">دخول</button><button class="${su ? 'on' : ''}" data-act="authmode" data-v="signup">حساب جديد</button></div>
+    ${noteHtml()}
+    <div class="card">
+      ${su ? `<label for="a_name" style="margin-top:0">${mer ? 'اسم المحل' : 'الاسم'}</label><input id="a_name" autocomplete="name">${'<label for="a_phone">رقم ليبيانا (092 أو 094)</label><input id="a_phone" type="tel" inputmode="tel" dir="ltr" placeholder="0921234567" autocomplete="tel">'}` : ''}
+      <label for="a_email" ${su ? '' : 'style="margin-top:0"'}>الإيميل</label><input id="a_email" type="email" inputmode="email" dir="ltr" placeholder="name@gmail.com" autocomplete="email" autocapitalize="none" spellcheck="false">
+      <label for="a_pw">كلمة السر (6 أحرف أو أكثر)</label><input id="a_pw" type="password" dir="ltr" autocomplete="${su ? 'new-password' : 'current-password'}">
+      ${su ? `${mer ? `<label for="reg_cat">نوع النشاط</label><select id="reg_cat">${CATS.map(([k, n]) => `<option value="${k}">${n}</option>`).join('')}</select>` : ''}
+        <button class="btn ${mer ? 'alt' : ''}" data-act="signup" data-v="${auth.want}" ${off}>إنشاء حساب ${mer ? 'تاجر' : 'زبون'}</button>
+        ${mer ? '<p class="sub">حساب التاجر يظهر للزبائن بعد موافقة المدير.</p>' : ''}` : `<button class="btn ${mer ? 'alt' : ''}" data-act="login" ${off}>دخول</button>
+        <button class="btn ghost" style="margin-top:8px" data-act="forgot" ${off}>نسيت كلمة السر؟</button>`}
+    </div>
+    ${socialHtml()}
+    <button class="btn ghost" data-act="want" data-v="">رجوع</button>
+  </div>`;
+}
+function adminLogin() {
+  return `<div class="home"><div class="logo">CASH BACK</div><div class="tag">دخول المدير</div>${noteHtml()}
+    <div class="card"><label for="ad_pw" style="margin-top:0">كلمة سر المدير</label><input id="ad_pw" type="password" dir="ltr" autocomplete="current-password">
+    <button class="btn" data-act="adminlogin" ${auth.busy ? 'disabled' : ''}>دخول</button></div></div>`;
+}
+
+function previewHtml(code) {
+  if (code.length < 6) return '';
+  const inv = S.invoices.find(i => i.code === code);
+  if (!inv) return '<p class="err">كود غير صحيح</p>';
+  const m = S.merchants.find(x => x.id === inv.mid);
+  const msg = inv.used ? 'الفاتورة مدفوعة من قبل' : (Date.now() > inv.exp ? 'انتهت صلاحية الفاتورة' : '');
+  return line('التاجر', esc(m && m.name)) + line('المبلغ', fmt(inv.amount), 'b') + line('كاش باك لك', fmt(inv.amount * S.settings.cashback / 100), 'pos') + (msg ? `<p class="err">${msg}</p>` : '');
+}
+
+const liveM = () => S.merchants.filter(m => m.status === 'active');
+const CATS = [
+  ['restaurants', 'مطاعم', '<path d="M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10M17 3c-2 1-3 3.5-3 6s1 3 3 3v9"/>'],
+  ['malls', 'مولات', '<path d="M5 21V7l7-4 7 4v14M9 21v-5h6v5M9 10h2M13 10h2"/>'],
+  ['clothes', 'ملابس', '<path d="M8 3L3 6l2 4 3-1v12h8V9l3 1 2-4-5-3a4 4 0 0 1-8 0z"/>'],
+  ['perfume', 'عطور', '<path d="M9 3h6v3H9zM8 6h8v3l1 2v8a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2v-8l1-2V6z"/>'],
+  ['electronics', 'إلكترونيات', '<path d="M8 2h8a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zM11 19h2"/>'],
+  ['cafes', 'كافيهات', '<path d="M4 8h12v6a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V8zM16 9h2a2 2 0 0 1 0 4h-2M7 3v2M11 3v2"/>'],
+  ['shops', 'متاجر', '<path d="M4 9l1-5h14l1 5M4 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 4 0M5 12v8h14v-8M10 20v-5h4v5"/>'],
+  ['gifts', 'مكافآت', '<path d="M4 10h16v10H4zM3 7h18v3H3zM12 7v13M12 7c-2-4-6-3-5 0M12 7c2-4 6-3 5 0"/>']
+];
+const catIcon = k => `<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${(CATS.find(c => c[0] === k) || CATS.find(c => c[0] === 'shops'))[2]}</svg>`;
+const catName = k => (CATS.find(c => c[0] === k) || [0, 'متجر'])[1];
+const coverBg = m => coverCache[m.id] ? `style="background-image:linear-gradient(rgba(30,12,6,.50),rgba(30,12,6,.80)),url('${coverCache[m.id]}')"` : '';
+const geo = { st: 'idle', lat: 0, lng: 0, tried: false };
+const hasLoc = m => typeof m.lat === 'number' && typeof m.lng === 'number';
+function distKm(a, b, c, d) {
+  const R = 6371, r = x => x * Math.PI / 180, dl = r(c - a), dg = r(d - b);
+  const h = Math.sin(dl / 2) ** 2 + Math.cos(r(a)) * Math.cos(r(c)) * Math.sin(dg / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+const distOf = m => (geo.st === 'ok' && hasLoc(m)) ? distKm(geo.lat, geo.lng, m.lat, m.lng) : null;
+const distTxt = k => k < 1 ? Math.max(10, Math.round(k * 100) * 10) + ' م' : (k < 10 ? k.toFixed(1) : Math.round(k)) + ' كم';
+const byDist = list => geo.st !== 'ok' ? list : list.slice().sort((x, y) => { const a = distOf(x), b = distOf(y); return (a === null ? 1e9 : a) - (b === null ? 1e9 : b); });
+function askGeo() {
+  if (!navigator.geolocation) { geo.st = 'err'; render(); return; }
+  geo.st = 'wait'; render();
+  navigator.geolocation.getCurrentPosition(
+    p => { geo.st = 'ok'; geo.lat = p.coords.latitude; geo.lng = p.coords.longitude; render(); },
+    e => { geo.st = e && e.code === 1 ? 'deny' : 'err'; render(); },
+    { enableHighAccuracy: false, timeout: 15000, maximumAge: 300000 });
+}
+function autoGeo() {
+  if (geo.tried || !navigator.geolocation) return;
+  geo.tried = true;
+  try {
+    if (navigator.permissions && navigator.permissions.query) navigator.permissions.query({ name: 'geolocation' }).then(r => { if (r.state !== 'denied') askGeo(); else { geo.st = 'deny'; render(); } }, () => askGeo());
+    else setTimeout(askGeo, 0);
+  } catch (e) { setTimeout(askGeo, 0); }
+}
+const geoCard = () => geo.st === 'ok' ? '' :
+  `<div class="card"><h2>📍 أقرب المحلات لك</h2>` + (
+    geo.st === 'wait' ? '<p class="k">جاري تحديد موقعك...</p>' :
+    geo.st === 'deny' ? '<p class="k">الموقع مقفول. شغّل إذن الموقع للتطبيق (من إعدادات المتصفح أو الهاتف) ثم اضغط الزر.</p><button class="btn" data-act="geo">حاول مرة ثانية</button>' :
+    geo.st === 'err' ? '<p class="k">تعذر تحديد موقعك. تأكد أن GPS شغّال.</p><button class="btn" data-act="geo">حاول مرة ثانية</button>' :
+    '<p class="k">اسمح بالموقع لنعرض لك المطاعم والمولات الأقرب منك. موقعك يُستخدم على جهازك فقط ولا يُحفظ.</p><button class="btn" data-act="geo">اعرض الأقرب لي</button>') + `</div>`;
+const mapLink = m => hasLoc(m) ? `<a class="btn ghost" style="display:block;text-align:center;text-decoration:none;margin-top:8px" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${m.lat},${m.lng}">🗺️ افتح الموقع في الخريطة</a>` : '';
+const storeCard = m => { const dk = distOf(m); return `<div class="card${coverCache[m.id] ? ' cv' : ''}" ${coverCache[m.id] ? coverBg(m) : (m.cover ? 'data-cv="' + m.id + '"' : '')}>${line(esc(m.name), `<span class="pill">كاش باك ${S.settings.cashback}%</span>`, 'b')}<div class="k">${catName(m.cat)}${dk !== null ? ' • 📍 ' + distTxt(dk) : ''}</div>
+  <button class="btn ghost" data-act="claimfor" data-v="${m.id}">صوّر فاتورة من هنا</button>${mapLink(m)}</div>`; };
+function resultsHtml() {
+  const q = ui.q.trim().toLowerCase();
+  if (!q) return '';
+  const hits = liveM().filter(m => m.name.toLowerCase().includes(q) || catName(m.cat).includes(q));
+  return `<h3>نتائج البحث</h3>` + (hits.map(storeCard).join('') || '<p class="k">ما لقينا نتائج.</p>');
+}
+
+function customer() {
+  const c = find(S.customers, ui.actor, 'x');
+  const mine = S.txns.filter(t => t.cid === c.id);
+  let body;
+  if (ui.tab === 'home') {
+    autoGeo();
+    const near = geo.st === 'ok' ? byDist(liveM().filter(hasLoc)).slice(0, 5) : [];
+    body = `<div class="search"><input id="q" type="search" placeholder="ابحث عن متجر أو مطعم..." value="${esc(ui.q)}" autocomplete="off" aria-label="بحث"></div>
+      <div id="res">${resultsHtml()}</div>
+      ${geoCard()}${geo.st === 'ok' ? '<h3>📍 الأقرب لك</h3>' + (near.map(storeCard).join('') || '<p class="k">ما فيه محلات محدد موقعها قريبة بعد.</p>') : ''}
+      <div class="carousel">
+        <div class="offer"><div class="k">عرض</div><h2>كاش باك ${S.settings.cashback}% على كل فاتورة</h2><p class="k">اشتري من أي متجر مشارك وصوّر فاتورتك.</p><button class="obtn" data-act="gophoto">صوّر فاتورتك</button></div>
+        <div class="offer"><div class="k">محفظتك</div><h2>رصيدك ${fmt(c.wallet)}</h2><p class="k">رصيد تصرفه عند المحلات المشاركة.</p><button class="obtn" data-act="tab" data-v="wallet">المحفظة</button></div>
+        <div class="offer"><div class="k">المتاجر</div><h2>${liveM().length} متجر مشارك</h2><p class="k">تصفح المتاجر حسب التصنيف.</p><button class="obtn" data-act="tab" data-v="stores">المتاجر</button></div>
+      </div>
+      <h3>التصنيفات</h3>
+      <div class="cats">${CATS.map(([k, n]) => `<button class="cat" data-act="cat" data-v="${k}"><i>${catIcon(k)}</i>${n}</button>`).join('')}</div>
+      <div class="sec"><h3>المتاجر المشاركة</h3><button class="link" data-act="tab" data-v="stores">عرض الكل</button></div>
+      ${liveM().slice(0, 4).map(storeCard).join('')}`;
+  } else if (ui.tab === 'stores') {
+    const list = byDist(liveM().filter(m => ui.cat === 'all' || m.cat === ui.cat));
+    body = `${geoCard()}<div class="chips"><button class="chip ${ui.cat === 'all' ? 'on' : ''}" data-act="chip" data-v="all">الكل</button>${CATS.map(([k, n]) => `<button class="chip ${ui.cat === k ? 'on' : ''}" data-act="chip" data-v="${k}">${n}</button>`).join('')}</div>
+      ${list.map(storeCard).join('') || '<p class="k">ما فيش متاجر في هذا التصنيف بعد.</p>'}`;
+  } else if (ui.tab === 'me') {
+    body = `<div class="card"><h2>${esc(c.name)}</h2>${line('رصيد الكاش باك', fmt(c.wallet), 'b')}${line('إجمالي الكاش باك', fmt(mine.reduce((a, t) => a + t.cashback, 0)))}${line('فواتيري', S.claims.filter(x => x.cid === c.id).length)}</div>
+      <button class="btn ghost" data-act="exit">تسجيل الخروج</button>${inviteCard(c)}${sndCard()}${delCard()}`;
+  } else if (ui.tab === 'wallet') {
+    body = `<div class="card hero"><div class="k">رصيد الكاش باك (تصرفه عند المحلات)</div><div class="big">${fmt(c.wallet)}</div></div>
+      ${cbPayCard(c)}
+      <button class="btn alt" data-act="gophoto">صوّر فاتورة واستلم كاش باك</button>
+      <h3>آخر العمليات</h3>
+      ${mine.length ? mine.map(t => { const m = S.merchants.find(x => x.id === t.mid); return `<div class="card">${line(esc(m && m.name) + ' • ' + hm(t.t), fmt(t.amount), 'b')}${t.method === 'wallet' ? line('الدفع', 'من المحفظة') : line('كاش باك', '+' + fmt(t.cashback), 'pos')}</div>`; }).join('') : '<p class="k">ما فيش عمليات بعد.</p>'}`;
+  } else if (ui.tab === 'claim') {
+    const t0 = new Date(), ds = t0.getFullYear() + '-' + String(t0.getMonth() + 1).padStart(2, '0') + '-' + String(t0.getDate()).padStart(2, '0');
+    const mine = S.claims.filter(x => x.cid === c.id).slice(0, 20);
+    body = `<div class="card"><h2>صوّر فاتورتك</h2>
+      <p class="k">اشتريت ودفعت للمحل (كاش أو بطاقة) وخرجت بفاتورتك؟ صورها واكتب بياناتها ${S.settings.autoApprove !== false ? 'ويدخل الكاش باك محفظتك فوراً' : 'والمدير يراجعها ويدخل الكاش باك محفظتك'}. نفس الفاتورة ما تتقبل مرتين.</p>
+      <div class="pair"><label class="btn alt filebtn" style="margin-top:0">التقاط بالكاميرا<input id="shot" type="file" accept="image/*" capture="environment"></label>
+        <label class="btn ghost filebtn" style="margin-top:0">من المعرض<input id="shot2" type="file" accept="image/*"></label></div>
+      <p class="k" style="margin:6px 0 0">لو الكاميرا ما فتحت، اختر الصورة من المعرض.</p>
+      <img id="shotimg" alt="صورة الفاتورة" hidden>
+      <p class="note" style="margin:10px 0 0">الكاش باك فقط من المحلات المسجلة في التطبيق. فاتورة محل مش موجود في القائمة تترفض.</p>
+      <label for="c_mid">المحل</label><select id="c_mid">${liveM().map(x => `<option value="${x.id}" ${ui.claimMid === x.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select>
+      <label for="c_no">رقم الفاتورة</label><input id="c_no" autocomplete="off" dir="ltr">
+      <div class="pair"><div><label for="c_date">التاريخ</label><input id="c_date" type="date" value="${ds}"></div><div><label for="c_time">الساعة</label><input id="c_time" type="time"></div></div>
+      <label for="c_bar">رقم الباركود (المطبوع تحت الخطوط)</label><input id="c_bar" inputmode="numeric" autocomplete="off" dir="ltr">
+      <label for="c_amt">المبلغ (د.ل)</label><input id="c_amt" inputmode="decimal">
+      <button class="btn" data-act="sendclaim">إرسال الفاتورة</button></div>
+      ${mine.length ? '<h3>طلباتي</h3>' + mine.map(x => { const m = S.merchants.find(y => y.id === x.mid); return `<div class="card">${line(esc(m && m.name) + ' • #' + esc(x.no), fmt(x.amount), 'b')}${line('الحالة', { pending: 'بانتظار مراجعة المدير', approved: 'تمت الموافقة', rejected: 'مرفوضة', cancelled: 'ملغاة' }[x.status])}${x.status === 'approved' && x.cashback !== undefined ? line('كاش باك', '+' + fmt(x.cashback), 'pos') : ''}</div>`; }).join('') : ''}`;
+  }
+  return shell('زبون: ' + esc(c.name), [['home', 'الرئيسية'], ['stores', 'المتاجر'], ['wallet', 'المحفظة'], ['me', 'حسابي']], body, { act: 'gophoto', label: 'صوّر' });
+}
+
+function reportBody(m, sales) {
+  const day0 = t => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); };
+  const today = day0(Date.now()), DAY = 864e5, days = ui.rp === 'all' ? 0 : Number(ui.rp);
+  const from = ui.rp === 'all' ? 0 : today - (days - 1) * DAY;
+  const L1 = sales.filter(t => t.t >= from);
+  const tot = L1.reduce((a, t) => a + t.amount, 0), cb = L1.reduce((a, t) => a + (t.cashback || 0), 0);
+  const fees = L1.reduce((a, t) => a + (t.fee != null ? t.fee : (t.method === 'wallet' ? 0 : t.amount * S.settings.commission / 100)), 0);
+  const cust = {}; L1.forEach(t => { const o = cust[t.cid] || (cust[t.cid] = { n: 0, s: 0, last: 0 }); o.n++; o.s += t.amount; o.last = Math.max(o.last, t.t); });
+  const ids = Object.keys(cust), firstSeen = {}; sales.forEach(t => { firstSeen[t.cid] = Math.min(firstSeen[t.cid] || Infinity, t.t); });
+  const fresh = ids.filter(id => firstSeen[id] >= from).length, back = ids.length - fresh;
+  // رسم آخر 7 أيام
+  const bars = []; for (let i = 6; i >= 0; i--) { const a = today - i * DAY; bars.push({ d: new Date(a), v: sales.filter(t => t.t >= a && t.t < a + DAY).reduce((x, t) => x + t.amount, 0) }); }
+  const mx = Math.max(1, ...bars.map(b => b.v)), names = ['أحد', 'اثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'];
+  const chart = `<div class="card"><h2>مبيعات آخر 7 أيام</h2><div style="display:flex;align-items:flex-end;gap:6px;height:120px;margin-top:10px">${bars.map(b => `<div style="flex:1;text-align:center;font-size:.7rem"><div style="height:${Math.round(b.v / mx * 90)}px;min-height:${b.v ? 3 : 0}px;background:linear-gradient(#ff6500,#e74608);border-radius:6px 6px 0 0"></div><div style="margin-top:4px;color:var(--mute)">${names[b.d.getDay()]}</div></div>`).join('')}</div>
+    <div class="k" style="margin-top:6px">أعلى يوم: ${fmt(mx === 1 && !bars.some(b => b.v) ? 0 : mx)}</div></div>`;
+  const top = ids.sort((a, b) => cust[b].s - cust[a].s).slice(0, 5);
+  const rows = top.map((id, i) => { const c = S.customers.find(x => x.id === id); return `<div class="card" style="padding:12px">${line((i + 1) + '. ' + esc(c ? c.name : 'زبون'), fmt(cust[id].s), 'b')}<div class="k">${cust[id].n} عملية • آخر زيارة ${new Date(cust[id].last).toLocaleDateString('ar-LY')}</div></div>`; }).join('');
+  const chip = ([k, n]) => `<button class="chip ${ui.rp === k ? 'on' : ''}" data-act="rp" data-v="${k}">${n}</button>`;
+  return `<div class="chips">${[['1', 'اليوم'], ['7', '7 أيام'], ['30', '30 يوم'], ['all', 'الكل']].map(chip).join('')}</div>
+    <div class="card"><h2>ملخص الفترة</h2>${line('المبيعات', fmt(tot), 'b')}${line('عدد العمليات', L1.length)}${line('متوسط العملية', fmt(L1.length ? tot / L1.length : 0))}${line('كاش باك للزبائن', fmt(cb))}${line('عمولات مدفوعة', fmt(fees))}</div>
+    <div class="card"><h2>الزبائن</h2>${line('عدد الزبائن', ids.length)}${line('زبائن جدد', fresh)}${line('زبائن راجعين', back)}</div>
+    ${chart}<h3>أفضل زبائنك</h3>${rows || '<p class="k">ما فيش عمليات في هذه الفترة.</p>'}`;
+}
+
+const settleStatus = st => ({ pending: 'قيد المراجعة', paid: 'تم التحويل', rejected: 'مرفوض' }[st] || st);
+const settleText = t => {
+  const m = S.merchants.find(x => x.id === t.mid) || {};
+  const rows = t.items.map(id => S.cbpays.find(x => x.id === id)).filter(Boolean).map((x, i) => {
+    const c = S.customers.find(y => y.id === x.cid), d = new Date(x.done || x.at);
+    return (i + 1) + ') ' + d.toLocaleDateString('en-GB') + ' ' + hm(x.done || x.at) + ' • ' + (c ? c.name : 'زبون') + ' • ' + fmt(x.amount);
+  });
+  return ['كشف سحب CASH BACK رقم ' + t.no, 'التاجر: ' + (m.name || '-'), 'تاريخ الطلب: ' + new Date(t.at).toLocaleDateString('en-GB'), '------', ...rows, '------', 'الإجمالي: ' + fmt(t.amount),
+    'المصرف: ' + t.bank, 'الحساب: ' + t.acct, 'الاسم: ' + t.holder, 'الحالة: ' + settleStatus(t.status) + (t.ref ? ' • مرجع ' + t.ref : '')].join('\n');
+};
+function cbPayCard(c) {
+  const open = S.cbpays.find(x => x.cid === c.id && cbLive(x));
+  const hist = S.cbpays.filter(x => x.cid === c.id && x.status === 'done').slice(0, 8);
+  const sts = { rejected: 'رفضه التاجر', canceled: 'ألغيته', pending: 'انتهت مدته' };
+  const last = S.cbpays.filter(x => x.cid === c.id && !cbLive(x) && x.status !== 'done').slice(0, 2);
+  return `<div class="card"><h2>ادفع بالكاش باك عند محل</h2>
+    <p class="k">اختر المحل والمبلغ. التاجر يؤكد من تطبيقه، وينخصم من رصيدك وينزل في حسابه.</p>
+    ${open ? `${line('بانتظار تأكيد ' + esc((S.merchants.find(m => m.id === open.mid) || {}).name), fmt(open.amount), 'b')}<p class="k">ينتهي الطلب بعد ${S.settings.cbpayMin || 10} دقيقة.</p><button class="btn ghost" data-act="cbcancel" data-v="${open.id}">إلغاء الطلب</button>`
+      : `<label for="cb_mid">المحل</label><select id="cb_mid">${liveM().map(m => `<option value="${m.id}">${esc(m.name)}</option>`).join('')}</select>
+         <label for="cb_amt">المبلغ (د.ل)</label><input id="cb_amt" inputmode="decimal" placeholder="${fmt(c.wallet)}">
+         <button class="btn" data-act="cbpay">أرسل الطلب للتاجر</button>`}
+    ${last.map(x => `<p class="k">طلب ${fmt(x.amount)} ${sts[x.status] || ''}</p>`).join('')}
+    ${hist.map(x => `<div class="card" style="padding:10px">${line(esc((S.merchants.find(m => m.id === x.mid) || {}).name) + ' • ' + hm(x.done || x.at), '-' + fmt(x.amount), 'b')}</div>`).join('')}</div>`;
+}
+function topNote() {
+  const st = S.settings;
+  if (!st.topAcct) return `<div class="note">المدير لم يضف حساب الشحن البنكي بعد. تواصل معه، وبعد ما يضيفه يظهر هنا.</div>`;
+  return `<div class="note"><b>1)</b> حوّل المبلغ لهذا الحساب البنكي:
+    ${line('المصرف', esc(st.topBank), 'b')}${line('صاحب الحساب', esc(st.topHolder), 'b')}${line('رقم الحساب', '<span class="mono" dir="ltr">' + esc(st.topAcct) + '</span>', 'b')}
+    <button class="btn ghost" style="margin:8px 0" data-act="copyacct">نسخ رقم الحساب</button>
+    <b>2)</b> صوّر إيصال التحويل واكتب المبلغ هنا. <b>3)</b> المدير يتأكد من البنك ويوافق وينزل المبلغ كامل في محفظتك.<br>أقل مبلغ للشحن: <b>${st.minTopup || 0} د.ل</b></div>`;
+}
+function settleTab(m) {
+  const bal = r2(m.cbIn || 0), min = S.settings.minSettle || 0;
+  const mine = S.cbpays.filter(x => x.mid === m.id && x.status === 'done' && !x.sid);
+  const open = S.settles.find(x => x.mid === m.id && x.status === 'pending');
+  return `<div class="card hero"><div class="k">كاش باك مستلم من الزبائن (رصيد منفصل)</div><div class="big">${fmt(bal)}</div></div>
+    <div class="note">هذا رصيد منفصل عن محفظة الشحن. كل ما زبون يدفع عندك بكاش باك ينزل هنا. تطلب سحبه من الشركة وتستلمه في حسابك البنكي مع كشف الفواتير.</div>
+    ${open ? `<div class="card">${line('سحب قيد المراجعة #' + esc(open.no), fmt(open.amount), 'b')}<button class="btn ghost" style="margin-top:8px" data-act="shareset" data-v="${open.id}">مشاركة الكشف</button></div>`
+      : `<div class="card"><h2>طلب سحب</h2><p class="k">أقل مبلغ: <b>${min} د.ل</b>. بعد الطلب يتجهز كشف بالفواتير، والمدير يحوّل المبلغ لحسابك.</p>
+      <label for="sl_bank">اسم المصرف</label><input id="sl_bank" value="${esc(m.payBank || 'مصرف شمال أفريقيا')}">
+      <label for="sl_acct">رقم الحساب / IBAN</label><input id="sl_acct" dir="ltr" value="${esc(m.payAcct || '')}" autocomplete="off">
+      <label for="sl_name">اسم صاحب الحساب</label><input id="sl_name" value="${esc(m.payName || '')}">
+      <button class="btn" data-act="setl">اطلب سحب ${fmt(bal)}</button></div>`}
+    <h3>فواتير بانتظار السحب (${mine.length})</h3>
+    ${mine.map(x => { const c = S.customers.find(y => y.id === x.cid); return `<div class="card" style="padding:10px">${line(esc(c && c.name) + ' • ' + hm(x.done || x.at), fmt(x.amount), 'b')}</div>`; }).join('') || '<p class="k">ما فيش.</p>'}
+    <h3>سجل السحوبات</h3>
+    ${S.settles.filter(x => x.mid === m.id && x.status !== 'pending').map(t => `<div class="card">${line('#' + esc(t.no) + ' • ' + settleStatus(t.status), fmt(t.amount), 'b')}${t.ref ? line('مرجع التحويل', '<span class="mono">' + esc(t.ref) + '</span>') : ''}<button class="btn ghost" style="margin-top:8px" data-act="shareset" data-v="${t.id}">مشاركة الكشف</button></div>`).join('') || '<p class="k">ما فيش سحوبات سابقة.</p>'}`;
+}
+
+function merchant() {
+  const m = find(S.merchants, ui.actor, 'x');
+  const sales = S.txns.filter(t => t.mid === m.id);
+  const total = sales.reduce((a, t) => a + t.amount, 0), cbp = sales.reduce((a, t) => a + t.cashback, 0);
+  let body;
+  if (ui.tab === 'home') {
+    const funded = Math.max(m.funded || 0, m.digital), pct = funded ? Math.max(0, Math.min(100, m.digital / funded * 100)) : 0;
+    const feesPaid = sales.reduce((a, t) => a + (t.fee != null ? t.fee : (t.method === 'wallet' ? 0 : t.amount * S.settings.commission / 100)), 0);
+    body = `${m.status === 'active' ? '' : `<div class="note">${m.status === 'pending' ? 'حسابك بانتظار موافقة المدير. ما يظهر للزبائن لين يتفعل.' : 'حسابك موقوف. تواصل مع المدير.'}</div>`}<div class="card"><h2>رصيد محفظتك</h2><div class="big">${fmt(m.digital)}</div>
+        <div class="bar"><i style="width:${pct}%"></i></div>
+        ${m.digital <= 20 ? '<p class="err">رصيدك قارب على الانتهاء، اشحن محفظتك</p>' : ''}<div class="k">من كل بيعة تنخصم عمولة ${S.settings.commission}% من رصيدك</div></div>
+      ${S.cbpays.filter(x => x.mid === m.id && cbLive(x)).map(x => { const c = S.customers.find(y => y.id === x.cid); return `<div class="card" style="border:2px solid #f45116"><h2>طلب دفع بكاش باك</h2>${line(esc(c && c.name), fmt(x.amount), 'b')}<p class="k">سلّم الزبون بضاعة بقيمة ${fmt(x.amount)} ثم اضغط قبول.</p><div class="pair"><button class="btn" data-act="cbok" data-v="${x.id}">قبول</button><button class="btn danger" data-act="cbno" data-v="${x.id}">رفض</button></div></div>`; }).join('')}
+      <div class="card">${line('كاش باك مستلم من الزبائن', fmt(m.cbIn || 0), 'b')}<p class="k">رصيد منفصل تطلب سحبه من الشركة.</p><button class="btn alt" data-act="tab" data-v="settle">طلب سحب</button></div>
+      <div class="card">${line('عمولات مدفوعة', fmt(feesPaid), 'b')}${line('إجمالي المبيعات', fmt(total))}${line('كاش باك للزبائن', fmt(cbp))}${line('عدد العمليات', sales.length)}</div>
+      <h3>سجل العمليات</h3>
+      ${sales.map(t => { const c = S.customers.find(x => x.id === t.cid); const can = Date.now() - t.t <= (S.settings.cancelMin || 0) * 60000; return `<div class="card">${line(esc(c && c.name) + ' • ' + hm(t.t), fmt(t.amount), 'b')}${can ? `<button class="btn ghost" style="margin-top:8px" data-act="cancelTx" data-v="${t.id}">إلغاء العملية (غلط)</button>` : ''}</div>`; }).join('') || '<p class="k">ما فيش عمليات بعد.</p>'}`;
+  } else if (ui.tab === 'settle') {
+    body = settleTab(m);
+  } else if (ui.tab === 'report') {
+    body = reportBody(m, sales);
+  } else if (ui.tab === 'topup') {
+    body = `<div class="card"><h2>طلب شحن</h2>
+      ${topNote()}
+      <label for="tp">المبلغ (د.ل)</label><input id="tp" inputmode="decimal" value="100">
+      <label class="btn alt filebtn" style="margin-top:12px">📷 صوّر إيصال التحويل<input id="tpshot" type="file" accept="image/*"></label><img id="toppic" class="cphoto" ${ui.topPhoto ? `src="${esc(ui.topPhoto)}"` : 'hidden'} alt="">
+      <label for="tp_ref">رقم عملية التحويل (اختياري)</label><input id="tp_ref" dir="ltr" autocomplete="off">
+      <p class="k" id="tpnet"></p><button class="btn" data-act="topup">إرسال الطلب للمدير</button></div>
+      ${S.topups.filter(t => t.mid === m.id).map(t => `<div class="card">${line({ pending: 'قيد المراجعة', approved: 'تمت الموافقة', rejected: 'مرفوض' }[t.status], fmt(t.amount), 'b')}<div class="k">عملية: <span class="mono">${esc(t.ref || '-')}</span></div></div>`).join('')}`;
+  } else {
+    body = `<div class="card"><h2>بيانات المحل</h2>
+      ${line('رقم الهاتف', '<span class="mono" dir="ltr">' + esc(m.phone || '-') + '</span>')}
+      <label for="mb_cat" style="margin-top:0">نوع النشاط</label><select id="mb_cat">${CATS.map(([k, n]) => `<option value="${k}" ${m.cat === k ? 'selected' : ''}>${n}</option>`).join('')}</select>
+      <button class="btn" data-act="mbank">حفظ</button></div>
+      <div class="card"><h2>📍 موقع المحل</h2><p class="k">${hasLoc(m) ? 'موقع محلك محدد، ويظهر للزبائن القريبين منك.' : 'لسه ما حددت موقع محلك، فما يظهر للزبائن القريبين.'} اضغط الزر وانت <b>داخل المحل</b> وGPS شغّال.</p>
+        <button class="btn" data-act="mloc">${hasLoc(m) ? 'حدّث موقع المحل' : 'حدد موقع محلي الآن'}</button>${hasLoc(m) ? mapLink(m) + '<button class="btn ghost" style="margin-top:8px" data-act="mlocdel">امسح الموقع</button>' : ''}</div>${sndCard()}${delCard()}`;
+  }
+  return shell('تاجر: ' + esc(m.name), [['home', 'الرئيسية'], ['report', 'تقارير'], ['topup', 'شحن'], ['settle', 'سحب'], ['bank', 'المحل']], body);
+}
+
+function bankForm() {
+  return `<div class="card"><h2>إضافة حساب بنكي</h2>
+    <label for="b_name" style="margin-top:0">اسم البنك</label><input id="b_name" placeholder="مثال: بنك الجمهورية">
+    <label for="b_holder">اسم صاحب الحساب</label><input id="b_holder">
+    <label for="b_num">رقم الحساب / IBAN</label><input id="b_num" dir="ltr">
+    <label for="b_key">مفتاح الربط (API Key)</label><input id="b_key" type="password" dir="ltr" autocomplete="off">
+    <label for="b_kind">نوع الحساب</label>
+    <select id="b_kind"><option value="platform">حساب CASH BACK (استلام العمولة ودفع الكاش باك)</option><option value="settlement">حساب سحب</option></select>
+    <p class="note" style="margin-top:10px">للتجربة فقط: لا تدخل مفاتيح حقيقية. المفتاح يتخزن في متصفح هذا الجهاز وليس في مكان آمن.</p>
+    <button class="btn" data-act="addbank">حفظ الحساب</button></div>
+  <h3>الحسابات المحفوظة (${S.banks.length})</h3>
+  ${S.banks.map(b => `<div class="card">${line('البنك', esc(b.name), 'b')}${line('صاحب الحساب', esc(b.holder) || '-')}${line('رقم الحساب', '<span class="mono">****' + esc(b.number.slice(-4)) + '</span>')}
+    ${line('النوع', b.kind === 'platform' ? 'CASH BACK' : 'سحب')}${line('مفتاح الربط', b.hasKey && keyGet(b.id) ? 'محفوظ' : (b.hasKey ? 'محفوظ (غير ظاهر على هذا الجهاز)' : 'غير موجود'))}
+    ${line('الحالة', `<span class="pill ${b.status === 'غير مربوط' ? 'off' : ''}">${b.status}</span>`)}
+    <div class="pair"><button class="btn" data-act="linkbank" data-v="${b.id}">ربط</button><button class="btn danger" data-act="delbank" data-v="${b.id}">حذف</button></div></div>`).join('') || '<p class="k">ما فيش حسابات بعد.</p>'}`;
+}
+
+function admin() {
+  const sales = S.txns.reduce((a, t) => a + t.amount, 0), cbp = S.txns.reduce((a, t) => a + t.cashback, 0);
+  const pending = S.topups.filter(t => t.status === 'pending');
+  const ppay = S.payouts.filter(t => t.status === 'pending');
+  const pset = S.settles.filter(t => t.status === 'pending');
+  let body;
+  if (ui.tab === 'overview') {
+    body = `<div class="card">${line('تجار', S.merchants.length)}${line('زبائن', S.customers.length)}${line('إجمالي المبيعات', fmt(sales), 'b')}${line('محفظة المنصة (عمولتك)', fmt(S.platform), 'b')}${line('كاش باك مدفوع', fmt(cbp))}</div>
+      <div class="card"><h2>تغطية حسابك البنكي</h2>${line('أرصدة التجار (شحن)', fmt(S.merchants.reduce((x, m) => x + m.digital, 0)))}${line('أرصدة الزبائن (كاش باك)', fmt(S.customers.reduce((x, c) => x + c.wallet, 0)))}${line('مستحقات التجار (كاش باك مستلم)', fmt(S.merchants.reduce((x, m) => x + (m.cbIn || 0), 0) + pset.reduce((x, t) => x + t.amount, 0)))}
+        <p class="k">لازم رصيد حسابك البنكي يكون على الأقل: <b>${fmt(S.merchants.reduce((x, m) => x + m.digital, 0) + S.customers.reduce((x, c) => x + c.wallet, 0) + S.merchants.reduce((x, m) => x + (m.cbIn || 0), 0) + pset.reduce((x, t) => x + t.amount, 0))}</b> (كل الأرصدة والمستحقات).</p></div>
+      <div class="card"><h2>مستحقات التجار (كاش باك مصروف عندهم)</h2>${line('غير مطلوب سحبه', fmt(S.merchants.reduce((x, m) => x + (m.cbIn || 0), 0)))}${line('طلبات سحب قيد التحويل', fmt(pset.reduce((x, t) => x + t.amount, 0)))}${line('مدفوع للتجار', fmt(S.settles.filter(t => t.status === 'paid').reduce((x, t) => x + t.amount, 0)))}
+        <p class="k">هذا ما عليك للتجار. يغطيه رصيدك من شحنات التجار في البنك.</p></div>
+      <h3>التجار</h3>
+      ${S.merchants.map(m => `<div class="card">${line(esc(m.name), 'رصيد ' + fmt(m.digital), 'b')}${(m.cbIn || 0) ? line('كاش باك مستلم', fmt(m.cbIn)) : ''}${line('رقم الهاتف', '<span class="mono" dir="ltr">' + esc(m.phone || '-') + '</span>')}</div>`).join('')}
+      <h3>سجل التدقيق</h3>
+      ${S.audit.slice(0, 30).map(a => `<div class="card" style="padding:10px">${line(hm(a.t) + ' • ' + esc(a.actor), esc(a.action), 'b')}<div class="k">${esc(a.detail)}</div></div>`).join('') || '<p class="k">ما فيش عمليات بعد.</p>'}`;
+  } else if (ui.tab === 'requests') {
+    body = pending.length ? pending.map(t => {
+      const m = S.merchants.find(x => x.id === t.mid);
+      return `<div class="card"><h2>${esc(m && m.name)} • ${fmt(t.amount)}</h2>
+        ${t.bank ? (t.photo ? `<img class="cphoto" src="${esc(t.photo)}" alt="إيصال التحويل">` : `<p class="note" data-ph="${esc(t.id)}">${fdb ? 'جاري تحميل الصورة...' : 'الصورة غير متوفرة على هذا الجهاز'}</p>`) : line('رقم ليبيانا للتاجر', '<span class="mono" dir="ltr">' + esc((m && m.phone) || t.phone || '-') + '</span>')}${line('رقم العملية', '<span class="mono">' + esc(t.ref || '-') + '</span>')}${line('تنزل في محفظته', '+' + fmt(t.amount), 'pos')}
+        <p class="k">${t.bank ? `تأكد من كشف حسابك البنكي إن ${fmt(t.amount)} وصلت من ${esc(m && m.name)} قبل الموافقة` : `تأكد إن رصيد ${fmt(t.amount)} وصل لرقمك ${MGR_PHONE} قبل الموافقة`}</p>
+        <div class="pair"><button class="btn" data-act="approve" data-v="${t.id}">موافقة</button><button class="btn danger" data-act="reject" data-v="${t.id}">رفض</button></div></div>`;
+    }).join('') : '<p class="k">ما فيش طلبات شحن جديدة.</p>';
+    if (ppay.length) body += `<h3>تحويل رصيد للزبائن (${ppay.length})</h3>` + (ppay.length ? ppay.map(t => { const c = S.customers.find(x => x.id === t.cid); return `<div class="card"><h2>${esc(c && c.name)} • ${fmt(t.amount)}</h2>
+        ${line('حوّل رصيد ليبيانا لرقم', '<span class="mono" dir="ltr">' + esc(t.phone || '-') + '</span>', 'b')}
+        <p class="k">حوّل ${fmt(t.amount)} من رقمك ${MGR_PHONE} للرقم أعلاه، وبعدها اضغط تم التحويل.</p>
+        <div class="pair"><button class="btn" data-act="okpay" data-v="${t.id}">تم التحويل</button><button class="btn danger" data-act="nopay" data-v="${t.id}">رفض</button></div></div>`; }).join('') : '<p class="k">ما فيش طلبات تحويل.</p>');
+    body += `<h3>سحوبات التجار (${pset.length})</h3>` + (pset.length ? pset.map(t => { const m = S.merchants.find(x => x.id === t.mid); return `<div class="card"><h2>${esc(m && m.name)} • ${fmt(t.amount)}</h2>
+        ${line('المصرف', esc(t.bank))}${line('رقم الحساب', '<span class="mono" dir="ltr">' + esc(t.acct) + '</span>', 'b')}${line('صاحب الحساب', esc(t.holder))}${line('عدد الفواتير', t.items.length)}
+        <pre style="white-space:pre-wrap;font:inherit;font-size:.82rem;background:var(--bg);border-radius:8px;padding:8px;margin:8px 0">${esc(settleText(t))}</pre>
+        <label for="sr_${t.id}">مرجع التحويل البنكي</label><input id="sr_${t.id}" dir="ltr" autocomplete="off">
+        <div class="pair"><button class="btn" data-act="okset" data-v="${t.id}">تم التحويل</button><button class="btn danger" data-act="noset" data-v="${t.id}">رفض</button></div></div>`; }).join('') : '<p class="k">ما فيش طلبات سحب.</p>');
+    const pcl = S.claims.filter(x => x.status === 'pending');
+    body += `<h3>فواتير بانتظار المراجعة (${pcl.length})</h3>` + (pcl.length ? pcl.map(x => {
+      const m = S.merchants.find(y => y.id === x.mid), c = S.customers.find(y => y.id === x.cid);
+      return `<div class="card"><h2>${esc(c && c.name)} • ${esc(m && m.name)} • ${fmt(x.amount)}</h2>
+        ${x.photo ? `<img class="cphoto" src="${esc(x.photo)}" alt="صورة الفاتورة">` : `<p class="note" data-ph="${esc(x.id)}">${fdb ? 'جاري تحميل الصورة...' : 'الصورة غير متوفرة على هذا الجهاز'}</p>`}
+        ${line('رقم الفاتورة', '<span class="mono">' + esc(x.no) + '</span>')}${line('التاريخ والساعة', '<span class="mono">' + esc(x.date) + ' ' + esc(x.time) + '</span>')}${line('الباركود', '<span class="mono">' + esc(x.barcode) + '</span>')}${line('كاش باك للزبون', fmt(x.amount * S.settings.cashback / 100), 'pos')}
+        ${x.review ? line('سبب المراجعة', esc(x.review)) : ''}
+        <div class="pair"><button class="btn" data-act="okclaim" data-v="${x.id}">اعتماد</button><button class="btn danger" data-act="noclaim" data-v="${x.id}">رفض</button></div></div>`;
+    }).join('') : '<p class="k">ما فيش فواتير بانتظار المراجعة.</p>');
+  } else if (ui.tab === 'merchants') {
+    body = S.merchants.map(m => `<div class="card">${line(esc(m.name), `<span class="pill ${m.status === 'active' ? '' : 'off'}">${{ active: 'مفعّل', pending: 'بانتظار الموافقة', suspended: 'موقوف' }[m.status] || m.status}</span>`, 'b')}
+      ${line('نوع النشاط', catName(m.cat))}
+      <label style="margin-top:0">صورة خلفية المحل (تظهر للزبائن)</label>
+      ${coverCache[m.id] ? `<img class="cvthumb" src="${coverCache[m.id]}" alt="">` : (m.cover ? `<p class="k" data-cv="${m.id}">جاري تحميل الصورة...</p>` : '<p class="k">ما فيه صورة بعد.</p>')}
+      <div class="pair"><label class="btn alt filebtn" style="margin-top:0">${m.cover ? 'تغيير الصورة' : 'اختيار صورة'}<input id="cv_${m.id}" type="file" accept="image/*"></label>${m.cover ? `<button class="btn ghost" data-act="rmcover" data-v="${m.id}" style="margin-top:0">حذف الصورة</button>` : ''}</div>
+      <label for="bp_${m.id}">بادئة الباركود (أول أرقام باركود فواتيره)</label><input id="bp_${m.id}" dir="ltr" value="${esc(m.barPrefix || '')}">
+      <label for="bl_${m.id}">طول الباركود (عدد الأرقام)</label><input id="bl_${m.id}" dir="ltr" inputmode="numeric" value="${m.barLen || ''}">
+      <p class="k">${m.barPrefix || m.barLen ? 'فواتير هذا المحل تتقبل تلقائياً لو طابقت الشروط.' : 'بدون شروط، فواتير هذا المحل تروح للمراجعة.'}</p>
+      <div class="pair"><button class="btn" data-act="savefmt" data-v="${m.id}">حفظ الشروط</button><button class="btn ${m.status === 'active' ? 'danger' : 'alt'}" data-act="togglem" data-v="${m.id}">${m.status === 'active' ? 'إيقاف' : 'تفعيل'}</button></div></div>`).join('');
+  } else if (ui.tab === 'banks') {
+    body = bankForm();
+  } else {
+    body = `<div class="card"><h2>النسب</h2>
+      <label for="r_c" style="margin-top:0">عمولة CASH BACK %</label><input id="r_c" inputmode="decimal" value="${S.settings.commission}">
+      <label for="r_k">كاش باك الزبون %</label><input id="r_k" inputmode="decimal" value="${S.settings.cashback}">
+      <label for="r_h">مدة مطالبة الزبون بالفاتورة (ساعة)</label><input id="r_h" inputmode="numeric" value="${S.settings.claimHours || 24}">
+      <label for="r_a">اعتماد فواتير الزبائن</label><select id="r_a"><option value="1" ${S.settings.autoApprove !== false ? 'selected' : ''}>تلقائي (الكاش باك فوراً)</option><option value="0" ${S.settings.autoApprove === false ? 'selected' : ''}>مراجعة المدير</option></select>
+      <label for="r_mx">أقصى مبلغ فاتورة للاعتماد التلقائي (د.ل)</label><input id="r_mx" inputmode="decimal" value="${S.settings.maxInvoice || 2000}">
+      <label for="r_md">أقصى عدد فواتير للزبون في 24 ساعة</label><input id="r_md" inputmode="numeric" value="${S.settings.maxDaily || 5}">
+      <label for="r_min">الحد الأدنى لشحن التاجر (د.ل)</label><input id="r_min" inputmode="decimal" value="${S.settings.minTopup === undefined ? 50 : S.settings.minTopup}">
+      <label for="r_ms">الحد الأدنى لسحب التاجر (د.ل)</label><input id="r_ms" inputmode="decimal" value="${S.settings.minSettle === undefined ? 20 : S.settings.minSettle}">
+      <button class="btn" data-act="rates">حفظ النسب</button></div>
+      <div class="card"><h2>حساب استقبال الشحن (يظهر للتجار)</h2>
+      <p class="k">التاجر يحوّل لهذا الحساب ويصوّر الإيصال. بدونها ما يقدر التجار يرسلون طلبات شحن.</p>
+      <label for="tb_bank" style="margin-top:0">اسم المصرف</label><input id="tb_bank" value="${esc(S.settings.topBank || '')}" placeholder="مصرف شمال أفريقيا">
+      <label for="tb_name">اسم صاحب الحساب</label><input id="tb_name" value="${esc(S.settings.topHolder || '')}">
+      <label for="tb_acct">رقم الحساب / IBAN</label><input id="tb_acct" dir="ltr" autocomplete="off" value="${esc(S.settings.topAcct || '')}">
+      <button class="btn" data-act="savetopbank">حفظ حساب الشحن</button></div>
+      <div class="card"><h2>بيانات التجربة</h2>
+      ${ui.confirmReset ? '<p class="err">سيتم مسح كل شيء على كل الأجهزة: التجار والزبائن والأرصدة والعمليات. الحسابات القديمة تحتاج إعادة تفعيل. تنزل نسخة احتياطية تلقائياً قبل المسح.</p><label for="rs_word" style="margin-top:0">اكتب كلمة «مسح» للتأكيد</label><input id="rs_word" autocomplete="off"><div class="pair"><button class="btn danger" data-act="doreset">تأكيد المسح</button><button class="btn ghost" data-act="cancelreset">إلغاء</button></div>'
+        : '<button class="btn danger" data-act="askreset">مسح كل البيانات والبدء من جديد</button>'}</div>
+      <div class="card"><h2>نسخة احتياطية</h2>
+      <p class="k">نزّل نسخة من كل البيانات (التجار والزبائن والأرصدة والعمليات) واحتفظ فيها. تقدر ترجعها وقت الحاجة.</p>
+      <button class="btn" data-act="backup">تنزيل نسخة احتياطية</button>
+      ${ui.confirmRestore ? '<p class="err">سيتم استبدال كل البيانات الحالية بالنسخة المختارة على كل الأجهزة.</p><div class="pair"><button class="btn danger" data-act="dorestore">تأكيد الاسترجاع</button><button class="btn ghost" data-act="cancelrestore">إلغاء</button></div>'
+        : '<label class="btn ghost" for="bk_file" style="display:block;text-align:center;margin-top:8px;cursor:pointer">استرجاع من نسخة محفوظة</label><input id="bk_file" type="file" accept=".json,application/json" style="display:none">'}</div>`;
+  }
+  return shell('لوحة المدير', [['overview', 'نظرة'], ['merchants', 'التجار'], ['requests', `الطلبات (${pending.length + ppay.length + pset.length + S.claims.filter(x => x.status === 'pending').length})`], ['settings', 'الإعدادات']], body);
+}
+
+function render() {
+  S.merchants.forEach(m => { if (!CATS.some(c => c[0] === m.cat)) m.cat = 'shops'; });
+  const app = $('#app');
+  const route = location.hash === '#admin' ? 'admin' : 'main';
+  const role = auth.profile && auth.profile.role;
+  let html;
+  if (!auth.ready) html = loadingHtml('جاري التحميل...');
+  else if (route === 'admin') {
+    if (!isAdmin()) html = adminLogin();
+    else { if (!['overview', 'merchants', 'requests', 'settings', 'notes'].includes(ui.tab)) ui.tab = 'overview'; html = admin(); }
+  }
+  else if (!auth.user) html = authHtml();
+  else if (auth.user && !auth.profile && auth.pend) html = completeHtml();
+  else if (!auth.profile) html = loadingHtml(auth.profileErr || 'جاري تحميل حسابك...', true);
+  else if (role === 'admin') html = authHtml();
+  else if (role === 'customer' && S.customers.some(c => c.id === ui.actor)) { if (!['home', 'stores', 'wallet', 'me', 'claim', 'notes'].includes(ui.tab)) ui.tab = 'home'; html = customer(); }
+  else if (role === 'merchant' && S.merchants.some(m => m.id === ui.actor)) { if (!['home', 'report', 'topup', 'settle', 'bank', 'notes'].includes(ui.tab)) ui.tab = 'home'; html = merchant(); }
+  else if (stateLoaded && (role === 'customer' || role === 'merchant')) html = repairHtml(role);
+  else html = loadingHtml('جاري مزامنة حسابك...', true);
+  app.innerHTML = html;
+  const tp = $('#tp'); if (tp) updNet();
+  fetchPhotos(); fetchCovers();
+}
+function updNet() { const tp = $('#tp'), n = $('#tpnet'); if (tp && n) n.textContent = 'تنزل في محفظتك بعد الموافقة: ' + fmt(Number(tp.value || 0)); }
+
+/* ---------- الأحداث ---------- */
+function busy(on) { auth.busy = on; document.querySelectorAll('#app .btn').forEach(b => { b.disabled = on; }); }
+const A = {
+  tab(v) { if (ui.tab === 'notes' && v !== 'notes') { L.readNotes(meId()); save(); } ui.tab = v; render(); },
+  want(v) { auth.want = v || null; auth.mode = 'login'; auth.fail = ''; render(); },
+  authmode(v) { auth.mode = v; auth.fail = ''; render(); },
+  rp(v) { ui.rp = v; render(); },
+  async invite() {
+    const c = S.customers.find(x => x.id === ui.actor); if (!c) return;
+    const url = inviteLink(c), text = 'سجل في CASH BACK واستلم كاش باك على مشترياتك: ' + url;
+    try { if (navigator.share) { await navigator.share({ title: 'CASH BACK', text, url }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
+    try { await navigator.clipboard.writeText(text); toast('تم نسخ رابط الدعوة'); } catch (e) { prompt('انسخ الرابط:', url); }
+  },
+  async exit() {
+    ui.last = null; ui.claimPhoto = null; ui.claimMid = null; ui.q = ''; ui.cat = 'all'; ui.role = null; ui.actor = null; auth.profile = null; auth.pend = null; auth.fail = ''; auth.mode = 'login'; auth.want = null;
+    try { if (fdb && dirty) { clearTimeout(pushT); await pushNow(); } if (fbAuth) await fbAuth.signOut(); else render(); } catch (e) { render(); }
+  },
+  async login() {
+    if (auth.busy) return;
+    const em = normEmail($('#a_email').value), pw = $('#a_pw').value;
+    if (!em) return toast('اكتب إيميل صحيح (مثال name@gmail.com)');
+    if (!pw) return toast('اكتب كلمة السر');
+    if (!fbAuth) return toast(auth.fail || 'جاري الاتصال... حاول بعد ثواني');
+    busy(true);
+    try { await fbAuth.signInWithEmailAndPassword(em, pw); } catch (e) { toast(authErr(e)); }
+    busy(false);
+  },
+  async social(kind) {
+    if (auth.busy) return;
+    if (!fbAuth) return toast(auth.fail || 'جاري الاتصال... حاول بعد ثواني');
+    if (kind === 'facebook' && !FB_READY) return toast('الدخول بفيسبوك قريباً. استعمل Google أو الإيميل الآن.');
+    let prov;
+    try { prov = provFor(kind === 'facebook' ? 'facebook.com' : 'google.com'); } catch (e) { return toast('تعذر تحميل خدمة الدخول'); }
+    try { if (kind !== 'facebook') prov.setCustomParameters({ prompt: 'select_account' }); } catch (e) {}
+    try { fbAuth.languageCode = 'ar'; } catch (e) {}
+    try { localStorage.setItem('cb_want', auth.want || ''); } catch (e) {}
+    busy(true); auth.fail = '';
+    let redirected = false;
+    try { await fbAuth.signInWithPopup(prov); }
+    catch (e) {
+      const c = (e && e.code) || '';
+      if (c === 'auth/popup-blocked' || c === 'auth/operation-not-supported-in-this-environment') {
+        try { redirected = true; await fbAuth.signInWithRedirect(prov); return; } catch (x) { redirected = false; toast(authErr(x)); }
+      } else if (c !== 'auth/popup-closed-by-user' && c !== 'auth/cancelled-popup-request') toast(authErr(e));
+    }
+    if (!redirected) { try { localStorage.removeItem('cb_want'); } catch (e) {} }
+    busy(false);
+  },
+  async socialfinish() {
+    if (auth.busy) return;
+    const u = auth.user, role = auth.want;
+    if (!u || !role || !fbdb) return toast(auth.fail || 'جاري الاتصال... حاول بعد ثواني');
+    const name = $('#a_name').value.trim(), phone = $('#a_phone').value, cat = $('#reg_cat') ? $('#reg_cat').value : 'shops';
+    if (!name) return toast(role === 'merchant' ? 'اكتب اسم المحل' : 'اكتب اسمك');
+    if (!normPhone(phone)) return toast('اكتب رقم ليبيانا صحيح (يبدأ بـ 092 أو 094، مثال 0921234567)');
+    busy(true);
+    try {
+      const ref = fbdb.collection('cashback').doc('state'), uref = fbdb.collection('users').doc(u.uid);
+      const out = await fbdb.runTransaction(async tx => {
+        const d = await tx.get(ref), cur = d.exists ? d.data() : { json: null, rev: 0 };
+        const prev = S; let ent, json;
+        S = cur.json ? JSON.parse(cur.json) : initial(); norm();
+        try { ent = role === 'customer' ? L.addCustomer(name, phone, undefined, getRef()) : L.addMerchant(name, cat, phone); json = stripS(); } finally { S = prev; }
+        tx.set(ref, { json, rev: cur.rev + 1, t: Date.now() });
+        tx.set(uref, { role, eid: ent.id, name });
+        return { json, rev: cur.rev + 1 };
+      });
+      adopt(out.json, out.rev);
+      auth.pend = null;
+      await afterLogin(u);
+      toast(role === 'merchant' ? 'تم التسجيل. حسابك بانتظار موافقة المدير.' : 'تم إنشاء حسابك');
+    } catch (e) { toast(authErr(e)); }
+    busy(false);
+  },
+  async socialcancel() {
+    const u = auth.user; auth.pend = null; auth.want = null; auth.fail = '';
+    try { if (u) await u.delete(); } catch (e) { try { await fbAuth.signOut(); } catch (x) {} }
+    render();
+  },
+  async forgot() {
+    if (auth.busy) return;
+    const em = normEmail($('#a_email').value);
+    if (!em) return toast('اكتب إيميلك في خانة الإيميل أول، ثم اضغط «نسيت كلمة السر؟»');
+    if (!fbAuth) return toast(auth.fail || 'جاري الاتصال... حاول بعد ثواني');
+    busy(true);
+    try {
+      try { fbAuth.languageCode = 'ar'; } catch (e) {}
+      await fbAuth.sendPasswordResetEmail(em);
+      toast('لو الإيميل مسجّل، وصلته رسالة لتغيير كلمة السر. شوف البريد (وجرّب Spam).');
+    } catch (e) {
+      if (e && e.code === 'auth/user-not-found') toast('لو الإيميل مسجّل، وصلته رسالة لتغيير كلمة السر. شوف البريد (وجرّب Spam).');
+      else toast(authErr(e));
+    }
+    busy(false);
+  },
+  async adminlogin() {
+    if (auth.busy) return;
+    const pw = $('#ad_pw').value;
+    if (!pw) return toast('اكتب كلمة السر');
+    if (!fbAuth) return toast(auth.fail || 'جاري الاتصال... حاول بعد ثواني');
+    busy(true);
+    try { await fbAuth.signInWithEmailAndPassword(ADMIN_EMAIL, pw); } catch (e) { toast(authErr(e)); }
+    busy(false);
+  },
+  async signup(role) {
+    if (auth.busy) return;
+    const name = $('#a_name').value.trim(), em = normEmail($('#a_email').value), pw = $('#a_pw').value, cat = $('#reg_cat') ? $('#reg_cat').value : 'shops', phone = $('#a_phone') ? $('#a_phone').value : '';
+    if (!name) return toast(role === 'merchant' ? 'اكتب اسم المحل' : 'اكتب اسمك');
+    if (!normPhone(phone)) return toast('اكتب رقم ليبيانا صحيح (يبدأ بـ 092 أو 094، مثال 0921234567)');
+    if (!em) return toast('اكتب إيميل صحيح (مثال name@gmail.com)');
+    if (pw.length < 6) return toast('كلمة السر قصيرة (6 أحرف على الأقل)');
+    if (!fbAuth || !fbdb) return toast(auth.fail || 'جاري الاتصال... حاول بعد ثواني');
+    busy(true); auth.creating = true;
+    let cred = null;
+    try {
+      cred = await fbAuth.createUserWithEmailAndPassword(em, pw);
+      const ref = fbdb.collection('cashback').doc('state'), uref = fbdb.collection('users').doc(cred.user.uid);
+      const out = await fbdb.runTransaction(async tx => {
+        const d = await tx.get(ref), cur = d.exists ? d.data() : { json: null, rev: 0 };
+        const prev = S; let ent, json;
+        S = cur.json ? JSON.parse(cur.json) : initial(); norm();
+        try { ent = role === 'customer' ? L.addCustomer(name, phone, undefined, getRef()) : L.addMerchant(name, cat, phone); json = stripS(); } finally { S = prev; }
+        tx.set(ref, { json, rev: cur.rev + 1, t: Date.now() });
+        tx.set(uref, { role, eid: ent.id, name });
+        return { json, rev: cur.rev + 1 };
+      });
+      adopt(out.json, out.rev);
+      auth.creating = false;
+      await afterLogin(cred.user);
+      toast(role === 'merchant' ? 'تم التسجيل. حسابك بانتظار موافقة المدير.' : 'تم إنشاء حسابك');
+    } catch (e) {
+      auth.creating = false;
+      if (cred && cred.user) { try { await cred.user.delete(); } catch (x) { try { await fbAuth.signOut(); } catch (y) {} } }
+      toast(authErr(e));
+    }
+    auth.creating = false; busy(false);
+  },
+  cancelTx(id) { if (!confirm('تلغي هذه العملية؟ الكاش باك يرجع من حساب الزبون وعمولتك ترجع لمحفظتك.')) return; if (run(() => L.cancelTx(ui.actor, id))) toast('تم إلغاء العملية'); },
+  topup() { if (run(() => L.requestTopup(ui.actor, $('#tp').value, $('#tp_ref').value, ui.topPhoto))) { ui.topPhoto = null; render(); toast('انرسل الطلب للمدير'); } },
+  async copyacct() { const a = S.settings.topAcct || ''; try { await navigator.clipboard.writeText(a); toast('تم نسخ رقم الحساب'); } catch (e) { prompt('انسخ رقم الحساب:', a); } },
+  savetopbank() { const g = id => ($(id) ? $(id).value : ''); if (run(() => L.setTopBank({ bank: g('#tb_bank'), holder: g('#tb_name'), acct: g('#tb_acct') }))) toast('انحفظ حساب الشحن'); },
+  mbank() { if (run(() => L.setMerchantCat(ui.actor, $('#mb_cat').value))) toast('انحفظ'); },
+  savefmt(v) { if (run(() => L.setBarcodeFormat(v, $('#bp_' + v).value, $('#bl_' + v).value))) toast('انحفظت الشروط'); },
+  togglem(v) { run(() => L.setMerchantStatus(v)); },
+  gophoto() { ui.tab = 'claim'; render(); },
+  claimfor(v) { ui.claimMid = v; ui.tab = 'claim'; render(); },
+  cat(v) { ui.cat = v; ui.tab = 'stores'; render(); },
+  chip(v) { ui.cat = v; render(); },
+  sendclaim() {
+    const o = { mid: $('#c_mid').value, no: $('#c_no').value, date: $('#c_date').value, time: $('#c_time').value, barcode: $('#c_bar').value, amount: $('#c_amt').value, photo: ui.claimPhoto };
+    const cl = run(() => L.submitClaim(ui.actor, o));
+    if (cl && cl.id) { ui.claimPhoto = null; render(); toast(cl.status === 'approved' ? `تم! كاش باك ${fmt(cl.cashback)} دخل محفظتك` : 'انرسل الطلب لمراجعة المدير'); }
+  },
+  okclaim(v) { const tx = run(() => L.reviewClaim(v, true)); if (tx && tx.method) toast(`تم اعتماد الفاتورة. كاش باك ${fmt(tx.cashback)}`); },
+  noclaim(v) { run(() => L.reviewClaim(v, false)); },
+  payout() { if (run(() => L.requestPayout(ui.actor, $('#po_amt').value))) toast('انرسل طلب التحويل للمدير'); },
+  okpay(v) { run(() => L.approvePayout(v)); },
+  nopay(v) { run(() => L.rejectPayout(v)); },
+  approve(v) { run(() => L.approveTopup(v)); },
+  reject(v) { run(() => L.rejectTopup(v)); },
+  addbank() {
+    const key = $('#b_key').value.trim();
+    const b = run(() => L.addBank({ name: $('#b_name').value, holder: $('#b_holder').value, number: $('#b_num').value, kind: $('#b_kind').value, hasKey: !!key }));
+    if (b && b.id && key) { try { localStorage.setItem('cb_key_' + b.id, key); } catch (e) { toast('تعذر حفظ المفتاح على هذا الجهاز'); } render(); }
+  },
+  linkbank(v) { if (run(() => L.linkBank(v))) toast('تم الربط (تجريبي). الاتصال الفعلي بالبنك يحتاج خادم.'); },
+  delbank(v) { run(() => L.removeBank(v)); try { localStorage.removeItem('cb_key_' + v); } catch (e) {} },
+  rates() { if (run(() => { L.setRates($('#r_c').value, $('#r_k').value); L.setClaimHours($('#r_h').value); L.setAutoApprove($('#r_a').value === '1'); L.setLimits($('#r_mx').value, $('#r_md').value); L.setMinTopup($('#r_min').value); L.setMinSettle($('#r_ms').value); })) toast('انحفظت الإعدادات'); },
+  cbpay() { const mid = $('#cb_mid') ? $('#cb_mid').value : '', amt = $('#cb_amt') ? $('#cb_amt').value : ''; if (run(() => L.requestCbPay(ui.actor, mid, amt))) toast('انرسل الطلب للتاجر'); },
+  cbcancel(v) { if (run(() => L.cancelCbPay(v, ui.actor))) toast('تم إلغاء الطلب'); },
+  cbok(v) { const t = run(() => L.reviewCbPay(v, true, ui.actor)); if (t) toast('تم القبول. نزل في كاش باك المستلم'); },
+  cbno(v) { run(() => L.reviewCbPay(v, false, ui.actor)); },
+  setl() { const g = id => ($(id) ? $(id).value : ''); if (run(() => L.requestSettle(ui.actor, { bank: g('#sl_bank'), acct: g('#sl_acct'), holder: g('#sl_name') }))) toast('انرسل طلب السحب للمدير'); },
+  okset(v) { const r = $('#sr_' + v); if (run(() => L.approveSettle(v, r ? r.value : ''))) toast('تم تسجيل التحويل'); },
+  noset(v) { run(() => L.rejectSettle(v)); },
+  async shareset(v) {
+    const t = S.settles.find(x => x.id === v); if (!t) return;
+    const text = settleText(t);
+    try { if (navigator.share) { await navigator.share({ title: 'كشف سحب ' + t.no, text }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
+    try { await navigator.clipboard.writeText(text); toast('تم نسخ الكشف'); } catch (e) { prompt('انسخ الكشف:', text); }
+  },
+  syncinfo() { toast(sync.msg); },
+  async rmcover(v) {
+    try { if (fdb) await fdb.collection('photos').doc('cover_' + v).delete(); } catch (e) {}
+    delete coverCache[v]; coverReq.delete(v);
+    run(() => { find(S.merchants, v, 'تاجر غير موجود').cover = 0; });
+  },
+  snd() { try { localStorage.setItem('cb_snd', soundOn() ? '0' : '1'); } catch (e) {} render(); if (soundOn()) ding(); },
+  sndtest() { ding(true); },
+  geo() { askGeo(); },
+  mloc() {
+    if (!navigator.geolocation) return toast('جهازك ما يدعم تحديد الموقع');
+    toast('جاري تحديد موقعك...');
+    navigator.geolocation.getCurrentPosition(
+      p => { if (run(() => L.setMerchantLoc(ui.actor, p.coords.latitude, p.coords.longitude))) toast('انحفظ موقع المحل'); },
+      e => toast(e && e.code === 1 ? 'اسمح للتطبيق بالوصول للموقع ثم حاول' : 'تعذر تحديد الموقع. تأكد أن GPS شغّال'),
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 });
+  },
+  mlocdel() { if (run(() => L.setMerchantLoc(ui.actor, null))) toast('انمسح الموقع'); },
+  askdel() { ui.confirmDel = true; render(); },
+  canceldel() { ui.confirmDel = false; render(); },
+  async dodel() {
+    const w = $('#del_word'), pw = $('#del_pw');
+    if (!w || w.value.trim() !== 'حذف') return toast('اكتب كلمة «حذف» للتأكيد');
+    const viaPw = hasPw(auth.user);
+    if (viaPw && (!pw || !pw.value)) return toast('اكتب كلمة السر');
+    if (!fbAuth || !fbdb || !auth.user) return toast('جاري الاتصال... حاول بعد ثواني');
+    const role = ui.role, eid = ui.actor, user = auth.user;
+    try { L.canDelete(role, eid); } catch (e) { return toast(e.message); }
+    const claimIds = S.claims.filter(x => x.cid === eid).map(x => x.id);
+    busy(true);
+    try {
+      if (viaPw) await user.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(user.email, pw.value));
+      else await user.reauthenticateWithPopup(provFor(((user.providerData || []).find(x => x.providerId !== 'password') || {}).providerId));
+      if (!run(() => L.deleteAccount(role, eid))) { busy(false); return; }
+      clearTimeout(pushT); await pushNow();
+      if (dirty || sync.st === 'err') throw new Error('تعذر حفظ الحذف، تأكد من الإنترنت وحاول مرة ثانية');
+      for (const id of claimIds) { try { await fbdb.collection('photos').doc(id).delete(); } catch (e) {} }
+      await fbdb.collection('users').doc(user.uid).delete();
+      ui.confirmDel = false; ui.last = null; ui.role = null; ui.actor = null; auth.profile = null;
+      await user.delete();
+      toast('تم حذف حسابك وبياناتك');
+    } catch (e) {
+      toast(e && e.code === 'auth/wrong-password' || e && e.code === 'auth/invalid-credential' ? 'كلمة السر غير صحيحة' : (e && e.message) || 'تعذر الحذف');
+    }
+    busy(false);
+  },
+  askreset() { ui.confirmReset = true; render(); },
+  cancelreset() { ui.confirmReset = false; render(); },
+  repair() {
+    const p = auth.profile; if (!p || !p.eid) return toast('حسابك غير مكتمل. اتصل بالمدير.');
+    const phone = $('#rp_phone') ? $('#rp_phone').value : '';
+    if (run(() => { if (p.role === 'merchant') L.addMerchant(p.name || 'محل', 'shops', phone, p.eid); else L.addCustomer(p.name || 'زبون', phone, p.eid); })) toast('تم إعادة إنشاء حسابك');
+  },
+  doreset() {
+    const w = $('#rs_word'); if (!w || w.value.trim() !== 'مسح') return toast('اكتب كلمة «مسح» في الخانة للتأكيد');
+    try { exportBackup(); } catch (e) {}
+    S = initial(); ui.confirmReset = false; save(); render(); toast('تم المسح (نزلت نسخة احتياطية قبل المسح)');
+  },
+  backup() { try { exportBackup(); toast('جاري تنزيل النسخة الاحتياطية'); } catch (e) { toast('تعذر إنشاء النسخة'); } },
+  dorestore() {
+    if (!pendingRestore) return;
+    S = pendingRestore; pendingRestore = null; ui.confirmRestore = false; norm(); save(); render(); toast('تم استرجاع النسخة');
+  },
+  cancelrestore() { pendingRestore = null; ui.confirmRestore = false; render(); }
+};
+document.addEventListener('change', e => {
+  if (!e.target || e.target.id !== 'bk_file' || !e.target.files || !e.target.files[0]) return;
+  const f = e.target.files[0], rd = new FileReader();
+  rd.onload = () => {
+    try {
+      const o = JSON.parse(String(rd.result)), st = o && o.state;
+      if (!o || o.app !== 'cashback' || !st || !Array.isArray(st.merchants) || !Array.isArray(st.customers) || !st.settings) throw new Error('x');
+      pendingRestore = st; ui.confirmRestore = true; render();
+    } catch (x) { toast('الملف مو نسخة احتياطية صحيحة'); }
+  };
+  rd.onerror = () => toast('تعذر قراءة الملف');
+  rd.readAsText(f);
+});
+document.addEventListener('click', e => { const el = e.target.closest('[data-act]'); if (el && A[el.dataset.act]) A[el.dataset.act](el.dataset.v); });
+async function readClaimPhoto(file, inputEl) {
+  toast('جاري قراءة الصورة...');
+  const load = src => new Promise((ok, no) => { const im = new Image(); im.onload = () => ok(im); im.onerror = no; im.src = src; });
+  let img = null, url = '';
+  try { url = URL.createObjectURL(file); img = await load(url); }
+  catch (e) {
+    try {
+      const data = await new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = no; r.readAsDataURL(file); });
+      img = await load(data);
+    } catch (e2) { if (inputEl) inputEl.value = ''; return toast('تعذر فتح هذي الصورة. جرّب صورة ثانية أو التقط صورة جديدة.'); }
+  }
+  const draw = max => {
+    const k = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+    const cv = document.createElement('canvas'); cv.width = Math.round(img.naturalWidth * k); cv.height = Math.round(img.naturalHeight * k);
+    cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height); return cv;
+  };
+  ui.claimPhoto = draw(560).toDataURL('image/jpeg', 0.55);
+  const si = $('#shotimg'); if (si) { si.src = ui.claimPhoto; si.hidden = false; }
+  let found = '';
+  if ('BarcodeDetector' in window) {
+    try { const r = await new BarcodeDetector().detect(draw(1280)); if (r.length) found = r[0].rawValue; } catch (e) {}
+  }
+  if (url) URL.revokeObjectURL(url);
+  if (inputEl) inputEl.value = '';
+  const bar = $('#c_bar');
+  if (found && bar) { bar.value = found; toast('قرأت الباركود، راجع الرقم'); }
+  else toast('انحفظت الصورة. اكتب رقم الباركود بإيدك');
+}
+async function readTopPhoto(file, inputEl) {
+  toast('جاري قراءة الصورة...');
+  const load = src => new Promise((ok, no) => { const im = new Image(); im.onload = () => ok(im); im.onerror = no; im.src = src; });
+  let img = null;
+  try { const url = URL.createObjectURL(file); img = await load(url); URL.revokeObjectURL(url); }
+  catch (e) {
+    try { const data = await new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = no; r.readAsDataURL(file); }); img = await load(data); }
+    catch (e2) { if (inputEl) inputEl.value = ''; return toast('تعذر فتح هذي الصورة. جرّب صورة ثانية.'); }
+  }
+  const k = Math.min(1, 900 / Math.max(img.naturalWidth, img.naturalHeight));
+  const cv = document.createElement('canvas'); cv.width = Math.round(img.naturalWidth * k); cv.height = Math.round(img.naturalHeight * k);
+  cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+  ui.topPhoto = cv.toDataURL('image/jpeg', 0.6);
+  if (inputEl) inputEl.value = '';
+  const si = $('#toppic'); if (si) { si.src = ui.topPhoto; si.hidden = false; }
+  toast('انحفظت صورة الإيصال');
+}
+async function readCover(file, mid, inputEl) {
+  toast('جاري قراءة الصورة...');
+  const load = src => new Promise((ok, no) => { const im = new Image(); im.onload = () => ok(im); im.onerror = no; im.src = src; });
+  let img = null;
+  try { const url = URL.createObjectURL(file); img = await load(url); URL.revokeObjectURL(url); }
+  catch (e) { if (inputEl) inputEl.value = ''; return toast('تعذر فتح هذي الصورة. جرّب صورة ثانية.'); }
+  const W = 640, H = 320, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const k = Math.max(W / img.naturalWidth, H / img.naturalHeight), w = img.naturalWidth * k, h = img.naturalHeight * k;
+  cv.getContext('2d').drawImage(img, (W - w) / 2, (H - h) / 2, w, h);
+  const data = cv.toDataURL('image/jpeg', 0.6);
+  if (inputEl) inputEl.value = '';
+  if (!fdb) return toast('لا يوجد اتصال، حاول بعد ثواني');
+  try { await fdb.collection('photos').doc('cover_' + mid).set({ data }); }
+  catch (e) { return toast(fbErr(e)); }
+  coverCache[mid] = data; coverReq.add(mid);
+  run(() => { find(S.merchants, mid, 'تاجر غير موجود').cover = Date.now(); });
+  toast('انحفظت صورة المحل');
+}
+document.addEventListener('change', e => {
+  if (e.target.id && e.target.id.startsWith('cv_') && e.target.files && e.target.files[0]) { readCover(e.target.files[0], e.target.id.slice(3), e.target); }
+  if ((e.target.id === 'shot' || e.target.id === 'shot2') && e.target.files && e.target.files[0]) { readClaimPhoto(e.target.files[0], e.target); }
+  if (e.target.id === 'tpshot' && e.target.files && e.target.files[0]) { readTopPhoto(e.target.files[0], e.target); }
+});
+document.addEventListener('input', e => {
+  if (e.target.id === 'code') $('#prev').innerHTML = previewHtml(e.target.value.trim());
+  if (e.target.id === 'tp') updNet();
+  if (e.target.id === 'q') { ui.q = e.target.value; const r = $('#res'); if (r) r.innerHTML = resultsHtml(); }
+});
+document.addEventListener('focusout', () => { if (deferRender) setTimeout(() => { const a = document.activeElement; if (deferRender && !(a && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName))) { deferRender = false; render(); } }, 250); });
+window.addEventListener('hashchange', () => { auth.fail = ''; render(); });
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  if (e.target.id === 'ad_pw') A.adminlogin();
+  else if (e.target.id === 'a_pw' && auth.mode === 'login') A.login();
+});
+/* ---------- زر تثبيت التطبيق ---------- */
+(function () {
+  let dp = null;
+  const box = () => document.getElementById('inst');
+  const standalone = () => (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+  const ua = navigator.userAgent || '';
+  const isIOS = /iphone|ipad|ipod/i.test(ua) && !/crios|fxios/i.test(ua);
+  const snoozed = () => { try { return Date.now() < Number(localStorage.getItem('cb_inst_snooze') || 0); } catch (e) { return false; } };
+  const snooze = d => { try { localStorage.setItem('cb_inst_snooze', String(Date.now() + d * 864e5)); } catch (e) {} };
+  function hide() { const b = box(); if (b) b.classList.remove('show'); }
+  function show(msg, withBtn) {
+    const b = box(); if (!b || standalone() || snoozed()) return;
+    b.innerHTML = '<img src="icon-192.png" alt=""><div class="t"><b>ثبّت CASH BACK</b>' + msg + '</div>' +
+      (withBtn ? '<button class="go" id="inst_go">ثبّت</button>' : '') + '<button class="no" id="inst_no">لاحقًا</button>';
+    b.classList.add('show');
+    const no = document.getElementById('inst_no'); if (no) no.onclick = () => { snooze(3); hide(); };
+    const go = document.getElementById('inst_go');
+    if (go) go.onclick = async () => {
+      if (!dp) return;
+      try { dp.prompt(); const r = await dp.userChoice; if (r && r.outcome === 'accepted') toast('جاري تثبيت التطبيق'); else snooze(3); } catch (e) {}
+      dp = null; hide();
+    };
+  }
+  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); dp = e; show('يفتح مباشرة من الشاشة الرئيسية بدون متصفح.', true); });
+  window.addEventListener('appinstalled', () => { dp = null; hide(); try { toast('تم تثبيت التطبيق'); } catch (e) {} });
+  window.addEventListener('load', () => setTimeout(() => {
+    if (standalone() || dp) return;
+    if (isIOS) show('اضغط زر المشاركة ⬆️ ثم «إضافة إلى الشاشة الرئيسية».', false);
+    else if (/android/i.test(ua)) show('من قائمة المتصفح ⋮ اختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية».', false);
+  }, 4000));
+})();
+render();
+fbInit();
+</script>
+
+</body>
+</html>
