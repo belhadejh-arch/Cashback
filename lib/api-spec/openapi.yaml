@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: cashback
+    description: CASH BACK application
 paths:
   /healthz:
     get:
@@ -24,6 +26,193 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /cashback/session:
+    get:
+      operationId: getCashbackSession
+      tags: [cashback]
+      summary: Load the authenticated user's CASH BACK data
+      responses:
+        "200":
+          description: Profile and role-scoped application data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CashbackSession"
+  /cashback/health:
+    get:
+      operationId: cashbackDataHealth
+      tags: [cashback]
+      summary: Check Firestore connectivity without returning account data
+      responses:
+        "200":
+          description: Firestore is available
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+        "503":
+          description: Firestore is unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /cashback/register:
+    post:
+      operationId: registerCashbackProfile
+      tags: [cashback]
+      summary: Create a customer profile or merchant application
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CashbackRegistration"
+      responses:
+        "201":
+          description: Profile created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CashbackProfile"
+  /cashback/receipts:
+    post:
+      operationId: submitCashbackReceipt
+      tags: [cashback]
+      summary: Submit a receipt for review
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CashbackReceiptInput"
+      responses:
+        "201":
+          description: Receipt queued for review
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CashbackReceipt"
+  /cashback/receipts/{id}/decision:
+    patch:
+      operationId: decideCashbackReceipt
+      tags: [cashback]
+      summary: Approve or reject a receipt as an administrator
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CashbackReceiptDecision"
+      responses:
+        "200":
+          description: Receipt reviewed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActionResult"
+  /cashback/merchants/{id}/decision:
+    patch:
+      operationId: decideCashbackMerchant
+      tags: [cashback]
+      summary: Approve or reject a merchant application
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CashbackMerchantDecision"
+      responses:
+        "200":
+          description: Merchant application reviewed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActionResult"
+  /cashback/wallet/redemptions:
+    post:
+      operationId: redeemMerchantCashback
+      tags: [cashback]
+      summary: Spend cashback at its issuing merchant only
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CashbackRedemption"
+      responses:
+        "201":
+          description: Cashback redeemed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActionResult"
+  /cashback/profile/preferences:
+    patch:
+      operationId: updateCashbackPreferences
+      tags: [cashback]
+      summary: Save account language and theme preferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CashbackPreferences"
+      responses:
+        "200":
+          description: Preferences updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CashbackProfile"
+  /cashback/settings/rate:
+    patch:
+      operationId: updateCashbackRate
+      tags: [cashback]
+      summary: Update the cashback percentage as an administrator
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CashbackRateUpdate"
+      responses:
+        "200":
+          description: Rate updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActionResult"
+  /cashback/media/{id}:
+    get:
+      operationId: getCashbackMedia
+      tags: [cashback]
+      summary: Read an image belonging to the authenticated account
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Image bytes
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
 components:
   schemas:
     HealthStatus:
@@ -33,4 +222,84 @@ components:
           type: string
       required:
         - status
+    CashbackProfile:
+      type: object
+      required: [uid, role, eid, name]
+      properties:
+        uid: { type: string }
+        role: { type: string, enum: [customer, merchant, admin] }
+        eid: { type: string }
+        name: { type: string }
+        phone: { type: ["string", "null"] }
+        email: { type: ["string", "null"] }
+        preferences:
+          type: object
+          additionalProperties: true
+    CashbackState:
+      type: object
+      additionalProperties: true
+    CashbackSession:
+      type: object
+      required: [profile, state]
+      properties:
+        profile: { $ref: "#/components/schemas/CashbackProfile" }
+        state: { $ref: "#/components/schemas/CashbackState" }
+    CashbackRegistration:
+      type: object
+      required: [role, name, phone]
+      properties:
+        role: { type: string, enum: [customer, merchant] }
+        name: { type: string, minLength: 2, maxLength: 100 }
+        phone: { type: string, minLength: 7, maxLength: 20 }
+        country: { type: string, enum: [Algeria, Libya] }
+        city: { type: string, maxLength: 100 }
+        address: { type: string, maxLength: 300 }
+        mapsUrl: { type: string, maxLength: 500 }
+        category: { type: string, maxLength: 40 }
+        logoData: { type: string, maxLength: 650000 }
+        email: { type: ["string", "null"], maxLength: 254 }
+    CashbackReceiptInput:
+      type: object
+      required: [merchantId, amount, date, imageData]
+      properties:
+        merchantId: { type: string, minLength: 1 }
+        invoiceNumber: { type: ["string", "null"], maxLength: 100 }
+        amount: { type: number, exclusiveMinimum: 0, maximum: 100000000 }
+        date: { type: string, format: date }
+        imageData: { type: string, maxLength: 650000 }
+    CashbackReceipt:
+      type: object
+      additionalProperties: true
+    CashbackReceiptDecision:
+      type: object
+      required: [approved]
+      properties:
+        approved: { type: boolean }
+        reason: { type: ["string", "null"], maxLength: 300 }
+    CashbackMerchantDecision:
+      type: object
+      required: [approved]
+      properties:
+        approved: { type: boolean }
+        reason: { type: ["string", "null"], maxLength: 300 }
+    CashbackRedemption:
+      type: object
+      required: [merchantId, amount]
+      properties:
+        merchantId: { type: string, minLength: 1 }
+        amount: { type: number, exclusiveMinimum: 0, maximum: 100000000 }
+    CashbackPreferences:
+      type: object
+      required: [language, theme]
+      properties:
+        language: { type: string, enum: [ar, en, fr] }
+        theme: { type: string, enum: [dark, light] }
+    CashbackRateUpdate:
+      type: object
+      required: [rate]
+      properties:
+        rate: { type: number, minimum: 0, maximum: 100 }
+    ActionResult:
+      type: object
+      additionalProperties: true
 

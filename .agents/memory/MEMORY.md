@@ -1,0 +1,1 @@
+- [Preserve CASH BACK data](cashback-data-store.md) — extend the existing Firebase-backed app without deleting or replacing stored data.
