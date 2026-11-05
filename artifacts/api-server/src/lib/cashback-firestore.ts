@@ -1,10 +1,12 @@
 import { createPublicKey, createSign, verify } from "node:crypto";
 import type { Request } from "express";
+import { pool } from "@workspace/db";
 
 const PROJECT_ID = "studio-5817063024-c14a2";
 const DOCUMENT_ROOT = `projects/${PROJECT_ID}/databases/(default)/documents`;
 const FIRESTORE_URL = `https://firestore.googleapis.com/v1/${DOCUMENT_ROOT}`;
 const ADMIN_EMAIL = "imadbenhamouda509@gmail.com";
+const NEON_MIGRATION_MARKER = "system/firestore_import_complete";
 
 export type CashbackRole = "customer" | "merchant" | "admin";
 export type CashbackProfile = {
@@ -220,7 +222,159 @@ async function firestore(path: string, init?: RequestInit): Promise<Response> {
   return fetch(`${FIRESTORE_URL}/${path}`, { ...init, headers });
 }
 
+function neonIsPrimary(): boolean {
+  return process.env.CASHBACK_STORAGE === "neon";
+}
+
+function relativeDocumentPath(name: string): string {
+  const prefix = `${DOCUMENT_ROOT}/`;
+  if (!name.startsWith(prefix)) throw new CashbackError(400, "INVALID_DOCUMENT_PATH");
+  return name.slice(prefix.length);
+}
+
+export async function getNeonDocument(path: string): Promise<any | null> {
+  const result = await pool.query<{ body: any }>(
+    "SELECT body FROM cashback_documents WHERE path = $1",
+    [path],
+  );
+  return result.rows[0]?.body ?? null;
+}
+
+export async function listFirestoreCollection(
+  collection: "cashback" | "users" | "photos",
+): Promise<any[]> {
+  const documents: any[] = [];
+  let pageToken: string | undefined;
+  do {
+    const params = new URLSearchParams({ pageSize: "300" });
+    if (pageToken) params.set("pageToken", pageToken);
+    const response = await firestore(`${collection}?${params.toString()}`);
+    if (!response.ok) throw new CashbackError(503, `FIRESTORE_LIST_HTTP_${response.status}`);
+    const page = (await response.json()) as { documents?: any[]; nextPageToken?: string };
+    documents.push(...(page.documents ?? []));
+    pageToken = page.nextPageToken;
+  } while (pageToken);
+  return documents;
+}
+
+export async function importFirestoreDocumentToNeon(
+  document: Record<string, any>,
+): Promise<"inserted" | "unchanged"> {
+  if (typeof document.name !== "string" || !document.fields) {
+    throw new CashbackError(400, "INVALID_FIRESTORE_DOCUMENT");
+  }
+  const path = relativeDocumentPath(document.name);
+  const body = JSON.stringify(document);
+  const inserted = await pool.query(
+    `INSERT INTO cashback_documents (path, body, revision)
+     VALUES ($1, $2::jsonb, 1)
+     ON CONFLICT (path) DO NOTHING
+     RETURNING path`,
+    [path, body],
+  );
+  if (inserted.rowCount === 1) return "inserted";
+  const existing = await pool.query<{ identical: boolean }>(
+    "SELECT body = $2::jsonb AS identical FROM cashback_documents WHERE path = $1",
+    [path, body],
+  );
+  if (existing.rows[0]?.identical) return "unchanged";
+  throw new CashbackError(409, "NEON_MIGRATION_CONFLICT");
+}
+
+export async function markFirestoreImportComplete(counts: Record<string, number>): Promise<void> {
+  if (!(await getNeonDocument("cashback/state"))) {
+    throw new CashbackError(409, "NEON_STATE_MISSING");
+  }
+  const document = {
+    name: `${DOCUMENT_ROOT}/${NEON_MIGRATION_MARKER}`,
+    fields: encodeFields({ json: JSON.stringify({ completedAt: Date.now(), counts }) }),
+    updateTime: "neon:1",
+  };
+  const result = await pool.query(
+    `INSERT INTO cashback_documents (path, body, revision)
+     VALUES ($1, $2::jsonb, 1)
+     ON CONFLICT (path) DO NOTHING
+     RETURNING path`,
+    [NEON_MIGRATION_MARKER, JSON.stringify(document)],
+  );
+  if (result.rowCount !== 1) throw new CashbackError(409, "NEON_MIGRATION_ALREADY_MARKED");
+}
+
+async function commitToNeon(writes: any[]): Promise<boolean> {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    for (const write of writes) {
+      if (!write?.update?.name || !write.update.fields) {
+        throw new CashbackError(400, "UNSUPPORTED_DATABASE_WRITE");
+      }
+      const path = relativeDocumentPath(write.update.name);
+      const condition = write.currentDocument as
+        | { exists?: boolean; updateTime?: string }
+        | undefined;
+      const selected = await client.query<{ body: any; revision: string | number }>(
+        "SELECT body, revision FROM cashback_documents WHERE path = $1 FOR UPDATE",
+        [path],
+      );
+      const current = selected.rows[0];
+      if (condition?.exists === false && current) {
+        await client.query("ROLLBACK");
+        return false;
+      }
+      if (condition?.exists === true && !current) {
+        await client.query("ROLLBACK");
+        return false;
+      }
+      if (
+        condition?.updateTime &&
+        (!current || String(current.body?.updateTime ?? "") !== String(condition.updateTime))
+      ) {
+        await client.query("ROLLBACK");
+        return false;
+      }
+      const nextRevision = Number(current?.revision ?? 0) + 1;
+      const body = JSON.stringify({
+        ...(current?.body ?? {}),
+        ...write.update,
+        updateTime: `neon:${nextRevision}`,
+      });
+      if (current) {
+        const updated = await client.query(
+          `UPDATE cashback_documents
+           SET body = $2::jsonb, revision = $3, updated_at = now()
+           WHERE path = $1 AND revision = $4`,
+          [path, body, nextRevision, current.revision],
+        );
+        if (updated.rowCount !== 1) {
+          await client.query("ROLLBACK");
+          return false;
+        }
+      } else {
+        const inserted = await client.query(
+          `INSERT INTO cashback_documents (path, body, revision)
+           VALUES ($1, $2::jsonb, $3)
+           ON CONFLICT (path) DO NOTHING
+           RETURNING path`,
+          [path, body, nextRevision],
+        );
+        if (inserted.rowCount !== 1) {
+          await client.query("ROLLBACK");
+          return false;
+        }
+      }
+    }
+    await client.query("COMMIT");
+    return true;
+  } catch (error) {
+    await client.query("ROLLBACK").catch(() => undefined);
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 export async function getDocument(path: string): Promise<any | null> {
+  if (neonIsPrimary()) return getNeonDocument(path);
   const response = await firestore(path);
   if (response.status === 404) return null;
   if (!response.ok) throw new CashbackError(503, `FIRESTORE_HTTP_${response.status}`);
@@ -232,10 +386,16 @@ export async function getState(): Promise<{
   updateTime?: string;
   revision: number;
 }> {
+  if (neonIsPrimary() && !(await getNeonDocument(NEON_MIGRATION_MARKER))) {
+    throw new CashbackError(503, "NEON_MIGRATION_REQUIRED");
+  }
   const doc = await getDocument("cashback/state");
   const fields = fieldsOf(doc);
   const raw = fields.json?.stringValue;
-  if (!raw) return { state: emptyState(), revision: 0 };
+  if (!raw) {
+    if (neonIsPrimary()) throw new CashbackError(503, "NEON_STATE_MISSING");
+    return { state: emptyState(), revision: 0 };
+  }
   try {
     const state = normalizeLegacyState(JSON.parse(raw) as CashbackState);
     return {
@@ -280,6 +440,7 @@ export function documentWrite(collection: string, id: string, fields: Record<str
 }
 
 export async function commit(writes: any[]): Promise<boolean> {
+  if (neonIsPrimary()) return commitToNeon(writes);
   const response = await firestore(":commit", {
     method: "POST",
     body: JSON.stringify({ writes }),
