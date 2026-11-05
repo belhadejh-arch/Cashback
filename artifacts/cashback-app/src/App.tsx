@@ -678,7 +678,7 @@ function AppInner() {
         <div className="promo-art" aria-hidden="true"><div className="promo-ticket"><ReceiptText size={34}/><strong>{t('cashback')}</strong><span><Gift size={20}/></span></div><span className="promo-orbit promo-orbit-one"/><span className="promo-orbit promo-orbit-two"/></div>
       </section>
       <section className="category-section">
-        <div className="home-section-head"><h2>{t('categories')}</h2><button className="text-link" onClick={()=>nav('/shops')} data-testid="button-view-categories">{t('viewAll')}</button></div>
+        <div className="home-section-head"><h2>{t('categories')}</h2><button className="text-link" onClick={()=>nav('/shops')} data-testid="button-view-categories">{t('allShops')}</button></div>
         <div className="category-rail" role="group" aria-label={t('categories')}>
           {browseCategories.map(cat=><button key={cat} className={`category-chip ${selectedCategory===cat?'is-active':''}`} onClick={()=>setSelectedCategory(selectedCategory===cat?'':cat)} aria-pressed={selectedCategory===cat} data-testid={`filter-category-${cat}`}><CategoryIcon category={cat}/>{t(`cat_${cat}`)}</button>)}
         </div>

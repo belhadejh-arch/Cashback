@@ -1046,3 +1046,31 @@ html:not(.dark) .app-shell:has(.home-shops-section) .home-notification-row.is-un
   .app-shell:has(.home-shops-section) .home-promo-copy h1 { font-size:23px; }
   .app-shell:has(.home-shops-section) .home-promo-copy p { font-size:11px; }
 }
+
+/* Keep the home "All shops" action on one line without shrinking or clipping it. */
+.app-shell:has(.home-shops-section) .home-shops-section > .home-section-head {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) max-content;
+  align-items:center;
+  gap:8px;
+}
+.app-shell:has(.home-shops-section) .home-shops-section > .home-section-head > .text-link {
+  display:inline-flex;
+  width:max-content;
+  max-width:none;
+  min-width:max-content;
+  flex:none;
+  overflow:visible;
+  white-space:nowrap;
+  padding-inline:3px;
+}
+.app-shell:has(.home-shops-section) .home-shops-section > .home-section-head > div { min-width:0; }
+.app-shell:has(.home-shops-section) .home-shops-section > .home-section-head h2,
+.app-shell:has(.home-shops-section) .home-shops-section > .home-section-head p { overflow-wrap:anywhere; }
+
+/* The requested app-wide typography: one Changa face and one 14px text size. */
+html body,
+html body * {
+  font-family:'Changa',sans-serif!important;
+  font-size:14px!important;
+}
