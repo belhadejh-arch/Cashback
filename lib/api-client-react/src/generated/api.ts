@@ -21,6 +21,7 @@ import type {
 
 import type {
   ActionResult,
+  CashbackLogin,
   CashbackMerchantDecision,
   CashbackPreferences,
   CashbackProfile,
@@ -225,7 +226,7 @@ export const getCashbackDataHealthUrl = () => {
 }
 
 /**
- * @summary Check Firestore connectivity without returning account data
+ * @summary Check Neon connectivity without returning account data
  */
 export const cashbackDataHealth = async ( options?: Parameters<typeof customFetch>[1]): Promise<HealthStatus> => {
 
@@ -272,7 +273,7 @@ export type CashbackDataHealthQueryError = ErrorType<HealthStatus>
 
 
 /**
- * @summary Check Firestore connectivity without returning account data
+ * @summary Check Neon connectivity without returning account data
  */
 
 export function useCashbackDataHealth<TData = Awaited<ReturnType<typeof cashbackDataHealth>>, TError = ErrorType<HealthStatus>>(
@@ -379,6 +380,168 @@ export const useRegisterCashbackProfile = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getRegisterCashbackProfileMutationOptions(options));
+    }
+
+export const getLoginCashbackUrl = () => {
+
+
+
+
+  return `/api/cashback/auth/login`
+}
+
+/**
+ * @summary Sign in with an email address and password
+ */
+export const loginCashback = async (cashbackLogin: CashbackLogin, options?: Parameters<typeof customFetch>[1]): Promise<CashbackProfile> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<CashbackProfile>(getLoginCashbackUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(cashbackLogin)
+  }
+);}
+
+
+
+
+
+export const getLoginCashbackMutationKey = () => ['loginCashback'] as const;
+
+export const getLoginCashbackMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof loginCashback>>, TError,LoginCashbackMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof loginCashback>>, TError,LoginCashbackMutationVariables, TContext> => {
+
+const mutationKey = getLoginCashbackMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof loginCashback>>, LoginCashbackMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  loginCashback(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type LoginCashbackMutationResult = NonNullable<Awaited<ReturnType<typeof loginCashback>>>
+    export type LoginCashbackMutationBody = BodyType<CashbackLogin>
+    export type LoginCashbackMutationError = ErrorType<unknown>
+    export type LoginCashbackMutationVariables = {data: BodyType<CashbackLogin>}
+
+    /**
+ * @summary Sign in with an email address and password
+ */
+export const useLoginCashback = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof loginCashback>>, TError,LoginCashbackMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof loginCashback>>,
+        TError,
+        LoginCashbackMutationVariables,
+        TContext
+      > => {
+      return useMutation(getLoginCashbackMutationOptions(options));
+    }
+
+export const getLogoutCashbackUrl = () => {
+
+
+
+
+  return `/api/cashback/auth/logout`
+}
+
+/**
+ * @summary End the current session
+ */
+export const logoutCashback = async ( options?: Parameters<typeof customFetch>[1]): Promise<ActionResult> => {
+
+  return customFetch<ActionResult>(getLogoutCashbackUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getLogoutCashbackMutationKey = () => ['logoutCashback'] as const;
+
+export const getLogoutCashbackMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof logoutCashback>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof logoutCashback>>, TError,void, TContext> => {
+
+const mutationKey = getLogoutCashbackMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof logoutCashback>>, void> = () => {
+
+
+          return  logoutCashback(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type LogoutCashbackMutationResult = NonNullable<Awaited<ReturnType<typeof logoutCashback>>>
+
+    export type LogoutCashbackMutationError = ErrorType<unknown>
+
+
+    /**
+ * @summary End the current session
+ */
+export const useLogoutCashback = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof logoutCashback>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof logoutCashback>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getLogoutCashbackMutationOptions(options));
     }
 
 export const getSubmitCashbackReceiptUrl = () => {

@@ -1,18 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
-import { setAuthTokenGetter } from '@workspace/api-client-react';
 import {
   getGetCashbackSessionQueryKey, getGetCashbackMediaQueryKey,
   useGetCashbackSession, useRegisterCashbackProfile, useSubmitCashbackReceipt,
   useDecideCashbackReceipt, useDecideCashbackMerchant, useRedeemMerchantCashback,
   useUpdateCashbackPreferences, useUpdateCashbackRate, useGetCashbackMedia,
+  useLoginCashback, useLogoutCashback,
 } from '@workspace/api-client-react';
 import { useLocation } from 'wouter';
 import { QRCodeSVG } from 'qrcode.react';
-import {
-  getFirebaseAuth, signInWithEmail, createEmailAccount, linkEmailPassword, sendPasswordReset, sendPhoneCode,
-  confirmPhoneCode, currentFirebaseUser, signOutFirebase, firebaseErrorCode,
-} from './lib/firebase-auth';
 import {
   ArrowDownLeft, ArrowLeft, ArrowRight, BadgeCheck, Banknote, Camera, Check, ChevronDown,
   CircleHelp, Clock3, Compass, FileCheck2, FilePlus2, Globe2, LogOut, MapPin, Moon,
@@ -54,9 +50,9 @@ const libyanCitiesArabic = ['طرابلس','بنغازي','مصراتة','الب
 const cityArabic = Object.fromEntries([...wilayas.map((name,index)=>[name,wilayasArabic[index]]),...libyanCities.map((name,index)=>[name,libyanCitiesArabic[index]])]) as Record<string,string>;
 const localizeCity = (name:string|undefined, lang:Lang) => name && lang==='ar' ? cityArabic[name] || name : name || '';
 const formatMoney = (n: number, country = 'Algeria') => `${Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${country === 'Libya' ? 'LYD' : 'DZD'}`;
-const getHttpStatus = (error:unknown) => {
+const getHttpStatus = (error: unknown) => {
   if (!error || typeof error !== 'object') return 0;
-  const value = error as { status?:unknown; statusCode?:unknown; response?:{status?:unknown} };
+  const value = error as { status?: unknown; statusCode?: unknown; response?: { status?: unknown } };
   return Number(value.status ?? value.statusCode ?? value.response?.status ?? 0);
 };
 const queryClient = new QueryClient();
@@ -64,8 +60,8 @@ const queryClient = new QueryClient();
 function IconButton({ children, onClick, label, testId }: { children: ReactNode; onClick: () => void; label: string; testId: string }) {
   return <button className="btn btn-outline" onClick={onClick} aria-label={label} data-testid={testId} style={{ minHeight: 42, padding: '9px 12px' }}>{children}</button>;
 }
-function Field({ label, value, onChange, type = 'text', placeholder, testId, required = false, min, step }: { label: string; value: string; onChange: (v: string) => void; type?: string; placeholder?: string; testId: string; required?: boolean; min?: string; step?: string }) {
-  return <label style={{ display:'grid', gap:6, fontSize:14, fontWeight:600 }}>{label}<input className="field" type={type} value={value} placeholder={placeholder} onChange={e=>onChange(e.target.value)} data-testid={testId} required={required} min={min} step={step} /></label>;
+function Field({ label, value, onChange, type = 'text', placeholder, testId, required = false, min, step, autoComplete }: { label: string; value: string; onChange: (v: string) => void; type?: string; placeholder?: string; testId: string; required?: boolean; min?: string; step?: string; autoComplete?: string }) {
+  return <label style={{ display:'grid', gap:6, fontSize:14, fontWeight:600 }}>{label}<input className="field" type={type} value={value} placeholder={placeholder} onChange={e=>onChange(e.target.value)} data-testid={testId} required={required} min={min} step={step} autoComplete={autoComplete} /></label>;
 }
 function SelectField({ label, value, onChange, options, testId, formatOption }: { label: string; value: string; onChange:(v:string)=>void; options:string[]; testId:string; formatOption?:(option:string,index:number)=>string }) {
   return <label style={{ display:'grid', gap:6, fontSize:14, fontWeight:600 }}>{label}<select className="field" value={value} onChange={e=>onChange(e.target.value)} data-testid={testId}><option value="">—</option>{options.map((o,index)=><option key={o} value={o}>{formatOption?.(o,index)??o}</option>)}</select></label>;
@@ -82,24 +78,24 @@ function AppInner() {
   const [location, setLocation] = useLocation();
   const [lang, setLang] = useState<Lang>('ar');
   const [theme, setTheme] = useState<Theme>('dark');
-  const [firebaseUser, setFirebaseUser] = useState<{ uid?: string; phoneNumber?: string; email?: string } | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const [splash, setSplash] = useState(true);
-  const [authMode, setAuthMode] = useState<'login'|'register'|'reset'|'phone'>('login');
+  const [authMode, setAuthMode] = useState<'login'|'register'|'reset'>('login');
   const [registerRole, setRegisterRole] = useState<'customer'|'merchant'>('customer');
-  const [authStep, setAuthStep] = useState<'form'|'sms'>('form');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [email, setEmail] = useState(''); const [password, setPassword] = useState(''); const [confirm, setConfirm] = useState('');
-  const [phone, setPhone] = useState(''); const [code, setCode] = useState(''); const [name, setName] = useState('');
+  const [phone, setPhone] = useState(''); const [name, setName] = useState('');
   const [country, setCountry] = useState('Algeria'); const [city, setCity] = useState(''); const [address, setAddress] = useState(''); const [mapsUrl, setMapsUrl] = useState(''); const [category, setCategory] = useState(''); const [logoData, setLogoData] = useState('');
   const [search, setSearch] = useState(''); const [selectedMerchant, setSelectedMerchant] = useState<Merchant|null>(null);
   const [dialog, setDialog] = useState<'receipt'|'redeem'|null>(null); const [receiptMerchantId, setReceiptMerchantId] = useState(''); const [receiptFile, setReceiptFile] = useState(''); const [invoice, setInvoice] = useState(''); const [purchaseAmount, setPurchaseAmount] = useState(''); const [purchaseDate, setPurchaseDate] = useState(new Date().toISOString().slice(0,10)); const [redeemAmount, setRedeemAmount] = useState('');
   const [reason, setReason] = useState(''); const [rateValue, setRateValue] = useState('');
   const t = (key: string) => dictionaries[lang][key] || (key.startsWith('cat_') ? key.slice(4) : key);
-  const { data: session, isLoading, isError, error: queryError, refetch } = useGetCashbackSession({ query: { queryKey: getGetCashbackSessionQueryKey(), enabled: authReady && !!firebaseUser, retry: false, refetchOnWindowFocus: false } });
+  const { data: session, isLoading, isError, error: queryError, refetch } = useGetCashbackSession({ query: { queryKey: getGetCashbackSessionQueryKey(), enabled: authReady, retry: false, refetchOnWindowFocus: false } });
+  const sessionHttpStatus = getHttpStatus(queryError);
   const register = useRegisterCashbackProfile(); const submitReceipt = useSubmitCashbackReceipt(); const decideReceipt = useDecideCashbackReceipt();
   const decideMerchant = useDecideCashbackMerchant(); const redeem = useRedeemMerchantCashback(); const preferences = useUpdateCashbackPreferences(); const updateRate = useUpdateCashbackRate();
+  const login = useLoginCashback(); const signOut = useLogoutCashback();
   const user = session as Session|undefined;
   const state = user?.state || {};
   const merchants = state.merchants || []; const claims = state.claims || []; const txns = state.txns || [];
@@ -110,96 +106,44 @@ function AppInner() {
   const isRtl = lang === 'ar';
   useEffect(() => { document.documentElement.classList.toggle('dark', theme === 'dark'); document.documentElement.dir = isRtl ? 'rtl' : 'ltr'; document.documentElement.lang = lang; }, [theme, lang, isRtl]);
   useEffect(() => { const id = window.setTimeout(()=>setSplash(false), 1850); return ()=>window.clearTimeout(id); }, []);
-  useEffect(() => {
-    let active = true;
-    let unsubscribe = () => {};
-    void getFirebaseAuth().then(auth => {
-      if (!active) return;
-      setAuthTokenGetter(async () => { const fbUser = currentFirebaseUser(); return fbUser ? await fbUser.getIdToken() : null; });
-      unsubscribe = auth.onAuthStateChanged((next: { uid?: string; phoneNumber?: string; email?: string } | null) => {
-        client.clear();
-        setFirebaseUser(next);
-        setAuthReady(true);
-      });
-    }).catch(() => { setAuthReady(true); });
-    return () => { active = false; unsubscribe(); setAuthTokenGetter(null); };
-  }, [client]);
+   useEffect(() => { setAuthReady(true); }, []);
   useEffect(() => { if (profile?.preferences?.language) { setLang(profile.preferences.language); setTheme(profile.preferences.theme || 'dark'); } }, [profile?.uid, profile?.preferences?.language, profile?.preferences?.theme]);
-  useEffect(() => {
-    if (firebaseUser && isError && getHttpStatus(queryError)===403 && !profile && authReady) {
-      setPhone(firebaseUser.phoneNumber || '');
-      setEmail(firebaseUser.email || '');
-      setRegisterRole('customer');
-      setAuthMode('register');
-      setAuthStep('form');
-      setNotice(t('finishPhoneProfile'));
-    }
-  }, [firebaseUser?.uid, firebaseUser?.phoneNumber, firebaseUser?.email, isError, queryError, profile, authReady]);
   useEffect(() => { if (location.startsWith('/shop/')) { const id = location.split('/')[2]; setSelectedMerchant(merchants.find(m=>m.id===id)||null); } else if (location !== '/shop') setSelectedMerchant(null); }, [location, merchants]);
   const refreshSession = () => client.invalidateQueries({ queryKey: getGetCashbackSessionQueryKey() });
   const filtered = useMemo(()=>merchants.filter(m=>m.status === 'active' && `${m.name} ${m.cat||''} ${m.city||''}`.toLowerCase().includes(search.toLowerCase())), [merchants,search]);
   const customer = profile?.role === 'customer'; const merchant = profile?.role === 'merchant'; const admin = profile?.role === 'admin';
   const clearMessages = () => { setError(''); setNotice(''); };
-  const showErr = (e: unknown) => { setError(firebaseErrorCode(e) ? t('authError') : t('genericError')); };
+  const showErr = (caught: unknown) => {
+    const code = (caught as { data?: { error?: string } })?.data?.error;
+    if (code === 'EMAIL_ALREADY_REGISTERED') {
+      setError(lang==='ar'?'هذا البريد الإلكتروني مسجل مسبقاً.':lang==='fr'?'Cette adresse e-mail est déjà utilisée.':'This email is already registered.');
+    } else if (code === 'INVALID_CREDENTIALS') {
+      setError(t('authError'));
+    } else if (code === 'INVALID_REQUEST' || code === 'INVALID_PROFILE' || code === 'MERCHANT_FIELDS_REQUIRED') {
+      setError(t('incomplete'));
+    } else {
+      setError(t('genericError'));
+    }
+  };
   const invalidate = () => { void refreshSession(); };
 
   async function signIn() {
     clearMessages();
-    try { await signInWithEmail(email, password); invalidate(); await refetch(); setLocation('/'); }
-    catch (e) { showErr(e); }
-  }
-  async function beginPhone() {
-    clearMessages();
-    try { await sendPhoneCode(phone, 'sign-in'); setAuthMode('phone'); setAuthStep('sms'); setNotice(t('phoneStep')); }
-    catch (e) { showErr(e); }
-  }
-  async function confirmPhone() {
-    clearMessages();
-    try { await confirmPhoneCode(code); invalidate(); await refetch(); setLocation('/'); setAuthStep('form'); }
+    try { await login.mutateAsync({ data: { email, password } }); client.clear(); await refetch(); setLocation('/'); }
     catch (e) { showErr(e); }
   }
   async function beginRegistration() {
     clearMessages();
-    const phoneIdentity = !!firebaseUser?.phoneNumber;
-    if (phoneIdentity) {
-      if (!firebaseUser.phoneNumber) { setError(t('incomplete')); return; }
-      if (!name || (registerRole === 'merchant' && (!phone || !email || !password || !confirm || !country || !city || !address || !category || !logoData))) { setError(t('incomplete')); return; }
-      if (password && password !== confirm) { setError(t('passwordsDiffer')); return; }
-      try {
-        if (email && password) await linkEmailPassword(email, password);
-        const body = { role: registerRole, name, phone: firebaseUser.phoneNumber, ...(email ? { email } : {}), ...(registerRole==='merchant' ? { country: country as 'Algeria'|'Libya', city, address, mapsUrl, category, logoData } : {}) };
-        await register.mutateAsync({ data: body });
-        invalidate(); await refetch(); setAuthStep('form'); setLocation('/');
-      } catch (e) { showErr(e); }
-      return;
-    }
-    if (firebaseUser?.email) {
-      if (!name || !phone || (registerRole==='merchant' && (!country || !city || !address || !category || !logoData))) { setError(t('incomplete')); return; }
-      try { await sendPhoneCode(phone, 'link'); setAuthMode('register'); setAuthStep('sms'); setNotice(t('phoneStep')); }
-      catch (e) { showErr(e); }
-      return;
-    }
-    if (!name || !phone || !email || !password || (registerRole==='merchant' && (!country || !city || !address || !category || !logoData))) { setError(t('incomplete')); return; }
+    if (!name || !email || !password || password.length < 8 || (registerRole==='merchant' && (!phone || !country || !city || !address || !category || !logoData))) { setError(t('incomplete')); return; }
     if (password !== confirm) { setError(t('passwordsDiffer')); return; }
     try {
-      await createEmailAccount(email, password);
-      await sendPhoneCode(phone, 'link');
-      setAuthMode('register'); setAuthStep('sms'); setNotice(t('phoneStep'));
-    } catch(e) { showErr(e); }
-  }
-  async function finishRegistration() {
-    clearMessages();
-    try {
-      await confirmPhoneCode(code);
-      const body = { role: registerRole, name, phone, ...(registerRole==='merchant' ? { country: country as 'Algeria'|'Libya', city, address, mapsUrl, category, logoData } : {}), email };
-      await register.mutateAsync({ data: body });
-      invalidate(); await refetch(); setAuthStep('form'); setLocation('/');
+      await register.mutateAsync({ data: { role: registerRole, name, phone: phone || null, email, password, ...(registerRole==='merchant' ? { country: country as 'Algeria'|'Libya', city, address, mapsUrl, category, logoData } : {}) } });
+      client.clear(); await refetch(); setLocation('/');
     } catch(e) { showErr(e); }
   }
   async function resetPassword() {
     clearMessages();
-    try { await sendPasswordReset(email); setNotice(t('resetSent')); }
-    catch(e) { showErr(e); }
+    setNotice(lang==='ar'?'استعادة كلمة المرور تتطلب إعداد خدمة بريد إلكتروني.':lang==='fr'?'La réinitialisation nécessite la configuration d’un service e-mail.':'Password reset needs an email delivery service to be configured.');
   }
   async function changePreference(nextLang: Lang, nextTheme: Theme) {
     if (profile) {
@@ -264,8 +208,8 @@ function AppInner() {
     catch { setError(t('genericError')); }
   }
   async function logout() {
-    try { await signOutFirebase(); } catch { /* Local view still exits if Firebase is unavailable. */ }
-    client.clear(); setLocation('/'); setAuthMode('login'); setAuthStep('form');
+    try { await signOut.mutateAsync(); } catch { /* Clear the local view even if the session endpoint is unreachable. */ }
+    client.clear(); setLocation('/'); setAuthMode('login');
   }
   const nav = (path: string) => { setLocation(path); setDialog(null); clearMessages(); };
   const header = (account = true) => <header style={{ maxWidth:1120, margin:'0 auto', padding:'14px 18px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:12 }}>
@@ -288,7 +232,7 @@ function AppInner() {
   if (profile && isError) return shell(<div style={{ maxWidth:540, margin:'50px auto' }}>{noticeBox(t('loadError'),true)}<button className="btn btn-primary" onClick={()=>void refetch()} data-testid="button-retry">{t('retryLoad')} <RefreshCw size={16}/></button></div>);
 
   if (!profile) {
-    const activeAuth = authMode==='register' ? t('createAccount') : authMode==='reset' ? t('reset') : authMode==='phone' ? t('phoneLogin') : t('login');
+    const activeAuth = authMode==='register' ? t('createAccount') : authMode==='reset' ? t('reset') : t('login');
     return <div className="app-shell grain" dir={isRtl?'rtl':'ltr'}>
       {header(false)}
       <main style={{ maxWidth:1040, margin:'0 auto', padding:'24px 18px 60px', display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,360px),1fr))', gap:24, alignItems:'stretch' }}>
@@ -299,24 +243,17 @@ function AppInner() {
         </section>
         <section className="surface" style={{ padding:'clamp(22px,4vw,36px)', borderRadius:26, alignSelf:'center' }}>
           <div style={{ display:'flex',gap:6, padding:4, borderRadius:13,background:'hsl(var(--muted))',marginBottom:24 }}>
-            <button className={`btn ${registerRole==='customer'?'btn-primary':''}`} style={{ flex:1,background:registerRole==='customer'?undefined:'transparent' }} onClick={()=>{setRegisterRole('customer');setAuthMode('login');setAuthStep('form');clearMessages()}} data-testid="tab-customer"><UserRound size={16}/>{t('customer')}</button>
-            <button className={`btn ${registerRole==='merchant'?'btn-primary':''}`} style={{ flex:1,background:registerRole==='merchant'?undefined:'transparent' }} onClick={()=>{setRegisterRole('merchant');setAuthMode('login');setAuthStep('form');clearMessages()}} data-testid="tab-merchant"><Store size={16}/>{t('merchant')}</button>
+            <button className={`btn ${registerRole==='customer'?'btn-primary':''}`} style={{ flex:1,background:registerRole==='customer'?undefined:'transparent' }} onClick={()=>{setRegisterRole('customer');setAuthMode('login');clearMessages()}} data-testid="tab-customer"><UserRound size={16}/>{t('customer')}</button>
+            <button className={`btn ${registerRole==='merchant'?'btn-primary':''}`} style={{ flex:1,background:registerRole==='merchant'?undefined:'transparent' }} onClick={()=>{setRegisterRole('merchant');setAuthMode('login');clearMessages()}} data-testid="tab-merchant"><Store size={16}/>{t('merchant')}</button>
           </div>
-          <div style={{ display:'flex',alignItems:'center',gap:12,marginBottom:18 }}><div style={{ width:42,height:42,borderRadius:13,background:'hsl(var(--primary) / .16)',color:'hsl(var(--primary))',display:'grid',placeItems:'center' }}>{registerRole==='merchant'?<Store size={20}/>:<Wallet size={20}/>}</div><div><h2 style={{ margin:0,fontSize:24 }}>{authStep==='sms'?t('verify'):activeAuth}</h2><span className="subtle" style={{ fontSize:13 }}>{t('welcome')}</span></div></div>
+          <div style={{ display:'flex',alignItems:'center',gap:12,marginBottom:18 }}><div style={{ width:42,height:42,borderRadius:13,background:'hsl(var(--primary) / .16)',color:'hsl(var(--primary))',display:'grid',placeItems:'center' }}>{registerRole==='merchant'?<Store size={20}/>:<Wallet size={20}/>}</div><div><h2 style={{ margin:0,fontSize:24 }}>{activeAuth}</h2><span className="subtle" style={{ fontSize:13 }}>{t('welcome')}</span></div></div>
           {error && noticeBox(error,true)}{notice && noticeBox(notice)}
-          {authStep==='sms' ? <div style={{ display:'grid',gap:15 }}>
-            <p className="subtle" style={{ margin:0 }}>{t('phoneStep')}</p>
-            <Field label={t('code')} value={code} onChange={setCode} testId="input-phone-code" placeholder="123456" />
-            <button className="btn btn-primary" onClick={()=>authMode==='register'?void finishRegistration():void confirmPhone()} data-testid="button-verify-code">{t('verifyCode')} <ArrowRight size={17}/></button>
-            <button className="btn btn-outline" onClick={()=>{setAuthStep('form');setCode('')}} data-testid="button-back">{t('back')}</button>
-          </div> : authMode==='register' ? <div style={{ display:'grid',gap:13 }}>
+          {authMode==='register' ? <form onSubmit={e=>{e.preventDefault();void beginRegistration();}} style={{ display:'grid',gap:13 }}>
             <Field label={registerRole==='merchant'?t('shopName'):t('name')} value={name} onChange={setName} testId="input-name" required/>
-            <Field label={t('phone')} value={phone} onChange={setPhone} testId="input-phone" type="tel" required={!firebaseUser?.phoneNumber} placeholder="+213 …"/>
-            {(!firebaseUser || (firebaseUser.phoneNumber && registerRole==='merchant')) && <>
-              <Field label={t('email')} value={email} onChange={setEmail} testId="input-email" type="email" required={registerRole==='merchant'||!firebaseUser?.phoneNumber}/>
-              <Field label={t('password')} value={password} onChange={setPassword} testId="input-password" type="password" required={registerRole==='merchant'||!firebaseUser?.phoneNumber}/>
-              <Field label={t('confirmPassword')} value={confirm} onChange={setConfirm} testId="input-confirm-password" type="password" required={registerRole==='merchant'||!firebaseUser?.phoneNumber}/>
-            </>}
+            <Field label={t('phone')} value={phone} onChange={setPhone} testId="input-phone" type="tel" required={registerRole==='merchant'} placeholder="+213 …"/>
+            <Field label={t('email')} value={email} onChange={setEmail} testId="input-email" type="email" required/>
+            <Field label={t('password')} value={password} onChange={setPassword} testId="input-password" type="password" required/>
+            <Field label={t('confirmPassword')} value={confirm} onChange={setConfirm} testId="input-confirm-password" type="password" required/>
             {registerRole==='merchant' && <>
               <label style={{display:'grid',gap:6,fontSize:14,fontWeight:600}}>{t('country')}<select className="field" value={country} onChange={e=>{setCountry(e.target.value);setCity('')}} data-testid="select-country"><option value="Algeria">{t('algeria')}</option><option value="Libya">{t('libya')}</option></select></label>
               <SelectField label={t('city')} value={city} onChange={setCity} options={country==='Algeria'?wilayas:libyanCities} testId="select-city" formatOption={(_option,index)=>lang==='ar'?(country==='Algeria'?wilayasArabic[index]:libyanCitiesArabic[index]):_option}/>
@@ -325,21 +262,20 @@ function AppInner() {
               <label style={{display:'grid',gap:6,fontSize:14,fontWeight:600}}>{t('category')}<select className="field" value={category} onChange={e=>setCategory(e.target.value)} data-testid="input-category" required><option value="">—</option>{['restaurants','cafes','clothing','electronics','malls','groceries','perfume','gifts','shops','other'].map(key=><option key={key} value={key}>{t(`cat_${key}`)}</option>)}</select></label>
               <label style={{ display:'grid',gap:6,fontSize:14,fontWeight:600 }}>{t('logo')}<input className="field" type="file" accept="image/*" onChange={e=>void saveLogo(e.target.files?.[0])} data-testid="input-shop-logo"/>{logoData && <span className="subtle">✓ {t('choose')}</span>}</label>
             </>}
-            <button className="btn btn-primary" onClick={()=>void beginRegistration()} disabled={register.isPending} data-testid="button-register">{register.isPending?t('loading'):t('continue')} <ArrowRight size={17}/></button>
-            <button className="btn" style={{ background:'transparent',color:'hsl(var(--muted-foreground))' }} onClick={()=>{setAuthMode('login');clearMessages()}} data-testid="button-existing-account">{t('haveAccount')} {t('login')}</button>
-          </div> : authMode==='reset' ? <div style={{ display:'grid',gap:14 }}><Field label={t('email')} value={email} onChange={setEmail} testId="input-email" type="email"/><button className="btn btn-primary" onClick={()=>void resetPassword()} data-testid="button-reset">{t('reset')} <ArrowRight size={17}/></button><button className="btn btn-outline" onClick={()=>setAuthMode('login')} data-testid="button-back-login">{t('back')}</button></div> : authMode==='phone' ? <div style={{ display:'grid',gap:14 }}><Field label={t('phone')} value={phone} onChange={setPhone} testId="input-phone" type="tel"/><button className="btn btn-primary" onClick={()=>void beginPhone()} data-testid="button-send-phone-code">{t('sendCode')} <ArrowRight size={17}/></button><button className="btn btn-outline" onClick={()=>setAuthMode('login')} data-testid="button-email-login">{t('emailLogin')}</button></div> :
-          <div style={{ display:'grid',gap:14 }}>
-            {isError && queryError && noticeBox(t('loadError'),true)}
+            <button type="submit" className="btn btn-primary" disabled={register.isPending} data-testid="button-register">{register.isPending?t('loading'):t('continue')} <ArrowRight size={17}/></button>
+            <button type="button" className="btn" style={{ background:'transparent',color:'hsl(var(--muted-foreground))' }} onClick={()=>{setAuthMode('login');clearMessages()}} data-testid="button-existing-account">{t('haveAccount')} {t('login')}</button>
+          </form> : authMode==='reset' ? <form onSubmit={e=>{e.preventDefault();void resetPassword();}} style={{ display:'grid',gap:14 }}><Field label={t('email')} value={email} onChange={setEmail} testId="input-email" type="email"/><button type="submit" className="btn btn-primary" data-testid="button-reset">{t('reset')} <ArrowRight size={17}/></button><button type="button" className="btn btn-outline" onClick={()=>setAuthMode('login')} data-testid="button-back-login">{t('back')}</button></form> :
+          <form onSubmit={e=>{e.preventDefault();void signIn();}} style={{ display:'grid',gap:14 }}>
+            {isError && queryError && sessionHttpStatus !== 401 && noticeBox(t('loadError'),true)}
             <Field label={t('email')} value={email} onChange={setEmail} testId="input-email" type="email" required/>
             <Field label={t('password')} value={password} onChange={setPassword} testId="input-password" type="password" required/>
-            <button className="btn" style={{ justifyContent:'flex-end',background:'transparent',color:'hsl(var(--primary))',padding:0,minHeight:26 }} onClick={()=>{setAuthMode('reset');clearMessages()}} data-testid="button-forgot">{t('forgot')}</button>
-            <button className="btn btn-primary" onClick={()=>void signIn()} data-testid="button-login">{t('login')} <ArrowRight size={17}/></button>
-            <button className="btn btn-outline" onClick={()=>void beginPhone()} data-testid="button-phone-login">{t('phoneLogin')}</button>
-            <div style={{ textAlign:'center', color:'hsl(var(--muted-foreground))',fontSize:14 }}>{t('noAccount')} <button onClick={()=>{setAuthMode('register');clearMessages()}} style={{ border:0,background:'transparent',color:'hsl(var(--primary))',fontWeight:700,cursor:'pointer' }} data-testid="button-create-account">{t('createAccount')}</button></div>
-          </div>}
+            <button type="button" className="btn" style={{ justifyContent:'flex-end',background:'transparent',color:'hsl(var(--primary))',padding:0,minHeight:26 }} onClick={()=>{setAuthMode('reset');clearMessages()}} data-testid="button-forgot">{t('forgot')}</button>
+            <button type="submit" className="btn btn-primary" data-testid="button-login">{t('login')} <ArrowRight size={17}/></button>
+            <div style={{ textAlign:'center', color:'hsl(var(--muted-foreground))',fontSize:14 }}>{t('noAccount')} <button type="button" onClick={()=>{setAuthMode('register');clearMessages()}} style={{ border:0,background:'transparent',color:'hsl(var(--primary))',fontWeight:700,cursor:'pointer' }} data-testid="button-create-account">{t('createAccount')}</button></div>
+          </form>}
         </section>
       </main>
-      <div style={{ maxWidth:1040,margin:'0 auto',padding:'0 18px 30px',textAlign:'center' }}><button className="btn btn-outline" onClick={()=>{setRegisterRole('merchant');setAuthMode('register');setAuthStep('form')}} data-testid="button-merchant-apply"><Store size={17}/>{t('applyShop')}</button><p className="subtle" style={{ fontSize:12,marginTop:14 }}>{t('tagline')}</p></div>
+      <div style={{ maxWidth:1040,margin:'0 auto',padding:'0 18px 30px',textAlign:'center' }}><button className="btn btn-outline" onClick={()=>{setRegisterRole('merchant');setAuthMode('register')}} data-testid="button-merchant-apply"><Store size={17}/>{t('applyShop')}</button><p className="subtle" style={{ fontSize:12,marginTop:14 }}>{t('tagline')}</p></div>
     </div>;
   }
 

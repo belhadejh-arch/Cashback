@@ -1,6 +1,7 @@
 import { randomUUID, createHash } from "node:crypto";
 import { Router, type IRouter, type Response, type NextFunction } from "express";
 import {
+  LoginCashbackBody,
   RegisterCashbackProfileBody,
   SubmitCashbackReceiptBody,
   DecideCashbackReceiptBody,
@@ -10,22 +11,28 @@ import {
   UpdateCashbackRateBody,
 } from "@workspace/api-zod";
 import {
-  authenticateIdentity,
   authenticateRequest,
   CashbackError,
   commit,
-  decodeFirestoreFields,
+  createSession,
+  decodeCashbackFields,
   documentWrite,
+  emailLookupId,
   getDocument,
   getState,
+  hashPassword,
   requireAdmin,
+  revokeSession,
   savePreferences,
+  sessionCookieName,
   stateWrite,
   unauthorizedRole,
+  verifyNeonConnection,
+  verifyPassword,
   type AuthenticatedRequest,
   type CashbackProfile,
   type CashbackState,
-} from "../lib/cashback-firestore";
+} from "../lib/cashback-neon";
 
 const router: IRouter = Router();
 const MAX_IMAGE_LENGTH = 650_000;
@@ -56,19 +63,21 @@ function respondError(res: Response, error: unknown): void {
 
 router.get("/cashback/health", async (_req, res) => {
   try {
-    await getState();
+    await verifyNeonConnection();
     res.json({ status: "ok" });
   } catch (error) {
     const code = error instanceof CashbackError ? error.code : "DATABASE_INTERNAL_ERROR";
-    _req.log.warn({ code }, "CASH BACK Firestore health check failed");
+    _req.log.warn({ code }, "CASH BACK Neon health check failed");
     res.status(503).json({ status: "unavailable" });
   }
 });
 
 router.use(async (req, res, next: NextFunction) => {
   try {
-    if (req.method === "POST" && req.path === "/cashback/register") {
-      (req as any).cashbackIdentity = await authenticateIdentity(req);
+    if (
+      req.method === "POST" &&
+      (req.path === "/cashback/register" || req.path === "/cashback/auth/login")
+    ) {
       next();
       return;
     }
@@ -205,7 +214,7 @@ router.get("/cashback/session", async (req, res) => {
     const profile = (req as AuthenticatedRequest).cashbackProfile;
     const { state } = await getState();
     const profileDoc = await getDocument(`users/${profile.uid}`);
-    const savedFields = decodeFirestoreFields(profileDoc);
+    const savedFields = decodeCashbackFields(profileDoc);
     const merchant = (state.merchants ?? []).find(
       (entry: any) => entry.id === profile.eid,
     );
@@ -224,27 +233,21 @@ router.get("/cashback/session", async (req, res) => {
 });
 
 router.post("/cashback/register", async (req, res) => {
-  const profile = (req as any).cashbackIdentity as {
-    uid: string;
-    email: string;
-    phoneNumber: string;
-  };
   try {
-    if (profile.email === "imadbenhamouda509@gmail.com") {
-      throw new CashbackError(403, "FORBIDDEN");
-    }
     const parsed = RegisterCashbackProfileBody.safeParse(req.body);
     if (!parsed.success) throw new CashbackError(400, "INVALID_REQUEST");
     const input = parsed.data;
-    const existing = await getDocument(`users/${profile.uid}`);
-    if (existing) throw new CashbackError(409, "PROFILE_ALREADY_EXISTS");
+    const email = fieldString(input.email).toLowerCase();
+    const existing = await getDocument(`account_emails/${emailLookupId(email)}`);
+    if (existing) throw new CashbackError(409, "EMAIL_ALREADY_REGISTERED");
     const name = fieldString(input.name);
-    const phone = normalizePhone(input.phone);
-    if (name.length < 2 || phone.length < 7 || phone.length > 18) {
+    const phone = input.phone ? normalizePhone(input.phone) : "";
+    if (
+      name.length < 2 ||
+      (phone && (phone.length < 7 || phone.length > 18)) ||
+      (input.role === "merchant" && !phone)
+    ) {
       throw new CashbackError(400, "INVALID_PROFILE");
-    }
-    if (!profile.phoneNumber || normalizePhone(profile.phoneNumber) !== phone) {
-      throw new CashbackError(403, "PHONE_NOT_VERIFIED");
     }
     const isMerchant = input.role === "merchant";
     if (isMerchant) {
@@ -263,29 +266,31 @@ router.post("/cashback/register", async (req, res) => {
     }
     const image = input.logoData ? validateImageData(input.logoData) : null;
     const id = `${isMerchant ? "m" : "c"}_${randomUUID().replaceAll("-", "").slice(0, 16)}`;
+    const uid = `u_${randomUUID().replaceAll("-", "").slice(0, 24)}`;
     const mediaId = image ? `logo_${id}` : undefined;
+    const password = hashPassword(input.password);
     const profileDocument = {
       role: input.role,
       eid: id,
       name,
-      phone,
-      email: profile.email ?? input.email ?? "",
+      phone: phone || null,
+      email,
       preferences: { language: "ar", theme: "dark" },
       ...(isMerchant ? { country: input.country, city: input.city, address: input.address } : {}),
     };
     await mutateState((state) => {
       state.customers ??= [];
       state.merchants ??= [];
-      const duplicate = [...state.customers, ...state.merchants].some(
+      const duplicate = phone && [...state.customers, ...state.merchants].some(
         (entry: any) => normalizePhone(String(entry.phone ?? "")) === phone,
       );
       if (duplicate) throw new CashbackError(409, "PHONE_ALREADY_REGISTERED");
       if (input.role === "customer") {
-        state.customers.push({ id, name, phone, wallet: 0, cbm: {} });
+        state.customers.push({ id, name, phone: phone || null, wallet: 0, cbm: {} });
       } else {
         state.merchants.push({
           id,
-          profileUid: profile.uid,
+          profileUid: uid,
           name,
           phone,
           cat: input.category,
@@ -304,26 +309,105 @@ router.post("/cashback/register", async (req, res) => {
         ? [documentWrite("photos", mediaId, {
             data: image.data,
             contentType: image.type,
-            ownerUid: profile.uid,
+            ownerUid: uid,
             kind: "merchant-logo",
           }, false)]
         : [];
-      const userWrite = documentWrite("users", profile.uid, profileDocument, false);
-      // The user document and legacy state are committed together so no partial profile is exposed.
+      const accountWrites = [
+        documentWrite("account_emails", emailLookupId(email), { uid }, false),
+        documentWrite("accounts", uid, {
+          email,
+          passwordSalt: password.salt,
+          passwordHash: password.hash,
+          createdAt: Date.now(),
+        }, false),
+        documentWrite("users", uid, profileDocument, false),
+      ];
       return {
-        result: { id, userWrite },
-        extraWrites: [...photoWrite, userWrite],
+        result: { id },
+        extraWrites: [...accountWrites, ...photoWrite],
       };
     });
+    const sessionToken = await createSession(uid);
+    res.cookie(sessionCookieName(), sessionToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+    });
     res.status(201).json({
-      uid: profile.uid,
+      uid,
       role: input.role,
       eid: id,
       name,
-      phone,
-      email: profile.email ?? input.email ?? null,
+      phone: phone || null,
+      email,
       preferences: { language: "ar", theme: "dark" },
     });
+  } catch (error) {
+    respondError(res, error);
+  }
+});
+
+router.post("/cashback/auth/login", async (req, res) => {
+  try {
+    const parsed = LoginCashbackBody.safeParse(req.body);
+    if (!parsed.success) throw new CashbackError(400, "INVALID_REQUEST");
+    const email = fieldString(parsed.data.email).toLowerCase();
+    const emailDocument = await getDocument(`account_emails/${emailLookupId(email)}`);
+    const emailFields = decodeCashbackFields(emailDocument);
+    const uid = typeof emailFields.uid === "string" ? emailFields.uid : "";
+    const accountDocument = uid ? await getDocument(`accounts/${uid}`) : null;
+    const account = decodeCashbackFields(accountDocument);
+    if (
+      !accountDocument ||
+      typeof account.passwordSalt !== "string" ||
+      typeof account.passwordHash !== "string" ||
+      !verifyPassword(parsed.data.password, account.passwordSalt, account.passwordHash)
+    ) {
+      throw new CashbackError(401, "INVALID_CREDENTIALS");
+    }
+    const profileDocument = await getDocument(`users/${uid}`);
+    const fields = decodeCashbackFields(profileDocument);
+    if (!profileDocument) throw new CashbackError(401, "INVALID_CREDENTIALS");
+    const role = fields.role as CashbackProfile["role"];
+    const eid = String(fields.eid ?? "");
+    if (!eid || !["customer", "merchant", "admin"].includes(role)) {
+      throw new CashbackError(403, "PROFILE_INCOMPLETE");
+    }
+    const sessionToken = await createSession(uid);
+    res.cookie(sessionCookieName(), sessionToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+    });
+    res.json({
+      uid,
+      role,
+      eid,
+      name: String(fields.name ?? ""),
+      phone: fields.phone ?? null,
+      email,
+      preferences: fields.preferences ?? { language: "ar", theme: "dark" },
+    });
+  } catch (error) {
+    respondError(res, error);
+  }
+});
+
+router.post("/cashback/auth/logout", async (req, res) => {
+  try {
+    await revokeSession(req);
+    res.clearCookie(sessionCookieName(), {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+    });
+    res.json({ ok: true });
   } catch (error) {
     respondError(res, error);
   }
@@ -602,7 +686,7 @@ router.get("/cashback/media/:id", async (req, res) => {
       getState(),
     ]);
     if (!media) throw new CashbackError(404, "MEDIA_NOT_FOUND");
-    const fields = decodeFirestoreFields(media);
+    const fields = decodeCashbackFields(media);
     const allowed =
       profile.role === "admin" ||
       fields.ownerUid === profile.uid ||

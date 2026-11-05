@@ -7,6 +7,7 @@
  */
 
 export * from './actionResult';
+export * from './cashbackLogin';
 export * from './cashbackMerchantDecision';
 export * from './cashbackPreferences';
 export * from './cashbackPreferencesLanguage';

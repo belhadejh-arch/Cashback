@@ -42,16 +42,16 @@ paths:
     get:
       operationId: cashbackDataHealth
       tags: [cashback]
-      summary: Check Firestore connectivity without returning account data
+      summary: Check Neon connectivity without returning account data
       responses:
         "200":
-          description: Firestore is available
+          description: Neon is available
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
         "503":
-          description: Firestore is unavailable
+          description: Neon is unavailable
           content:
             application/json:
               schema:
@@ -74,6 +74,36 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CashbackProfile"
+  /cashback/auth/login:
+    post:
+      operationId: loginCashback
+      tags: [cashback]
+      summary: Sign in with an email address and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CashbackLogin"
+      responses:
+        "200":
+          description: Authenticated profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CashbackProfile"
+  /cashback/auth/logout:
+    post:
+      operationId: logoutCashback
+      tags: [cashback]
+      summary: End the current session
+      responses:
+        "200":
+          description: Session ended
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActionResult"
   /cashback/receipts:
     post:
       operationId: submitCashbackReceipt
@@ -246,18 +276,25 @@ components:
         state: { $ref: "#/components/schemas/CashbackState" }
     CashbackRegistration:
       type: object
-      required: [role, name, phone]
+      required: [role, name, email, password]
       properties:
         role: { type: string, enum: [customer, merchant] }
         name: { type: string, minLength: 2, maxLength: 100 }
-        phone: { type: string, minLength: 7, maxLength: 20 }
+        email: { type: string, format: email, maxLength: 254 }
+        password: { type: string, minLength: 8, maxLength: 128 }
+        phone: { type: ["string", "null"], maxLength: 20 }
         country: { type: string, enum: [Algeria, Libya] }
         city: { type: string, maxLength: 100 }
         address: { type: string, maxLength: 300 }
         mapsUrl: { type: string, maxLength: 500 }
         category: { type: string, maxLength: 40 }
         logoData: { type: string, maxLength: 650000 }
-        email: { type: ["string", "null"], maxLength: 254 }
+    CashbackLogin:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email, maxLength: 254 }
+        password: { type: string, minLength: 8, maxLength: 128 }
     CashbackReceiptInput:
       type: object
       required: [merchantId, amount, date, imageData]

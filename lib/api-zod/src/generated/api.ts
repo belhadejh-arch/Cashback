@@ -35,7 +35,7 @@ export const GetCashbackSessionResponse = zod.object({
 
 
 /**
- * @summary Check Firestore connectivity without returning account data
+ * @summary Check Neon connectivity without returning account data
  */
 export const CashbackDataHealthResponse = zod.object({
   "status": zod.string()
@@ -48,7 +48,11 @@ export const CashbackDataHealthResponse = zod.object({
 export const registerCashbackProfileBodyNameMin = 2;
 export const registerCashbackProfileBodyNameMax = 100;
 
-export const registerCashbackProfileBodyPhoneMin = 7;
+export const registerCashbackProfileBodyEmailMax = 254;
+
+export const registerCashbackProfileBodyPasswordMin = 8;
+export const registerCashbackProfileBodyPasswordMax = 128;
+
 export const registerCashbackProfileBodyPhoneMax = 20;
 
 export const registerCashbackProfileBodyCityMax = 100;
@@ -61,21 +65,20 @@ export const registerCashbackProfileBodyCategoryMax = 40;
 
 export const registerCashbackProfileBodyLogoDataMax = 650000;
 
-export const registerCashbackProfileBodyEmailMax = 254;
-
 
 
 export const RegisterCashbackProfileBody = zod.object({
   "role": zod.enum(['customer', 'merchant']),
   "name": zod.string().min(registerCashbackProfileBodyNameMin).max(registerCashbackProfileBodyNameMax),
-  "phone": zod.string().min(registerCashbackProfileBodyPhoneMin).max(registerCashbackProfileBodyPhoneMax),
+  "email": zod.string().email().max(registerCashbackProfileBodyEmailMax),
+  "password": zod.string().min(registerCashbackProfileBodyPasswordMin).max(registerCashbackProfileBodyPasswordMax),
+  "phone": zod.string().max(registerCashbackProfileBodyPhoneMax).nullish(),
   "country": zod.enum(['Algeria', 'Libya']).optional(),
   "city": zod.string().max(registerCashbackProfileBodyCityMax).optional(),
   "address": zod.string().max(registerCashbackProfileBodyAddressMax).optional(),
   "mapsUrl": zod.string().max(registerCashbackProfileBodyMapsUrlMax).optional(),
   "category": zod.string().max(registerCashbackProfileBodyCategoryMax).optional(),
-  "logoData": zod.string().max(registerCashbackProfileBodyLogoDataMax).optional(),
-  "email": zod.string().max(registerCashbackProfileBodyEmailMax).nullish()
+  "logoData": zod.string().max(registerCashbackProfileBodyLogoDataMax).optional()
 })
 
 export const RegisterCashbackProfileResponse = zod.object({
@@ -87,6 +90,38 @@ export const RegisterCashbackProfileResponse = zod.object({
   "email": zod.string().nullish(),
   "preferences": zod.record(zod.string(), zod.unknown()).optional()
 })
+
+
+/**
+ * @summary Sign in with an email address and password
+ */
+export const loginCashbackBodyEmailMax = 254;
+
+export const loginCashbackBodyPasswordMin = 8;
+export const loginCashbackBodyPasswordMax = 128;
+
+
+
+export const LoginCashbackBody = zod.object({
+  "email": zod.string().email().max(loginCashbackBodyEmailMax),
+  "password": zod.string().min(loginCashbackBodyPasswordMin).max(loginCashbackBodyPasswordMax)
+})
+
+export const LoginCashbackResponse = zod.object({
+  "uid": zod.string(),
+  "role": zod.enum(['customer', 'merchant', 'admin']),
+  "eid": zod.string(),
+  "name": zod.string(),
+  "phone": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "preferences": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+
+/**
+ * @summary End the current session
+ */
+export const LogoutCashbackResponse = zod.record(zod.string(), zod.unknown())
 
 
 /**

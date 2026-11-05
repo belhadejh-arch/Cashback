@@ -17,7 +17,6 @@ async function buildAll() {
   await esbuild({
     entryPoints: [
       path.resolve(artifactDir, "src/index.ts"),
-      path.resolve(artifactDir, "src/migrate-firestore-to-neon.ts"),
     ],
     platform: "node",
     bundle: true,
@@ -69,7 +68,6 @@ async function buildAll() {
       "@google-cloud/*",
       "@google/*",
       "googleapis",
-      "firebase-admin",
       "@parcel/watcher",
       "@sentry/profiling-node",
       "@tree-sitter/*",

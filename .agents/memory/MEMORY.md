@@ -1,1 +1,1 @@
-- [Preserve CASH BACK data](cashback-data-store.md) — extend the existing Firebase-backed app without deleting or replacing stored data.
+- [CASH BACK Neon boundary](cashback-data-store.md) — keep legacy Firestore data untouched; the active app starts fresh on Neon with email/password auth.

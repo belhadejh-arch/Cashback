@@ -62,11 +62,18 @@ export interface CashbackRegistration {
      * @maxLength 100
      */
   name: string;
+  /** @maxLength 254 */
+  email: string;
   /**
-     * @minLength 7
-     * @maxLength 20
+     * @minLength 8
+     * @maxLength 128
      */
-  phone: string;
+  password: string;
+  /**
+     * @maxLength 20
+     * @nullable
+     */
+  phone?: string | null;
   country?: CashbackRegistrationCountry;
   /** @maxLength 100 */
   city?: string;
@@ -78,11 +85,16 @@ export interface CashbackRegistration {
   category?: string;
   /** @maxLength 650000 */
   logoData?: string;
+}
+
+export interface CashbackLogin {
+  /** @maxLength 254 */
+  email: string;
   /**
-     * @maxLength 254
-     * @nullable
+     * @minLength 8
+     * @maxLength 128
      */
-  email?: string | null;
+  password: string;
 }
 
 export interface CashbackReceiptInput {

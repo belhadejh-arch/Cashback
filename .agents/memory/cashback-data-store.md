@@ -3,8 +3,10 @@ name: Preserve CASH BACK data
 description: Database boundaries and data-safety requirements for the CASH BACK project.
 ---
 
-Preserve the existing CASH BACK database, stored records, and functions. Do not delete existing data or replace/migrate the database without explicit approval.
+Leave existing Firestore records untouched, but run the active CASH BACK app on Neon with fresh data. Do not migrate or delete Firestore records unless the user asks.
 
-**Why:** The user explicitly requires maintaining the current project and its data, and prohibits deletion or database replacement without consent.
+New accounts use email and password stored in Neon. Do not use Firebase authentication or SMS verification.
 
-**How to apply:** Add server-side capabilities to the current persistence layer; any destructive data changes or database migration require explicit user approval first.
+**Why:** The user chose Neon as the only active database, selected a fresh start instead of importing existing records, and chose email/password instead of SMS.
+
+**How to apply:** Keep the old Firestore data as an untouched archive; do not connect the running app to Firebase or attempt an import. Future password recovery requires an email delivery provider.
