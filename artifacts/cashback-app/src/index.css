@@ -1014,7 +1014,6 @@ html:not(.dark) .app-shell:has(.home-shops-section) .home-notification-row.is-un
 /* Use Changa consistently and slightly reduce dense mobile labels. */
 .shop-count,.profile-refresh .profile-stats strong { font-family:'Changa',sans-serif!important; }
 .app-shell:has(.home-shops-section) .home-section-head h2 { font-size:17px; }
-.app-shell:has(.home-shops-section) .home-section-head .text-link { flex:0 0 auto; min-width:max-content; white-space:nowrap; font-size:12px; }
 .app-shell:has(.home-shops-section) .merchant-card-title h3 { font-size:15px; }
 .app-shell:has(.home-shops-section) .merchant-card-copy { gap:7px; padding:11px 10px; }
 
@@ -1047,30 +1046,14 @@ html:not(.dark) .app-shell:has(.home-shops-section) .home-notification-row.is-un
   .app-shell:has(.home-shops-section) .home-promo-copy p { font-size:11px; }
 }
 
-/* Keep the home "All shops" action on one line without shrinking or clipping it. */
-.app-shell:has(.home-shops-section) .home-shops-section > .home-section-head {
-  display:grid;
-  grid-template-columns:minmax(0,1fr) max-content;
-  align-items:center;
-  gap:8px;
+.app-shell:has(.home-shops-section) .area-select select.area-select-all {
+  font-size:10px!important;
+  padding-inline-start:28px!important;
+  padding-inline-end:8px!important;
 }
-.app-shell:has(.home-shops-section) .home-shops-section > .home-section-head > .text-link {
-  display:inline-flex;
-  width:max-content;
-  max-width:none;
-  min-width:max-content;
-  flex:none;
-  overflow:visible;
-  white-space:nowrap;
-  padding-inline:3px;
-}
-.app-shell:has(.home-shops-section) .home-shops-section > .home-section-head > div { min-width:0; }
-.app-shell:has(.home-shops-section) .home-shops-section > .home-section-head h2,
-.app-shell:has(.home-shops-section) .home-shops-section > .home-section-head p { overflow-wrap:anywhere; }
 
-/* The requested app-wide typography: one Changa face and one 14px text size. */
+/* Keep the requested Changa font without forcing every element to one size. */
 html body,
 html body * {
   font-family:'Changa',sans-serif!important;
-  font-size:14px!important;
 }

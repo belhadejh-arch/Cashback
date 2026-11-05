@@ -671,20 +671,20 @@ function AppInner() {
     {shell(<>
       <div className="discovery-tools">
         <label className="shop-search"><Search size={17}/><input className="field" value={search} onChange={e=>setSearch(e.target.value)} placeholder={t('search')} aria-label={t('search')} data-testid="input-search-shops"/></label>
-        <label className="area-select"><span><MapPin size={16}/>{t('shopArea')}</span><select className="field" value={cityFilter} onChange={e=>setCityFilter(e.target.value)} aria-label={t('shopArea')} data-testid="select-shop-area"><option value="">{availableCountries.length===1?t(availableCountries[0]==='Libya'?'libya':'algeria'):t('allShops')}</option>{availableCities.map(city=><option key={city} value={city}>{localizeCity(city,lang)}</option>)}</select></label>
+        <label className="area-select"><span><MapPin size={16}/>{t('shopArea')}</span><select className={`field ${!cityFilter&&availableCountries.length!==1?'area-select-all':''}`} value={cityFilter} onChange={e=>setCityFilter(e.target.value)} aria-label={t('shopArea')} data-testid="select-shop-area"><option value="">{availableCountries.length===1?t(availableCountries[0]==='Libya'?'libya':'algeria'):t('allShops')}</option>{availableCities.map(city=><option key={city} value={city}>{localizeCity(city,lang)}</option>)}</select></label>
       </div>
       <section className="promo-banner home-promo">
         <div className="home-promo-copy"><span className="home-promo-kicker">{t('homeBrandTagline')}</span><div className="home-promo-rate"><strong>{state.settings?.cashback ?? 4}%</strong><span>{t('homeCashback')}</span></div><h1>{t('homePromoTitle')}</h1><p>{t('homePromoSubtitle')}</p><button className="btn btn-promo" onClick={()=>openReceiptPage()} data-testid="button-promo-receipt"><Camera size={18}/>{t('homeCameraAction')}</button></div>
         <div className="promo-art" aria-hidden="true"><div className="promo-ticket"><ReceiptText size={34}/><strong>{t('cashback')}</strong><span><Gift size={20}/></span></div><span className="promo-orbit promo-orbit-one"/><span className="promo-orbit promo-orbit-two"/></div>
       </section>
       <section className="category-section">
-        <div className="home-section-head"><h2>{t('categories')}</h2><button className="text-link" onClick={()=>nav('/shops')} data-testid="button-view-categories">{t('allShops')}</button></div>
+        <div className="home-section-head"><h2>{t('categories')}</h2><button className="text-link" onClick={()=>nav('/shops')} data-testid="button-view-categories">{t('viewAll')}</button></div>
         <div className="category-rail" role="group" aria-label={t('categories')}>
           {browseCategories.map(cat=><button key={cat} className={`category-chip ${selectedCategory===cat?'is-active':''}`} onClick={()=>setSelectedCategory(selectedCategory===cat?'':cat)} aria-pressed={selectedCategory===cat} data-testid={`filter-category-${cat}`}><CategoryIcon category={cat}/>{t(`cat_${cat}`)}</button>)}
         </div>
       </section>
       <section id="home-shops" className="home-shops-section">
-        <div className="home-section-head"><div><h2>{t('nearby')}</h2><p className="subtle">{cityFilter?localizeCity(cityFilter,lang):availableCountries.length===1?t(availableCountries[0]==='Libya'?'libya':'algeria'):t('allShops')}</p></div><button className="text-link" onClick={()=>nav('/shops')} data-testid="button-view-shops">{t('allShops')}</button></div>
+        <div className="home-section-head"><div><h2>{t('nearby')}</h2><p className="subtle">{cityFilter?localizeCity(cityFilter,lang):availableCountries.length===1?t(availableCountries[0]==='Libya'?'libya':'algeria'):t('allShops')}</p></div><button className="text-link" onClick={()=>nav('/shops')} data-testid="button-view-shops">{t('viewAll')}</button></div>
         {filtered.length===0 ? <Empty icon={<Compass size={30}/>} title={t('noShops')} text={t('noShopsHint')}/> : <div className="merchant-grid">{filtered.map(shop=><button key={shop.id} className="surface merchant-card" onClick={()=>nav(`/shop/${shop.id}`)} data-testid={`card-shop-${shop.id}`}>
           <div className="merchant-card-image"><MediaImage id={shop.logoId} alt={shop.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>{shop.cashbackRate!==undefined&&<span className="merchant-rate"><strong>{shop.cashbackRate}%</strong><small>{t('cashback')}</small></span>}</div>
           <div className="merchant-card-copy"><div className="merchant-card-title"><div><h3>{shop.name}</h3><span className="subtle">{shop.cat?t(`cat_${shop.cat}`):t('merchant')}</span></div><ArrowRight size={17}/></div>
