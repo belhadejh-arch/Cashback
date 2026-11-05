@@ -11,10 +11,10 @@ import {
 import { useLocation } from 'wouter';
 import { QRCodeSVG } from 'qrcode.react';
 import {
-  ArrowDownLeft, ArrowLeft, ArrowRight, BadgeCheck, Banknote, Camera, Check, ChevronDown,
+  ArrowDownLeft, ArrowLeft, ArrowRight, BadgeCheck, Banknote, Bell, Camera, Check, ChevronDown, Home,
   CircleHelp, Clock3, Compass, Coffee, FileCheck2, FilePlus2, Gift, Globe2, Laptop, LogOut, MapPin, Moon, Share2,
   Plus, ReceiptText, Search, Settings, ShieldCheck, Store, Sun, UserRound, Wallet,
-  X, RefreshCw, LockKeyhole, Percent, LocateFixed, Shirt, ShoppingBag, Tag, Utensils,
+  X, RefreshCw, LockKeyhole, Percent, LocateFixed, MoreHorizontal, Shirt, ShoppingBag, Tag, Utensils,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Route, Switch, Router as WouterRouter } from 'wouter';
@@ -25,7 +25,8 @@ type Theme = 'dark' | 'light';
 type Merchant = { id: string; name: string; cat?: string; status?: string; country?: string; city?: string; address?: string; mapsUrl?: string; lat?: number; lng?: number; cashbackRate?: number; logoId?: string; publicId?: string; qrValue?: string };
 type Claim = { id: string; mid: string; cid: string; invoiceNumber?: string; date?: string; amount: number; photoId?: string; status: string; created?: string; cashback?: number; reason?: string };
 type Txn = { id: string; t?: string; mid: string; cid: string; amount: number; cashback?: number; method?: string };
-type Session = { profile: { uid: string; role: string; eid: string; name: string; phone?: string; email?: string; avatarUpdatedAt?: number; preferences?: { language?: Lang; theme?: Theme }; status?: string; rejectionReason?: string }; state: { settings?: { cashback?: number; claimHours?: number }; merchants?: Merchant[]; customers?: { id: string; name: string; phone?: string; wallet?: number; cbm?: Record<string, number> }[]; claims?: Claim[]; txns?: Txn[]; cbpays?: { id: string; cid: string; mid: string; amount: number; status: string; at?: string }[]; notes?: unknown[] } };
+type CashbackNote = { id: string; to?: string; text: string; t?: number; read?: boolean };
+type Session = { profile: { uid: string; role: string; eid: string; name: string; phone?: string; email?: string; avatarUpdatedAt?: number; preferences?: { language?: Lang; theme?: Theme }; status?: string; rejectionReason?: string }; state: { settings?: { cashback?: number; claimHours?: number }; merchants?: Merchant[]; customers?: { id: string; name: string; phone?: string; wallet?: number; cbm?: Record<string, number> }[]; claims?: Claim[]; txns?: Txn[]; cbpays?: { id: string; cid: string; mid: string; amount: number; status: string; at?: string }[]; notes?: CashbackNote[] } };
 type Dict = Record<string, string>;
 const dictionaries: Record<Lang, Dict> = {
   en: {
@@ -90,6 +91,11 @@ const cameraTranslations: Record<Lang, Dict> = {
     photoReady: 'صورة الإيصال جاهزة.',
   },
 };
+const homeNavTranslations: Record<Lang, Dict> = {
+  en: { stores: 'Shops', more: 'More', cameraNav: 'Receipt photo', viewAll: 'View all', notifications: 'Notifications', noNotifications: 'No notifications yet', homeBrandTagline:'Shop more. Earn more.', homePromoTitle:'Cash back on your purchases', homePromoSubtitle:'Earn rewards every time you shop locally.', homeCashback:'Cashback', homeCameraAction:'Photograph your receipt now' },
+  fr: { stores: 'Commerces', more: 'Plus', cameraNav: 'Photo du reçu', viewAll: 'Tout voir', notifications: 'Notifications', noNotifications: 'Aucune notification pour le moment', homeBrandTagline:'Achetez plus. Gagnez plus.', homePromoTitle:'Du cashback sur vos achats', homePromoSubtitle:'Gagnez des récompenses dans les commerces locaux.', homeCashback:'Cashback', homeCameraAction:'Photographiez votre reçu maintenant' },
+  ar: { stores: 'المتاجر', more: 'المزيد', cameraNav: 'تصوير فاتورة', viewAll: 'عرض الكل', notifications: 'الإشعارات', noNotifications: 'لا توجد إشعارات بعد', homeBrandTagline:'اشترِ أكثر... اربح أكثر', homePromoTitle:'كاش باك على مشترياتك', homePromoSubtitle:'استرجع جزءاً من قيمة مشترياتك من المتاجر المشاركة.', homeCashback:'كاش باك', homeCameraAction:'صوّر فاتورتك الآن' },
+};
 const wilayas = ['Adrar','Chlef','Laghouat','Oum El Bouaghi','Batna','Béjaïa','Biskra','Béchar','Blida','Bouira','Tamanrasset','Tébessa','Tlemcen','Tiaret','Tizi Ouzou','Alger','Djelfa','Jijel','Sétif','Saïda','Skikda','Sidi Bel Abbès','Annaba','Guelma','Constantine','Médéa','Mostaganem','M’Sila','Mascara','Ouargla','Oran','El Bayadh','Illizi','Bordj Bou Arréridj','Boumerdès','El Tarf','Tindouf','Tissemsilt','El Oued','Khenchela','Souk Ahras','Tipaza','Mila','Aïn Defla','Naâma','Aïn Témouchent','Ghardaïa','Relizane','Timimoun','Bordj Badji Mokhtar','Ouled Djellal','Béni Abbès','In Salah','In Guezzam','Touggourt','Djanet','El M’Ghair','El Meniaa'];
 const libyanCities = ['Tripoli','Benghazi','Misrata','Bayda','Zawiya','Zliten','Ajdabiya','Tobruk','Sabha','Sirte','Derna','Khoms','Gharyan','Tarhuna','Bani Walid','Jalu','Kufra','Ghadames','Murzuq','Nalut','Sabratha','Surman','Yefren','Ubari','Brak','Marj'];
 const wilayasArabic = ['أدرار','الشلف','الأغواط','أم البواقي','باتنة','بجاية','بسكرة','بشار','البليدة','البويرة','تمنراست','تبسة','تلمسان','تيارت','تيزي وزو','الجزائر','الجلفة','جيجل','سطيف','سعيدة','سكيكدة','سيدي بلعباس','عنابة','قالمة','قسنطينة','المدية','مستغانم','المسيلة','معسكر','ورقلة','وهران','البيض','إليزي','برج بوعريريج','بومرداس','الطارف','تندوف','تيسمسيلت','الوادي','خنشلة','سوق أهراس','تيبازة','ميلة','عين الدفلى','النعامة','عين تموشنت','غرداية','غليزان','تيميمون','برج باجي مختار','أولاد جلال','بني عباس','عين صالح','عين قزام','تقرت','جانت','المغير','المنيعة'];
@@ -147,13 +153,14 @@ function AppInner() {
   const [receiptCameraActive, setReceiptCameraActive] = useState(false);
   const [receiptCameraStarting, setReceiptCameraStarting] = useState(false);
   const [receiptCameraError, setReceiptCameraError] = useState('');
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const receiptVideoRef = useRef<HTMLVideoElement>(null);
   const receiptPhotoInputRef = useRef<HTMLInputElement>(null);
   const receiptCameraStreamRef = useRef<MediaStream|null>(null);
   const receiptCameraRequestRef = useRef(0);
   const [dialog, setDialog] = useState<'receipt'|'redeem'|null>(null); const [receiptMerchantId, setReceiptMerchantId] = useState(''); const [receiptFile, setReceiptFile] = useState(''); const [invoice, setInvoice] = useState(''); const [purchaseAmount, setPurchaseAmount] = useState(''); const [purchaseDate, setPurchaseDate] = useState(new Date().toISOString().slice(0,10)); const [redeemAmount, setRedeemAmount] = useState('');
   const [reason, setReason] = useState(''); const [rateValue, setRateValue] = useState('');
-  const t = (key: string) => cameraTranslations[lang][key] || extraTranslations[lang][key] || dictionaries[lang][key] || (key.startsWith('cat_') ? key.slice(4) : key);
+  const t = (key: string) => homeNavTranslations[lang][key] || cameraTranslations[lang][key] || extraTranslations[lang][key] || dictionaries[lang][key] || (key.startsWith('cat_') ? key.slice(4) : key);
   const { data: session, isLoading, isError, error: queryError, refetch } = useGetCashbackSession({ query: { queryKey: getGetCashbackSessionQueryKey(), enabled: authReady, retry: false, refetchOnWindowFocus: false } });
   const sessionHttpStatus = getHttpStatus(queryError);
   const register = useRegisterCashbackProfile(); const submitReceipt = useSubmitCashbackReceipt(); const decideReceipt = useDecideCashbackReceipt();
@@ -166,6 +173,11 @@ function AppInner() {
   const merchants = state.merchants || []; const claims = state.claims || []; const txns = state.txns || [];
   const profile = user?.profile;
   const activeMerchants = merchants.filter(m=>m.status==='active');
+  const customerNotes = (state.notes||[])
+    .filter(note=>!note.to||note.to===profile?.eid)
+    .slice()
+    .sort((a,b)=>Number(b.t||0)-Number(a.t||0));
+  const notificationCount = customerNotes.length;
   const receiptStore = activeMerchants.find(m=>m.id===receiptMerchantId) || (selectedMerchant?.status==='active'?selectedMerchant:null);
   const selectedBalance = selectedMerchant && profile ? Number(state.customers?.find(c=>c.id===profile.eid)?.cbm?.[selectedMerchant.id] ?? 0) : 0;
   const isRtl = lang === 'ar';
@@ -185,6 +197,7 @@ function AppInner() {
   useEffect(() => { if (location.startsWith('/shop/')) { const id = location.split('/')[2]; setSelectedMerchant(merchants.find(m=>m.id===id)||null); } else if (location !== '/shop') setSelectedMerchant(null); }, [location, merchants]);
   const refreshSession = () => client.invalidateQueries({ queryKey: getGetCashbackSessionQueryKey() });
   const availableCities = useMemo(()=>Array.from(new Set(activeMerchants.map(m=>m.city).filter((value): value is string=>Boolean(value)))),[activeMerchants]);
+  const availableCountries = useMemo(()=>Array.from(new Set(activeMerchants.map(m=>m.country).filter((value): value is string=>Boolean(value)))),[activeMerchants]);
   const filtered = useMemo(()=>activeMerchants.filter(m=>
     `${m.name} ${m.cat||''} ${m.city||''} ${m.address||''}`.toLowerCase().includes(search.toLowerCase()) &&
     (!selectedCategory || m.cat===selectedCategory) &&
@@ -363,6 +376,14 @@ function AppInner() {
       <button className="btn btn-primary" onClick={()=>void saveReceipt()} disabled={submitReceipt.isPending||activeMerchants.length===0} data-testid="button-submit-receipt"><ReceiptText size={17}/>{submitReceipt.isPending?t('loading'):t('submit')}</button>
     </div>
   </Dialog> : null;
+  const notificationDialog = notificationsOpen ? <Dialog close={()=>setNotificationsOpen(false)} closeLabel={t('close')} title={t('notifications')}>
+    <div className="home-notifications-list">
+      {customerNotes.length===0 ? <p className="subtle">{t('noNotifications')}</p> : customerNotes.map(note=><article className={`surface home-notification-row ${note.read?'is-read':'is-unread'}`} key={note.id} data-testid={`notification-${note.id}`}>
+        <span className="home-notification-mark" aria-hidden="true"><Bell size={16}/></span>
+        <div><p>{note.text}</p>{note.t&&<small className="subtle">{new Date(note.t).toLocaleString(lang==='ar'?'ar-DZ':lang==='fr'?'fr-FR':'en')}</small>}</div>
+      </article>)}
+    </div>
+  </Dialog> : null;
   const redeemDialog = dialog==='redeem' && selectedMerchant ? <Dialog close={()=>setDialog(null)} closeLabel={t('close')} title={t('redeem')}>
     <div style={{display:'grid',gap:14}}>
       <p className="subtle" style={{margin:0}}>{selectedMerchant.name}</p>
@@ -427,6 +448,19 @@ function AppInner() {
   const nav = (path: string) => { stopReceiptCamera(); setLocation(path); setDialog(null); clearMessages(); };
   const header = (account = true) => {
     if (customer && location.startsWith('/profile')) return null;
+    if (customer && location === '/') return <header className="customer-home-header">
+      <button className="home-header-profile" onClick={()=>nav('/profile')} data-testid="button-home-profile">
+        {profile.avatarUpdatedAt!==undefined&&!photoFailed
+          ? <img className="home-header-avatar" src={`/api/cashback/profile/photo?v=${encodeURIComponent(String(profile.avatarUpdatedAt))}`} alt="" aria-hidden="true" onError={()=>setPhotoFailed(true)}/>
+          : <span className="home-header-avatar home-header-initials" aria-hidden="true">{profile.name.split(/\s+/).filter(Boolean).slice(0,2).map(part=>part[0]).join('').toLocaleUpperCase()}</span>}
+        <span className="home-header-copy"><small>{t('hello')}</small><strong>{profile.name}</strong></span>
+      </button>
+      <button onClick={()=>nav('/')} data-testid="link-brand" className="home-header-brand"><span className="home-header-mark"><img src="/cashback-logo-transparent.png" alt="" aria-hidden="true"/></span><span><strong>CASH BACK</strong><small>{t('homeBrandTagline')}</small></span></button>
+      <div className="home-header-actions">
+        <button className="home-header-icon" onClick={()=>setNotificationsOpen(true)} aria-label={t('notifications')} data-testid="button-home-notifications"><Bell size={20}/>{notificationCount>0&&<span className="home-header-badge">{notificationCount>9?'9+':notificationCount}</span>}</button>
+        <button className="home-header-icon" onClick={()=>void logout()} aria-label={t('signOut')} data-testid="button-header-logout"><LogOut size={19}/></button>
+      </div>
+    </header>;
     return <header className="site-header" style={{ maxWidth:1120, margin:'0 auto', padding:'14px 18px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:12 }}>
       <button onClick={()=>nav('/')} data-testid="link-brand" className="brand-lockup"><img src="/cashback-logo-transparent.png" alt="CASH BACK" style={{ width:54, height:46, objectFit:'contain', borderRadius:8 }} /></button>
       <div style={{ display:'flex', alignItems:'center', gap:8 }}>
@@ -443,7 +477,7 @@ function AppInner() {
     setDialog('receipt');
     void startReceiptCamera();
   };
-  const shell = (content: ReactNode) => <div className="app-shell grain" dir={isRtl?'rtl':'ltr'}>{header()}<main className="page-enter" style={{ maxWidth:1120, margin:'0 auto', padding:'12px 18px 90px' }}>{content}</main>{customer&&<BottomNav path={location} nav={nav} t={t} onReceipt={openReceiptDialog}/ >}{customer&&receiptDialog}</div>;
+  const shell = (content: ReactNode) => <div className="app-shell grain" dir={isRtl?'rtl':'ltr'}>{header()}<main className="page-enter" style={{ maxWidth:1120, margin:'0 auto', padding:'12px 18px 90px' }}>{content}</main>{customer&&<BottomNav path={location} nav={nav} t={t} onReceipt={openReceiptDialog}/ >}{customer&&receiptDialog}{customer&&notificationDialog}</div>;
   const Empty = ({ icon, title, text }: { icon: ReactNode; title: string; text: string }) => <div className="surface" style={{ padding:'38px 24px', textAlign:'center' }}><div style={{ color:'hsl(var(--primary))', marginBottom:10 }}>{icon}</div><h3 style={{ margin:'0 0 6px', fontSize:20 }}>{title}</h3><p className="subtle" style={{ maxWidth:440, margin:'0 auto', lineHeight:1.65 }}>{text}</p></div>;
   const noticeBox = (text:string, isError=false) => <div role={isError?'alert':'status'} data-testid={isError?'status-error':'status-success'} style={{ background:isError?'hsl(var(--destructive) / .12)':'hsl(var(--primary) / .12)', color:isError?'hsl(var(--destructive))':'hsl(var(--foreground))', padding:'12px 15px', borderRadius:12, marginBottom:14, fontWeight:600 }}>{text}</div>;
   const statusLabel = (s:string) => s==='approved'?t('approved'):s==='rejected'?t('rejected'):t('pending');
@@ -571,6 +605,26 @@ function AppInner() {
       {isLoading?<div className="history-skeleton" aria-label={t('historyLoad')}><i/><i/><i/></div>:historyRows.length===0?<div className="surface profile-empty"><ArrowDownLeft size={24}/><span>{t('noTransactions')}</span></div>:<div className="history-list">{historyRows.map(row=>{const shop=merchants.find(m=>m.id===row.mid);return <div className="surface profile-transaction-row history-transaction" key={row.id} data-testid={`row-transaction-${row.id}`}><span><strong>{shop?.name||t('merchantId')}</strong><small>{t(row.kind)} · {row.at||'—'}</small></span><strong className={row.kind==='earned'?'profile-earned-value':''}>{row.kind==='earned'?'+':''}{formatMoney(row.value,shop?.country)}</strong></div>;})}</div>}
     </section>);
   }
+  if (customer && location === '/shops') return shell(<div className="shops-directory-page" style={{display:'grid',gap:18,maxWidth:980,margin:'8px auto'}}>
+    <PageTitle icon={<Store size={19}/>} title={t('stores')} eyebrow={t('nearby')}/>
+    <div className="discovery-tools">
+      <label className="shop-search"><Search size={17}/><input className="field" value={search} onChange={e=>setSearch(e.target.value)} placeholder={t('search')} aria-label={t('search')} data-testid="input-search-shops"/></label>
+      <label className="area-select"><span><MapPin size={16}/>{t('shopArea')}</span><select className="field" value={cityFilter} onChange={e=>setCityFilter(e.target.value)} aria-label={t('shopArea')} data-testid="select-shop-area"><option value="">{availableCountries.length===1?t(availableCountries[0]==='Libya'?'libya':'algeria'):t('allShops')}</option>{availableCities.map(city=><option key={city} value={city}>{localizeCity(city,lang)}</option>)}</select></label>
+    </div>
+    <section className="category-section">
+      <div className="home-section-head"><h2>{t('categories')}</h2><button className="text-link" onClick={()=>setSelectedCategory('')} data-testid="button-view-categories">{t('viewAll')}</button></div>
+      <div className="category-rail" role="group" aria-label={t('categories')}>{browseCategories.map(cat=><button key={cat} className={`category-chip ${selectedCategory===cat?'is-active':''}`} onClick={()=>setSelectedCategory(selectedCategory===cat?'':cat)} aria-pressed={selectedCategory===cat} data-testid={`filter-category-${cat}`}><CategoryIcon category={cat}/>{t(`cat_${cat}`)}</button>)}</div>
+    </section>
+    <section className="home-shops-section">
+      <div className="home-section-head"><div><h2>{t('nearby')}</h2><p className="subtle">{cityFilter?localizeCity(cityFilter,lang):availableCountries.length===1?t(availableCountries[0]==='Libya'?'libya':'algeria'):t('allShops')}</p></div><button className="text-link" onClick={()=>{setSearch('');setCityFilter('');setSelectedCategory('');}} data-testid="button-view-shops">{t('viewAll')}</button></div>
+      {filtered.length===0 ? <Empty icon={<Compass size={30}/>} title={t('noShops')} text={t('noShopsHint')}/> : <div className="merchant-grid">{filtered.map(shop=><button key={shop.id} className="surface merchant-card" onClick={()=>nav(`/shop/${shop.id}`)} data-testid={`card-shop-${shop.id}`}>
+        <div className="merchant-card-image"><MediaImage id={shop.logoId} alt={shop.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>{shop.cashbackRate!==undefined&&<span className="merchant-rate"><strong>{shop.cashbackRate}%</strong><small>{t('cashback')}</small></span>}</div>
+        <div className="merchant-card-copy"><div className="merchant-card-title"><div><h3>{shop.name}</h3><span className="subtle">{shop.cat?t(`cat_${shop.cat}`):t('merchant')}</span></div><ArrowRight size={17}/></div>
+          {(shop.city||shop.address)&&<div className="merchant-location"><MapPin size={14}/><span>{localizeCity(shop.city,lang)||shop.address}</span></div>}
+        </div>
+      </button>)}</div>}
+    </section>
+  </div>);
   if (customer && location === '/wallet') return shell(<CustomerWallet profile={profile} state={state} merchants={merchants} txns={txns} claims={claims} setSelected={(m)=>{setSelectedMerchant(m);nav(`/wallet/${m.id}`)}} t={t} lang={lang} />);
   if (customer && location.startsWith('/wallet/')) {
     const mid=location.split('/')[2]; const shop=merchants.find(m=>m.id===mid);
@@ -597,31 +651,22 @@ function AppInner() {
   ];
   return <>
     {shell(<>
-      <section className="home-identity">
-        <button className="home-profile" onClick={()=>nav('/profile')} data-testid="button-home-profile">
-          {profile.avatarUpdatedAt!==undefined&&!photoFailed?<img className="home-avatar home-avatar-image" src={`/api/cashback/profile/photo?v=${encodeURIComponent(String(profile.avatarUpdatedAt))}`} alt="" aria-hidden="true" onError={()=>setPhotoFailed(true)}/>:<span className="home-avatar" aria-hidden="true">{profile.name.split(/\s+/).filter(Boolean).slice(0,2).map(part=>part[0]).join('').toLocaleUpperCase()}</span>}
-          <span className="home-profile-copy"><small>{t('hello')}</small><strong>{profile.name}</strong></span>
-          <ArrowRight size={17}/>
-        </button>
-        <button className="home-wallet-shortcut" onClick={()=>nav('/wallet')} aria-label={t('wallet')} data-testid="button-wallet"><Wallet size={19}/></button>
-      </section>
       <div className="discovery-tools">
-        <label className="area-select"><span><MapPin size={16}/>{t('shopArea')}</span><select className="field" value={cityFilter} onChange={e=>setCityFilter(e.target.value)} aria-label={t('shopArea')} data-testid="select-shop-area"><option value="">{t('allShops')}</option>{availableCities.map(city=><option key={city} value={city}>{localizeCity(city,lang)}</option>)}</select></label>
         <label className="shop-search"><Search size={17}/><input className="field" value={search} onChange={e=>setSearch(e.target.value)} placeholder={t('search')} aria-label={t('search')} data-testid="input-search-shops"/></label>
+        <label className="area-select"><span><MapPin size={16}/>{t('shopArea')}</span><select className="field" value={cityFilter} onChange={e=>setCityFilter(e.target.value)} aria-label={t('shopArea')} data-testid="select-shop-area"><option value="">{availableCountries.length===1?t(availableCountries[0]==='Libya'?'libya':'algeria'):t('allShops')}</option>{availableCities.map(city=><option key={city} value={city}>{localizeCity(city,lang)}</option>)}</select></label>
       </div>
       <section className="promo-banner home-promo">
-        <div className="home-promo-copy"><span className="home-promo-kicker">{t('tagline')}</span><div className="home-promo-rate"><strong>{state.settings?.cashback ?? 4}%</strong><span>{t('cashback')}</span></div><h1>{t('customerEntry')}</h1><p>{t('customerBlurb')}</p><button className="btn btn-promo" onClick={()=>openReceiptDialog()} data-testid="button-promo-receipt"><Camera size={18}/>{t('receipt')}</button></div>
+        <div className="home-promo-copy"><span className="home-promo-kicker">{t('homeBrandTagline')}</span><div className="home-promo-rate"><strong>{state.settings?.cashback ?? 4}%</strong><span>{t('homeCashback')}</span></div><h1>{t('homePromoTitle')}</h1><p>{t('homePromoSubtitle')}</p><button className="btn btn-promo" onClick={()=>openReceiptDialog()} data-testid="button-promo-receipt"><Camera size={18}/>{t('homeCameraAction')}</button></div>
         <div className="promo-art" aria-hidden="true"><div className="promo-ticket"><ReceiptText size={34}/><strong>{t('cashback')}</strong><span><Gift size={20}/></span></div><span className="promo-orbit promo-orbit-one"/><span className="promo-orbit promo-orbit-two"/></div>
       </section>
       <section className="category-section">
-        <div className="home-section-head"><h2>{t('categories')}</h2><span className="subtle">{browseCategories.length}</span></div>
+        <div className="home-section-head"><h2>{t('categories')}</h2><button className="text-link" onClick={()=>nav('/shops')} data-testid="button-view-categories">{t('viewAll')}</button></div>
         <div className="category-rail" role="group" aria-label={t('categories')}>
-          <button className={`category-chip ${selectedCategory===''?'is-active':''}`} onClick={()=>setSelectedCategory('')} aria-pressed={selectedCategory===''} data-testid="filter-category-all"><Tag size={17}/>{t('allShops')}</button>
           {browseCategories.map(cat=><button key={cat} className={`category-chip ${selectedCategory===cat?'is-active':''}`} onClick={()=>setSelectedCategory(selectedCategory===cat?'':cat)} aria-pressed={selectedCategory===cat} data-testid={`filter-category-${cat}`}><CategoryIcon category={cat}/>{t(`cat_${cat}`)}</button>)}
         </div>
       </section>
-      <section className="home-shops-section">
-        <div className="home-section-head"><div><h2>{t('nearby')}</h2><p className="subtle">{cityFilter?localizeCity(cityFilter,lang):t('allShops')}</p></div><span className="shop-count">{filtered.length}</span></div>
+      <section id="home-shops" className="home-shops-section">
+        <div className="home-section-head"><div><h2>{t('nearby')}</h2><p className="subtle">{cityFilter?localizeCity(cityFilter,lang):availableCountries.length===1?t(availableCountries[0]==='Libya'?'libya':'algeria'):t('allShops')}</p></div><button className="text-link" onClick={()=>nav('/shops')} data-testid="button-view-shops">{t('viewAll')}</button></div>
         {filtered.length===0 ? <Empty icon={<Compass size={30}/>} title={t('noShops')} text={t('noShopsHint')}/> : <div className="merchant-grid">{filtered.map(shop=><button key={shop.id} className="surface merchant-card" onClick={()=>nav(`/shop/${shop.id}`)} data-testid={`card-shop-${shop.id}`}>
           <div className="merchant-card-image"><MediaImage id={shop.logoId} alt={shop.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>{shop.cashbackRate!==undefined&&<span className="merchant-rate"><strong>{shop.cashbackRate}%</strong><small>{t('cashback')}</small></span>}</div>
           <div className="merchant-card-copy"><div className="merchant-card-title"><div><h3>{shop.name}</h3><span className="subtle">{shop.cat?t(`cat_${shop.cat}`):t('merchant')}</span></div><ArrowRight size={17}/></div>
@@ -647,11 +692,17 @@ function SettingsPage({lang,theme,setPreference,t,profile,logout,notice,error}:{
   return <div className="settings-page" style={{maxWidth:720,margin:'18px auto',display:'grid',gap:20}}><PageTitle icon={<Settings/>} title={t('settings')} eyebrow={t('preferences')}/>{error&&<div role="alert" className="surface" style={{padding:14,color:'hsl(var(--destructive))'}}>{error}</div>}{notice&&<div role="status" className="surface" style={{padding:14}}>{notice}</div>}<section className="surface" style={{padding:22,display:'grid',gap:20}}><div><strong style={{display:'block',marginBottom:8}}>{t('language')}</strong><div style={{display:'flex',gap:8,flexWrap:'wrap'}}>{([['en','English'],['fr','Français'],['ar','العربية']] as const).map(([key,label])=><button key={key} onClick={()=>void setPreference(key,theme)} className={`btn ${lang===key?'btn-primary':'btn-outline'}`} data-testid={`button-language-${key}`}>{label}</button>)}</div></div><div><strong style={{display:'block',marginBottom:8}}>{t('theme')}</strong><div style={{display:'flex',gap:8}}>{(['light','dark'] as Theme[]).map(v=><button key={v} onClick={()=>void setPreference(lang,v)} className={`btn ${theme===v?'btn-primary':'btn-outline'}`} data-testid={`button-theme-${v}`}>{v==='dark'?<Moon size={16}/>:<Sun size={16}/>} {t(v)}</button>)}</div></div></section><section className="surface" style={{padding:22,display:'grid',gap:14}}><strong>{t('profileText')}</strong><InfoRow label={t('name')} value={profile.name}/><InfoRow label={t('email')} value={profile.email||'—'}/><InfoRow label={t('phone')} value={profile.phone||'—'}/><button className="btn btn-outline" onClick={logout} data-testid="button-logout"><LogOut size={17}/>{t('signOut')}</button></section></div>;
 }
 function BottomNav({path,nav,t,onReceipt}:{path:string;nav:(path:string)=>void;t:(s:string)=>string;onReceipt:()=>void}) {
-  const items=[['/',<Compass size={19}/>,t('home')],['/wallet',<Wallet size={19}/>,t('wallet')],['/profile',<UserRound size={19}/>,t('profile')],['/settings',<Settings size={19}/>,t('settings')]] as const;
-  const renderItem=([href,icon,label]:typeof items[number])=><button key={href} className={`bottom-nav-item ${(path===href||path.startsWith(href+'/'))?'is-active':''}`} onClick={()=>nav(href)} data-testid={`nav-${href.replace('/','')||'home'}`} aria-current={path===href?'page':undefined}>{icon}<span>{label}</span></button>;
+  const moreActive=['/profile','/receipts','/transactions','/settings'].includes(path);
+  const items=[
+    {href:'/',icon:<Home size={19}/>,label:t('home'),active:path==='/',onClick:()=>{if(path==='/')window.scrollTo({top:0,behavior:'smooth'});else nav('/');}},
+    {href:'shops',icon:<Store size={19}/>,label:t('stores'),active:path==='/shops'||path.startsWith('/shop/'),onClick:()=>nav('/shops')},
+    {href:'/wallet',icon:<Wallet size={19}/>,label:t('wallet'),active:path==='/wallet'||path.startsWith('/wallet/'),onClick:()=>nav('/wallet')},
+    {href:'/profile',icon:<MoreHorizontal size={19}/>,label:t('more'),active:moreActive,onClick:()=>nav('/profile')},
+  ];
+  const renderItem=(item:typeof items[number])=><button key={item.href} className={`bottom-nav-item ${item.active?'is-active':''}`} onClick={item.onClick} data-testid={`nav-${item.href==='/'?'home':item.href==='shops'?'stores':item.href.slice(1)}`} aria-current={item.active?'page':undefined}>{item.icon}<span>{item.label}</span></button>;
   return <nav className="bottom-nav" aria-label={t('home')}>
     {items.slice(0,2).map(renderItem)}
-    <button className="bottom-nav-receipt" onClick={onReceipt} aria-label={t('receipt')} data-testid="nav-receipt"><span><Camera size={22}/></span><small>{t('receipt')}</small></button>
+    <button className="bottom-nav-receipt" onClick={onReceipt} aria-label={t('receipt')} data-testid="nav-receipt"><span><Camera size={22}/></span><small>{t('cameraNav')}</small></button>
     {items.slice(2).map(renderItem)}
   </nav>;
 }

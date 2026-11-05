@@ -1,0 +1,10 @@
+---
+name: CASH BACK customer UI
+description: The user's standing visual and navigation requirements for customer-facing CASH BACK screens.
+---
+
+Use the user's attached CASH BACK mobile screen as the canonical reference for customer-facing UI: black/dark surfaces, orange-to-gold accents, rounded cards, Changa, Arabic RTL by default, and the customer profile/avatar at the top of the home screen. The home layout includes location/search, a cashback promotion, categories, participating shops, recent activity, and a bottom navigation bar. Each major section should open on its own screen, not render as a replacement panel inside the current page. Keep dark/light and Arabic/English/French preferences applied across the app and persisted to the user's account.
+
+**Why:** The user repeatedly made fidelity to the attached design mandatory and specified profile placement, theme/language behavior, and separate section navigation.
+
+**How to apply:** When changing customer screens, match the reference while retaining live backend data and working controls; do not invent shop ratings, balances, or activity to fill visual gaps.

@@ -1,1 +1,2 @@
 - [CASH BACK Neon boundary](cashback-data-store.md) — keep legacy Firestore data untouched; the active app starts fresh on Neon with email/password auth.
+- [CASH BACK customer UI](cashback-customer-ui.md) — follow the user's mandatory mobile reference: dark ember/orange, Changa, RTL, top profile, and separate section screens.
