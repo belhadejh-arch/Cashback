@@ -11,7 +11,7 @@ import { useLocation } from 'wouter';
 import { QRCodeSVG } from 'qrcode.react';
 import {
   ArrowDownLeft, ArrowLeft, ArrowRight, BadgeCheck, Banknote, Camera, Check, ChevronDown,
-  CircleHelp, Clock3, Compass, Coffee, FileCheck2, FilePlus2, Gift, Globe2, Laptop, LogOut, MapPin, Moon,
+  CircleHelp, Clock3, Compass, Coffee, FileCheck2, FilePlus2, Gift, Globe2, Laptop, LogOut, MapPin, Moon, Share2,
   Plus, ReceiptText, Search, Settings, ShieldCheck, Store, Sun, UserRound, Wallet,
   X, Upload, RefreshCw, LockKeyhole, Percent, LocateFixed, Shirt, ShoppingBag, Tag, Utensils,
 } from 'lucide-react';
@@ -44,9 +44,9 @@ const dictionaries: Record<Lang, Dict> = {
   },
 };
 const extraTranslations: Record<Lang, Dict> = {
-  en: { categories: 'Categories' },
-  fr: { categories: 'Catégories' },
-  ar: { categories: 'التصنيفات' },
+  en: { categories: 'Categories', accountSection: 'My account', claimHistory: 'Receipt history', rewardShops: 'Shops with rewards', transactions: 'Transactions', myDetails: 'Personal details', quickAccess: 'Your account', interfacePrefs: 'Preferences', helloProfile: 'Your local rewards, at a glance.', approvedReceipts: 'Approved receipts', profileSettingsTitle: 'Profile & settings', inviteFriends: 'Invite friends', inviteMessage: 'Join me on CASH BACK and earn rewards at local shops.', inviteCopied: 'Invitation link copied.', shareUnavailable: 'Sharing is unavailable in this browser.' },
+  fr: { categories: 'Catégories', accountSection: 'Mon compte', claimHistory: 'Historique des reçus', rewardShops: 'Commerces avec récompenses', transactions: 'Transactions', myDetails: 'Informations personnelles', quickAccess: 'Votre compte', interfacePrefs: 'Préférences', helloProfile: 'Vos récompenses locales, en un coup d’œil.', approvedReceipts: 'Reçus approuvés', profileSettingsTitle: 'Profil et paramètres', inviteFriends: 'Inviter des amis', inviteMessage: 'Rejoignez CASH BACK et gagnez des récompenses dans les commerces locaux.', inviteCopied: 'Lien d’invitation copié.', shareUnavailable: 'Le partage est indisponible dans ce navigateur.' },
+  ar: { categories: 'التصنيفات', accountSection: 'حسابي', claimHistory: 'سجل الفواتير', rewardShops: 'متاجر لديها مكافآت', transactions: 'المعاملات', myDetails: 'البيانات الشخصية', quickAccess: 'حسابك', interfacePrefs: 'التفضيلات', helloProfile: 'مكافآتك المحلية، في لمحة.', approvedReceipts: 'الفواتير المقبولة', profileSettingsTitle: 'الملف الشخصي والإعدادات', inviteFriends: 'دعوة الأصدقاء', inviteMessage: 'انضم إليّ في CASH BACK واكسب مكافآت من المتاجر المحلية.', inviteCopied: 'تم نسخ رابط الدعوة.', shareUnavailable: 'المشاركة غير متاحة في هذا المتصفح.' },
 };
 const wilayas = ['Adrar','Chlef','Laghouat','Oum El Bouaghi','Batna','Béjaïa','Biskra','Béchar','Blida','Bouira','Tamanrasset','Tébessa','Tlemcen','Tiaret','Tizi Ouzou','Alger','Djelfa','Jijel','Sétif','Saïda','Skikda','Sidi Bel Abbès','Annaba','Guelma','Constantine','Médéa','Mostaganem','M’Sila','Mascara','Ouargla','Oran','El Bayadh','Illizi','Bordj Bou Arréridj','Boumerdès','El Tarf','Tindouf','Tissemsilt','El Oued','Khenchela','Souk Ahras','Tipaza','Mila','Aïn Defla','Naâma','Aïn Témouchent','Ghardaïa','Relizane','Timimoun','Bordj Badji Mokhtar','Ouled Djellal','Béni Abbès','In Salah','In Guezzam','Touggourt','Djanet','El M’Ghair','El Meniaa'];
 const libyanCities = ['Tripoli','Benghazi','Misrata','Bayda','Zawiya','Zliten','Ajdabiya','Tobruk','Sabha','Sirte','Derna','Khoms','Gharyan','Tarhuna','Bani Walid','Jalu','Kufra','Ghadames','Murzuq','Nalut','Sabratha','Surman','Yefren','Ubari','Brak','Marj'];
@@ -95,6 +95,7 @@ function AppInner() {
   const [country, setCountry] = useState('Algeria'); const [city, setCity] = useState(''); const [address, setAddress] = useState(''); const [mapsUrl, setMapsUrl] = useState(''); const [category, setCategory] = useState(''); const [logoData, setLogoData] = useState('');
   const [search, setSearch] = useState(''); const [selectedMerchant, setSelectedMerchant] = useState<Merchant|null>(null);
   const [selectedCategory, setSelectedCategory] = useState(''); const [cityFilter, setCityFilter] = useState('');
+  const [profilePanel, setProfilePanel] = useState<'wallet'|'claims'|'transactions'|null>(null);
   const [dialog, setDialog] = useState<'receipt'|'redeem'|null>(null); const [receiptMerchantId, setReceiptMerchantId] = useState(''); const [receiptFile, setReceiptFile] = useState(''); const [invoice, setInvoice] = useState(''); const [purchaseAmount, setPurchaseAmount] = useState(''); const [purchaseDate, setPurchaseDate] = useState(new Date().toISOString().slice(0,10)); const [redeemAmount, setRedeemAmount] = useState('');
   const [reason, setReason] = useState(''); const [rateValue, setRateValue] = useState('');
   const t = (key: string) => extraTranslations[lang][key] || dictionaries[lang][key] || (key.startsWith('cat_') ? key.slice(4) : key);
@@ -113,6 +114,12 @@ function AppInner() {
   const isRtl = lang === 'ar';
   useEffect(() => { document.documentElement.classList.toggle('dark', theme === 'dark'); document.documentElement.dir = isRtl ? 'rtl' : 'ltr'; document.documentElement.lang = lang; }, [theme, lang, isRtl]);
   useEffect(() => { const id = window.setTimeout(()=>setSplash(false), 1850); return ()=>window.clearTimeout(id); }, []);
+  useEffect(() => {
+    if (!profilePanel) return;
+    const targetId = profilePanel==='wallet'?'profile-panel-wallet':profilePanel==='claims'?'profile-receipt-history':'profile-transactions';
+    const frame = window.requestAnimationFrame(()=>document.getElementById(targetId)?.scrollIntoView({behavior:'smooth',block:'nearest'}));
+    return ()=>window.cancelAnimationFrame(frame);
+  }, [profilePanel]);
    useEffect(() => { setAuthReady(true); }, []);
   useEffect(() => { if (profile?.preferences?.language) { setLang(profile.preferences.language); setTheme(profile.preferences.theme || 'dark'); } }, [profile?.uid, profile?.preferences?.language, profile?.preferences?.theme]);
   useEffect(() => { if (location.startsWith('/shop/')) { const id = location.split('/')[2]; setSelectedMerchant(merchants.find(m=>m.id===id)||null); } else if (location !== '/shop') setSelectedMerchant(null); }, [location, merchants]);
@@ -162,6 +169,17 @@ function AppInner() {
       try { await preferences.mutateAsync({ data: { language: nextLang, theme: nextTheme } }); setLang(nextLang); setTheme(nextTheme); invalidate(); setNotice(dictionaries[nextLang].saved); }
       catch(e) { setError(t('genericError')); }
     } else { setLang(nextLang); setTheme(nextTheme); }
+  }
+  async function inviteFriend() {
+    const url = new URL(import.meta.env.BASE_URL, window.location.origin).toString();
+    const payload = { title: 'CASH BACK', text: t('inviteMessage'), url };
+    try {
+      if (navigator.share) await navigator.share(payload);
+      else if (navigator.clipboard?.writeText) { await navigator.clipboard.writeText(`${payload.text} ${url}`); setNotice(t('inviteCopied')); }
+      else setError(t('shareUnavailable'));
+    } catch (caught) {
+      if ((caught as DOMException)?.name !== 'AbortError') setError(t('genericError'));
+    }
   }
   const fileToData = (file: File) => new Promise<string>((resolve,reject)=>{
     const source=URL.createObjectURL(file); const image=new Image();
@@ -224,15 +242,18 @@ function AppInner() {
     client.clear(); setLocation('/'); setAuthMode('login');
   }
   const nav = (path: string) => { setLocation(path); setDialog(null); clearMessages(); };
-  const header = (account = true) => <header className="site-header" style={{ maxWidth:1120, margin:'0 auto', padding:'14px 18px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:12 }}>
-    <button onClick={()=>nav('/')} data-testid="link-brand" className="brand-lockup"><img src="/cashback-logo-transparent.png" alt="CASH BACK" style={{ width:54, height:46, objectFit:'contain', borderRadius:8 }} /><span>CASH BACK</span></button>
-    <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-      <select aria-label={t('language')} className="field" style={{ width:94, minHeight:40, padding:'6px 8px' }} value={lang} onChange={e=>void changePreference(e.target.value as Lang,theme)} data-testid="select-language"><option value="en">English</option><option value="fr">Français</option><option value="ar">العربية</option></select>
-      <IconButton onClick={()=>void changePreference(lang,theme==='dark'?'light':'dark')} label={t('theme')} testId="button-theme">{theme==='dark'?<Sun size={18}/>:<Moon size={18}/>}</IconButton>
-      {account && profile && <IconButton onClick={()=>nav('/settings')} label={t('settings')} testId="button-settings"><Settings size={18}/></IconButton>}
-      {account && profile && <IconButton onClick={()=>void logout()} label={t('signOut')} testId="button-header-logout"><LogOut size={18}/></IconButton>}
-    </div>
-  </header>;
+  const header = (account = true) => {
+    if (customer && location.startsWith('/profile')) return null;
+    return <header className="site-header" style={{ maxWidth:1120, margin:'0 auto', padding:'14px 18px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:12 }}>
+      <button onClick={()=>nav('/')} data-testid="link-brand" className="brand-lockup"><img src="/cashback-logo-transparent.png" alt="CASH BACK" style={{ width:54, height:46, objectFit:'contain', borderRadius:8 }} /></button>
+      <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+        <select aria-label={t('language')} className="field" style={{ width:94, minHeight:40, padding:'6px 8px' }} value={lang} onChange={e=>void changePreference(e.target.value as Lang,theme)} data-testid="select-language"><option value="en">English</option><option value="fr">Français</option><option value="ar">العربية</option></select>
+        <IconButton onClick={()=>void changePreference(lang,theme==='dark'?'light':'dark')} label={t('theme')} testId="button-theme">{theme==='dark'?<Sun size={18}/>:<Moon size={18}/>}</IconButton>
+        {account && profile && <IconButton onClick={()=>nav('/settings')} label={t('settings')} testId="button-settings"><Settings size={18}/></IconButton>}
+        {account && profile && <IconButton onClick={()=>void logout()} label={t('signOut')} testId="button-header-logout"><LogOut size={18}/></IconButton>}
+      </div>
+    </header>;
+  };
   const openReceiptDialog = () => { setReceiptMerchantId(selectedMerchant?.id||''); setDialog('receipt'); };
   const shell = (content: ReactNode) => <div className="app-shell grain" dir={isRtl?'rtl':'ltr'}>{header()}<main className="page-enter" style={{ maxWidth:1120, margin:'0 auto', padding:'12px 18px 90px' }}>{content}</main>{customer&&<BottomNav path={location} nav={nav} t={t} onReceipt={openReceiptDialog}/ >}{customer&&receiptDialog}</div>;
   const Empty = ({ icon, title, text }: { icon: ReactNode; title: string; text: string }) => <div className="surface" style={{ padding:'38px 24px', textAlign:'center' }}><div style={{ color:'hsl(var(--primary))', marginBottom:10 }}>{icon}</div><h3 style={{ margin:'0 0 6px', fontSize:20 }}>{title}</h3><p className="subtle" style={{ maxWidth:440, margin:'0 auto', lineHeight:1.65 }}>{text}</p></div>;
@@ -297,24 +318,54 @@ function AppInner() {
     const customerData=state.customers?.find(c=>c.id===profile.eid);
     const profileClaims=claims.filter(c=>c.cid===profile.eid).sort((a,b)=>Date.parse(b.created||b.date||'')-Date.parse(a.created||a.date||''));
     const initials=profile.name.split(/\s+/).filter(Boolean).slice(0,2).map(part=>part[0]).join('').toLocaleUpperCase();
-    return shell(<section className="profile-page" style={{maxWidth:740,margin:'12px auto',display:'grid',gap:16}}>
-      <PageTitle icon={<UserRound/>} title={t('profile')} eyebrow={t('profileText')}/>
+    const customerTxns=txns.filter(x=>x.cid===profile.eid);
+    const customerPayments=(state.cbpays||[]).filter(payment=>payment.cid===profile.eid&&(payment.status==='done'||payment.status==='approved')).sort((a,b)=>Date.parse(b.at||'')-Date.parse(a.at||''));
+    const rewardShopCount=activeMerchants.filter(shop=>Number(customerData?.cbm?.[shop.id]||0)>0).length;
+    return shell(<section className="profile-page profile-refresh" style={{maxWidth:740,margin:'12px auto',display:'grid',gap:15}}>
+      <div className="profile-topbar" dir="ltr">
+        <button className="profile-back" onClick={()=>nav('/')} aria-label={t('home')} data-testid="button-profile-back"><ArrowLeft size={20}/></button>
+        <h1 dir="auto">{t('profileSettingsTitle')}</h1>
+        <button className="profile-brand" onClick={()=>nav('/')} aria-label={t('home')} data-testid="link-profile-brand"><img src="/cashback-logo-transparent.png" alt="CASH BACK"/></button>
+      </div>
       <div className="profile-summary surface">
-        <div className="profile-summary-head"><div className="profile-avatar" aria-hidden="true">{initials}</div><div className="profile-identity"><h2>{profile.name}</h2>{profile.phone&&<span>{profile.phone}</span>}{profile.email&&<span>{profile.email}</span>}</div><button className="btn btn-outline profile-settings-link" onClick={()=>nav('/settings')} data-testid="button-profile-settings"><Settings size={17}/>{t('settings')}</button></div>
+        <div className="profile-summary-head">
+          <div className="profile-avatar" aria-hidden="true">{initials}</div>
+          <div className="profile-identity"><h2 data-testid="text-profile-name">{profile.name}</h2>{profile.phone&&<span data-testid="text-profile-phone">{profile.phone}</span>}{profile.email&&<span data-testid="text-profile-email">{profile.email}</span>}</div>
+        </div>
         <div className="profile-stats">
-          <div><strong>{profileClaims.length}</strong><span>{t('receipt')}</span></div>
-          <div><strong>{txns.filter(x=>x.cid===profile.eid).length}</strong><span>{t('ledger')}</span></div>
-          <div><strong>{activeMerchants.length}</strong><span>{t('wallet')}</span></div>
+          <div><strong data-testid="text-profile-receipt-count">{profileClaims.length}</strong><span>{t('receipt')}</span></div>
+          <div><strong data-testid="text-profile-transaction-count">{customerTxns.length}</strong><span>{t('transactions')}</span></div>
+          <div><strong data-testid="text-profile-reward-shops">{rewardShopCount}</strong><span>{t('rewardShops')}</span></div>
         </div>
       </div>
-      <section className="profile-data-section"><div className="profile-section-heading"><h2>{t('walletTitle')}</h2><button className="text-link" onClick={()=>nav('/wallet')} data-testid="button-profile-wallet">{t('allShops')} <ArrowRight size={15}/></button></div>
+      <section className="profile-menu surface">
+        <h2>{t('quickAccess')}</h2>
+        <button className="profile-menu-row" onClick={()=>nav('/settings')} data-testid="button-profile-details"><UserRound size={19}/><span>{t('myDetails')}</span><ArrowLeft className="profile-menu-chevron" size={17}/></button>
+        <button className="profile-menu-row" aria-expanded={profilePanel==='claims'} onClick={()=>setProfilePanel(panel=>panel==='claims'?null:'claims')} data-testid="button-profile-receipts"><ReceiptText size={19}/><span>{t('claimHistory')}</span><ArrowLeft className="profile-menu-chevron" size={17}/></button>
+        <button className="profile-menu-row" aria-expanded={profilePanel==='wallet'} onClick={()=>setProfilePanel(panel=>panel==='wallet'?null:'wallet')} data-testid="button-profile-wallet"><Gift size={19}/><span>{t('walletTitle')}</span><ArrowLeft className="profile-menu-chevron" size={17}/></button>
+        <button className="profile-menu-row" aria-expanded={profilePanel==='transactions'} onClick={()=>setProfilePanel(panel=>panel==='transactions'?null:'transactions')} data-testid="button-profile-transactions"><ArrowDownLeft size={19}/><span>{t('transactions')}</span><ArrowLeft className="profile-menu-chevron" size={17}/></button>
+        <button className="profile-menu-row" onClick={()=>void inviteFriend()} data-testid="button-profile-invite"><Share2 size={19}/><span>{t('inviteFriends')}</span><ArrowLeft className="profile-menu-chevron" size={17}/></button>
+      </section>
+      <section className="profile-menu profile-preferences surface">
+        <h2>{t('interfacePrefs')}</h2>
+        <div className="profile-menu-row profile-pref-row"><Moon size={19}/><span>{t('theme')}</span><button type="button" role="switch" aria-checked={theme==='dark'} aria-label={t('theme')} className={`profile-theme-switch ${theme==='dark'?'is-on':''}`} onClick={()=>void changePreference(lang,theme==='dark'?'light':'dark')} data-testid="button-profile-theme"><span/></button></div>
+        <div className="profile-menu-row profile-pref-row"><Globe2 size={19}/><span>{t('language')}</span><select className="field profile-language-select" aria-label={t('language')} value={lang} onChange={e=>void changePreference(e.target.value as Lang,theme)} data-testid="select-profile-language"><option value="ar">العربية</option><option value="fr">Français</option><option value="en">English</option></select></div>
+        <button className="profile-menu-row profile-settings-row" onClick={()=>nav('/settings')} data-testid="button-profile-all-settings"><Settings size={19}/><span>{t('settings')}</span><ArrowLeft className="profile-menu-chevron" size={17}/></button>
+      </section>
+      {(error||notice)&&<div className="profile-feedback" role={error?'alert':'status'}>{error||notice}</div>}
+      {profilePanel==='wallet'&&<section id="profile-panel-wallet" className="profile-data-section profile-history-section" aria-labelledby="profile-wallet-heading">
+        <div className="profile-section-heading"><h2 id="profile-wallet-heading">{t('walletTitle')}</h2><button className="text-link" onClick={()=>nav('/wallet')} data-testid="button-profile-all-wallets">{t('allShops')} <ArrowRight size={15}/></button></div>
         {activeMerchants.length===0?<div className="surface profile-empty"><Wallet size={22}/><span>{t('noShopsHint')}</span></div>:<div className="profile-wallet-list">{activeMerchants.map(shop=>{
-          const earned=txns.filter(x=>x.cid===profile.eid&&x.mid===shop.id).reduce((sum,x)=>sum+Number(x.cashback||0),0);
+          const earned=customerTxns.filter(x=>x.mid===shop.id).reduce((sum,x)=>sum+Number(x.cashback||0),0);
           const rawBalance=customerData?.cbm?.[shop.id];
           return <button className="surface profile-wallet-row" key={shop.id} onClick={()=>nav(`/wallet/${shop.id}`)} data-testid={`profile-wallet-${shop.id}`}><span className="profile-wallet-mark"><Store size={18}/></span><span className="profile-wallet-name"><strong>{shop.name}</strong><small>{shop.cat?t(`cat_${shop.cat}`):localizeCity(shop.city,lang)||t('merchantId')}</small></span><span className="profile-wallet-values"><strong>{rawBalance===undefined?'—':formatMoney(Number(rawBalance),shop.country)}</strong><small>{t('balance')} · {t('earned')} {formatMoney(earned,shop.country)}</small></span><ArrowRight className="profile-row-arrow" size={16}/></button>;
         })}</div>}
-      </section>
-      <section className="profile-data-section"><div className="profile-section-heading"><h2>{t('recentActivity')}</h2><span className="subtle">{profileClaims.length}</span></div>{profileClaims.length===0?<div className="surface profile-empty"><ReceiptText size={22}/><span>{t('noReceipts')}</span></div>:<div style={{display:'grid',gap:9}}>{profileClaims.slice(0,4).map(claim=><ClaimRow key={claim.id} claim={claim} shop={merchants.find(m=>m.id===claim.mid)} t={t}/>)}</div>}</section>
+      </section>}
+      {profilePanel==='claims'&&<section id="profile-receipt-history" className="profile-data-section profile-history-section"><div className="profile-section-heading"><h2>{t('claimHistory')}</h2><span className="subtle">{profileClaims.length}</span></div>{profileClaims.length===0?<div className="surface profile-empty"><ReceiptText size={22}/><span>{t('noReceipts')}</span></div>:<div style={{display:'grid',gap:9}}>{profileClaims.slice(0,4).map(claim=><ClaimRow key={claim.id} claim={claim} shop={merchants.find(m=>m.id===claim.mid)} t={t}/>)}</div>}</section>}
+      {profilePanel==='transactions'&&<section id="profile-transactions" className="profile-data-section profile-history-section"><div className="profile-section-heading"><h2>{t('transactions')}</h2><span className="subtle">{customerTxns.length+customerPayments.length}</span></div>{customerTxns.length+customerPayments.length===0?<div className="surface profile-empty"><ArrowDownLeft size={22}/><span>{t('noActivity')}</span></div>:<div style={{display:'grid',gap:9}}>
+        {customerPayments.slice(0,4).map(payment=>{const shop=merchants.find(m=>m.id===payment.mid);return <div className="surface profile-transaction-row" key={`payment-${payment.id}`}><span><strong>{shop?.name||t('merchantId')}</strong><small>{t('used')} · {payment.at||''}</small></span><strong>{formatMoney(payment.amount,shop?.country)}</strong></div>;})}
+        {customerTxns.slice(-4).reverse().map(txn=>{const shop=merchants.find(m=>m.id===txn.mid);return <div className="surface profile-transaction-row" key={`txn-${txn.id}`}><span><strong>{shop?.name||t('merchantId')}</strong><small>{t('earned')} · {txn.t||''}</small></span><strong className="profile-earned-value">+{formatMoney(Number(txn.cashback||0),shop?.country)}</strong></div>;})}
+      </div>}</section>}
       <button className="btn btn-outline profile-logout" onClick={()=>void logout()} data-testid="button-logout"><LogOut size={17}/>{t('signOut')}</button>
     </section>);
   }
