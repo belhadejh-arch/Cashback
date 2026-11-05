@@ -17,5 +17,7 @@ export interface CashbackProfile {
   phone?: string | null;
   /** @nullable */
   email?: string | null;
+  /** @nullable */
+  avatarUpdatedAt?: number | null;
   preferences?: CashbackProfilePreferences;
 }

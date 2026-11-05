@@ -20,6 +20,7 @@ export type CashbackProfile = {
   name: string;
   phone?: string | null;
   email?: string | null;
+  avatarUpdatedAt?: number;
   preferences?: { language?: "ar" | "en" | "fr"; theme?: "dark" | "light" };
 };
 export type CashbackState = Record<string, any>;
@@ -327,6 +328,7 @@ export async function authenticateRequest(req: Request): Promise<CashbackProfile
     name: String(fields.name ?? ""),
     phone: fields.phone ? String(fields.phone) : null,
     email: fields.email ? String(fields.email) : null,
+    avatarUpdatedAt: Number(fields.avatarUpdatedAt ?? 0) || undefined,
     preferences: fields.preferences ?? { language: "ar", theme: "dark" },
   };
 }

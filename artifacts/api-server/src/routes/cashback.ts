@@ -7,6 +7,10 @@ import {
   DecideCashbackReceiptBody,
   DecideCashbackMerchantBody,
   RedeemMerchantCashbackBody,
+  CreateCashbackProfilePhotoUploadBody,
+  CreateCashbackProfilePhotoUploadResponse,
+  SaveCashbackProfilePhotoBody,
+  SaveCashbackProfilePhotoResponse,
   UpdateCashbackPreferencesBody,
   UpdateCashbackRateBody,
 } from "@workspace/api-zod";
@@ -33,6 +37,12 @@ import {
   type CashbackProfile,
   type CashbackState,
 } from "../lib/cashback-neon";
+import {
+  createProfilePhotoUpload,
+  getProfilePhotoFile,
+  profilePhotoMatchesType,
+  readProfilePhoto,
+} from "../lib/profilePhotoStorage";
 
 const router: IRouter = Router();
 const MAX_IMAGE_LENGTH = 650_000;
@@ -221,6 +231,7 @@ router.get("/cashback/session", async (req, res) => {
     const resultProfile = {
       ...profile,
       name: savedFields.name || profile.name,
+      avatarUpdatedAt: Number(savedFields.avatarUpdatedAt ?? profile.avatarUpdatedAt ?? 0) || undefined,
       preferences: savedFields.preferences ?? profile.preferences,
       ...(profile.role === "merchant" && merchant
         ? { status: merchant.status, rejectionReason: merchant.rejectionReason ?? null }
@@ -650,6 +661,114 @@ router.patch("/cashback/profile/preferences", async (req, res) => {
     const parsed = UpdateCashbackPreferencesBody.safeParse(req.body);
     if (!parsed.success) throw new CashbackError(400, "INVALID_REQUEST");
     res.json(await savePreferences(profile, parsed.data));
+  } catch (error) {
+    respondError(res, error);
+  }
+});
+
+router.post("/cashback/profile/photo/upload-url", async (req, res) => {
+  const profile = (req as AuthenticatedRequest).cashbackProfile;
+  try {
+    const parsed = CreateCashbackProfilePhotoUploadBody.safeParse(req.body);
+    if (!parsed.success) throw new CashbackError(400, "INVALID_REQUEST");
+    const uploadId = `avatar_${randomUUID().replaceAll("-", "")}`;
+    const { uploadURL, objectPath } = await createProfilePhotoUpload(profile.uid);
+    const createdAt = Date.now();
+    const stored = await commit([
+      documentWrite("profile_photo_uploads", uploadId, {
+        uid: profile.uid,
+        objectPath,
+        contentType: parsed.data.contentType,
+        declaredSize: parsed.data.size,
+        createdAt,
+        expiresAt: createdAt + 10 * 60 * 1000,
+      }, false),
+    ]);
+    if (!stored) throw new CashbackError(503, "PHOTO_UPLOAD_CREATE_FAILED");
+    res.status(201).json(
+      CreateCashbackProfilePhotoUploadResponse.parse({ uploadURL, objectPath, uploadId }),
+    );
+  } catch (error) {
+    respondError(res, error);
+  }
+});
+
+router.patch("/cashback/profile/photo", async (req, res) => {
+  const profile = (req as AuthenticatedRequest).cashbackProfile;
+  try {
+    const parsed = SaveCashbackProfilePhotoBody.safeParse(req.body);
+    if (!parsed.success) throw new CashbackError(400, "INVALID_REQUEST");
+    const uploadPath = `profile_photo_uploads/${parsed.data.uploadId}`;
+    const uploadDoc = await getDocument(uploadPath);
+    const upload = decodeCashbackFields(uploadDoc);
+    if (
+      !uploadDoc ||
+      upload.uid !== profile.uid ||
+      upload.objectPath !== parsed.data.objectPath ||
+      upload.finalizedAt ||
+      Number(upload.expiresAt ?? 0) <= Date.now()
+    ) {
+      throw new CashbackError(400, "PHOTO_UPLOAD_EXPIRED");
+    }
+
+    const file = await getProfilePhotoFile(upload.objectPath);
+    const [metadata] = await file.getMetadata();
+    const contentType = String(metadata.contentType ?? "");
+    const size = Number(metadata.size ?? 0);
+    if (
+      contentType !== upload.contentType ||
+      !["image/jpeg", "image/png", "image/webp"].includes(contentType) ||
+      !Number.isFinite(size) ||
+      size <= 0 ||
+      size > 5 * 1024 * 1024 ||
+      size > Number(upload.declaredSize) ||
+      !(await profilePhotoMatchesType(file, contentType))
+    ) {
+      throw new CashbackError(400, "INVALID_IMAGE");
+    }
+
+    const profilePath = `users/${profile.uid}`;
+    const profileDoc = await getDocument(profilePath);
+    if (!profileDoc) throw new CashbackError(404, "PROFILE_NOT_FOUND");
+    const fields = decodeCashbackFields(profileDoc);
+    const avatarUpdatedAt = Math.max(Date.now(), Number(fields.avatarUpdatedAt ?? 0) + 1);
+    const pendingUpdate = documentWrite("profile_photo_uploads", parsed.data.uploadId, {
+      ...upload,
+      finalizedAt: avatarUpdatedAt,
+    }, true);
+    pendingUpdate.currentDocument = { updateTime: uploadDoc.updateTime };
+    const profileUpdate = documentWrite("users", profile.uid, {
+      ...fields,
+      avatarObjectPath: upload.objectPath,
+      avatarUpdatedAt,
+    }, true);
+    profileUpdate.currentDocument = { updateTime: profileDoc.updateTime };
+    const saved = await commit([pendingUpdate, profileUpdate]);
+    if (!saved) throw new CashbackError(409, "PROFILE_UPDATE_CONFLICT");
+    res.json(SaveCashbackProfilePhotoResponse.parse({ avatarUpdatedAt }));
+  } catch (error) {
+    respondError(res, error);
+  }
+});
+
+router.get("/cashback/profile/photo", async (req, res) => {
+  const profile = (req as AuthenticatedRequest).cashbackProfile;
+  try {
+    const profileDoc = await getDocument(`users/${profile.uid}`);
+    const fields = decodeCashbackFields(profileDoc);
+    const objectPath = String(fields.avatarObjectPath ?? "");
+    if (!objectPath) throw new CashbackError(404, "MEDIA_NOT_FOUND");
+    const photo = await readProfilePhoto(objectPath);
+    res.setHeader("content-type", photo.contentType);
+    res.setHeader("content-length", String(photo.size));
+    res.setHeader("cache-control", "private, max-age=300");
+    res.setHeader("x-content-type-options", "nosniff");
+    photo.body.on("error", (error) => {
+      req.log.warn({ err: error }, "Could not stream profile photo");
+      if (!res.headersSent) res.status(500).end();
+      else res.destroy(error);
+    });
+    photo.body.pipe(res);
   } catch (error) {
     respondError(res, error);
   }

@@ -32,7 +32,11 @@ import type {
   CashbackRedemption,
   CashbackRegistration,
   CashbackSession,
-  HealthStatus
+  HealthStatus,
+  ProfilePhotoFinalizeInput,
+  ProfilePhotoResult,
+  ProfilePhotoUpload,
+  ProfilePhotoUploadInput
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -985,6 +989,259 @@ export const useUpdateCashbackPreferences = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getUpdateCashbackPreferencesMutationOptions(options));
     }
+
+export const getCreateCashbackProfilePhotoUploadUrl = () => {
+
+
+
+
+  return `/api/cashback/profile/photo/upload-url`
+}
+
+/**
+ * @summary Create a short-lived private upload URL for a profile photo
+ */
+export const createCashbackProfilePhotoUpload = async (profilePhotoUploadInput: ProfilePhotoUploadInput, options?: Parameters<typeof customFetch>[1]): Promise<ProfilePhotoUpload> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ProfilePhotoUpload>(getCreateCashbackProfilePhotoUploadUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(profilePhotoUploadInput)
+  }
+);}
+
+
+
+
+
+export const getCreateCashbackProfilePhotoUploadMutationKey = () => ['createCashbackProfilePhotoUpload'] as const;
+
+export const getCreateCashbackProfilePhotoUploadMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCashbackProfilePhotoUpload>>, TError,CreateCashbackProfilePhotoUploadMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createCashbackProfilePhotoUpload>>, TError,CreateCashbackProfilePhotoUploadMutationVariables, TContext> => {
+
+const mutationKey = getCreateCashbackProfilePhotoUploadMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createCashbackProfilePhotoUpload>>, CreateCashbackProfilePhotoUploadMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createCashbackProfilePhotoUpload(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateCashbackProfilePhotoUploadMutationResult = NonNullable<Awaited<ReturnType<typeof createCashbackProfilePhotoUpload>>>
+    export type CreateCashbackProfilePhotoUploadMutationBody = BodyType<ProfilePhotoUploadInput>
+    export type CreateCashbackProfilePhotoUploadMutationError = ErrorType<unknown>
+    export type CreateCashbackProfilePhotoUploadMutationVariables = {data: BodyType<ProfilePhotoUploadInput>}
+
+    /**
+ * @summary Create a short-lived private upload URL for a profile photo
+ */
+export const useCreateCashbackProfilePhotoUpload = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCashbackProfilePhotoUpload>>, TError,CreateCashbackProfilePhotoUploadMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createCashbackProfilePhotoUpload>>,
+        TError,
+        CreateCashbackProfilePhotoUploadMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateCashbackProfilePhotoUploadMutationOptions(options));
+    }
+
+export const getSaveCashbackProfilePhotoUrl = () => {
+
+
+
+
+  return `/api/cashback/profile/photo`
+}
+
+/**
+ * @summary Attach an uploaded image to the authenticated profile
+ */
+export const saveCashbackProfilePhoto = async (profilePhotoFinalizeInput: ProfilePhotoFinalizeInput, options?: Parameters<typeof customFetch>[1]): Promise<ProfilePhotoResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ProfilePhotoResult>(getSaveCashbackProfilePhotoUrl(),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(profilePhotoFinalizeInput)
+  }
+);}
+
+
+
+
+
+export const getSaveCashbackProfilePhotoMutationKey = () => ['saveCashbackProfilePhoto'] as const;
+
+export const getSaveCashbackProfilePhotoMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveCashbackProfilePhoto>>, TError,SaveCashbackProfilePhotoMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof saveCashbackProfilePhoto>>, TError,SaveCashbackProfilePhotoMutationVariables, TContext> => {
+
+const mutationKey = getSaveCashbackProfilePhotoMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof saveCashbackProfilePhoto>>, SaveCashbackProfilePhotoMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  saveCashbackProfilePhoto(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SaveCashbackProfilePhotoMutationResult = NonNullable<Awaited<ReturnType<typeof saveCashbackProfilePhoto>>>
+    export type SaveCashbackProfilePhotoMutationBody = BodyType<ProfilePhotoFinalizeInput>
+    export type SaveCashbackProfilePhotoMutationError = ErrorType<unknown>
+    export type SaveCashbackProfilePhotoMutationVariables = {data: BodyType<ProfilePhotoFinalizeInput>}
+
+    /**
+ * @summary Attach an uploaded image to the authenticated profile
+ */
+export const useSaveCashbackProfilePhoto = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveCashbackProfilePhoto>>, TError,SaveCashbackProfilePhotoMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof saveCashbackProfilePhoto>>,
+        TError,
+        SaveCashbackProfilePhotoMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSaveCashbackProfilePhotoMutationOptions(options));
+    }
+
+export const getGetCashbackProfilePhotoUrl = () => {
+
+
+
+
+  return `/api/cashback/profile/photo`
+}
+
+/**
+ * @summary Read the authenticated user's private profile photo
+ */
+export const getCashbackProfilePhoto = async ( options?: Parameters<typeof customFetch>[1]): Promise<Blob> => {
+
+  return customFetch<Blob>(getGetCashbackProfilePhotoUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCashbackProfilePhotoQueryKey = () => {
+    return [
+    `/api/cashback/profile/photo`
+    ] as const;
+    }
+
+
+export const getGetCashbackProfilePhotoQueryOptions = <TData = Awaited<ReturnType<typeof getCashbackProfilePhoto>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCashbackProfilePhoto>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCashbackProfilePhotoQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCashbackProfilePhoto>>> = ({ signal }) => getCashbackProfilePhoto({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCashbackProfilePhoto>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetCashbackProfilePhotoQueryResult = NonNullable<Awaited<ReturnType<typeof getCashbackProfilePhoto>>>
+export type GetCashbackProfilePhotoQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Read the authenticated user's private profile photo
+ */
+
+export function useGetCashbackProfilePhoto<TData = Awaited<ReturnType<typeof getCashbackProfilePhoto>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCashbackProfilePhoto>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetCashbackProfilePhotoQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getUpdateCashbackRateUrl = () => {
 

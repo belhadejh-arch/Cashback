@@ -26,3 +26,8 @@ export * from './cashbackRegistrationRole';
 export * from './cashbackSession';
 export * from './cashbackState';
 export * from './healthStatus';
+export * from './profilePhotoFinalizeInput';
+export * from './profilePhotoResult';
+export * from './profilePhotoUpload';
+export * from './profilePhotoUploadInput';
+export * from './profilePhotoUploadInputContentType';

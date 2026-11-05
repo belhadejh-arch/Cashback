@@ -29,6 +29,8 @@ export interface CashbackProfile {
   phone?: string | null;
   /** @nullable */
   email?: string | null;
+  /** @nullable */
+  avatarUpdatedAt?: number | null;
   preferences?: CashbackProfilePreferences;
 }
 
@@ -165,6 +167,47 @@ export const CashbackPreferencesTheme = {
 export interface CashbackPreferences {
   language: CashbackPreferencesLanguage;
   theme: CashbackPreferencesTheme;
+}
+
+export type ProfilePhotoUploadInputContentType = typeof ProfilePhotoUploadInputContentType[keyof typeof ProfilePhotoUploadInputContentType];
+
+
+export const ProfilePhotoUploadInputContentType = {
+  'image/jpeg': 'image/jpeg',
+  'image/png': 'image/png',
+  'image/webp': 'image/webp',
+} as const;
+
+export interface ProfilePhotoUploadInput {
+  contentType: ProfilePhotoUploadInputContentType;
+  /**
+     * @minimum 1
+     * @maximum 5242880
+     */
+  size: number;
+}
+
+export interface ProfilePhotoUpload {
+  uploadURL: string;
+  objectPath: string;
+  uploadId: string;
+}
+
+export interface ProfilePhotoFinalizeInput {
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  uploadId: string;
+  /**
+     * @minLength 1
+     * @maxLength 500
+     */
+  objectPath: string;
+}
+
+export interface ProfilePhotoResult {
+  avatarUpdatedAt: number;
 }
 
 export interface CashbackRateUpdate {

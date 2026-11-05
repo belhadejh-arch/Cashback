@@ -1,11 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import {
   getGetCashbackSessionQueryKey, getGetCashbackMediaQueryKey,
   useGetCashbackSession, useRegisterCashbackProfile, useSubmitCashbackReceipt,
   useDecideCashbackReceipt, useDecideCashbackMerchant, useRedeemMerchantCashback,
   useUpdateCashbackPreferences, useUpdateCashbackRate, useGetCashbackMedia,
-  useLoginCashback, useLogoutCashback,
+  useLoginCashback, useLogoutCashback, useCreateCashbackProfilePhotoUpload,
+  useSaveCashbackProfilePhoto,
 } from '@workspace/api-client-react';
 import { useLocation } from 'wouter';
 import { QRCodeSVG } from 'qrcode.react';
@@ -13,7 +14,7 @@ import {
   ArrowDownLeft, ArrowLeft, ArrowRight, BadgeCheck, Banknote, Camera, Check, ChevronDown,
   CircleHelp, Clock3, Compass, Coffee, FileCheck2, FilePlus2, Gift, Globe2, Laptop, LogOut, MapPin, Moon, Share2,
   Plus, ReceiptText, Search, Settings, ShieldCheck, Store, Sun, UserRound, Wallet,
-  X, Upload, RefreshCw, LockKeyhole, Percent, LocateFixed, Shirt, ShoppingBag, Tag, Utensils,
+  X, RefreshCw, LockKeyhole, Percent, LocateFixed, Shirt, ShoppingBag, Tag, Utensils,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Route, Switch, Router as WouterRouter } from 'wouter';
@@ -24,7 +25,7 @@ type Theme = 'dark' | 'light';
 type Merchant = { id: string; name: string; cat?: string; status?: string; country?: string; city?: string; address?: string; mapsUrl?: string; lat?: number; lng?: number; cashbackRate?: number; logoId?: string; publicId?: string; qrValue?: string };
 type Claim = { id: string; mid: string; cid: string; invoiceNumber?: string; date?: string; amount: number; photoId?: string; status: string; created?: string; cashback?: number; reason?: string };
 type Txn = { id: string; t?: string; mid: string; cid: string; amount: number; cashback?: number; method?: string };
-type Session = { profile: { uid: string; role: string; eid: string; name: string; phone?: string; email?: string; preferences?: { language?: Lang; theme?: Theme }; status?: string; rejectionReason?: string }; state: { settings?: { cashback?: number; claimHours?: number }; merchants?: Merchant[]; customers?: { id: string; name: string; phone?: string; wallet?: number; cbm?: Record<string, number> }[]; claims?: Claim[]; txns?: Txn[]; cbpays?: { id: string; cid: string; mid: string; amount: number; status: string; at?: string }[]; notes?: unknown[] } };
+type Session = { profile: { uid: string; role: string; eid: string; name: string; phone?: string; email?: string; avatarUpdatedAt?: number; preferences?: { language?: Lang; theme?: Theme }; status?: string; rejectionReason?: string }; state: { settings?: { cashback?: number; claimHours?: number }; merchants?: Merchant[]; customers?: { id: string; name: string; phone?: string; wallet?: number; cbm?: Record<string, number> }[]; claims?: Claim[]; txns?: Txn[]; cbpays?: { id: string; cid: string; mid: string; amount: number; status: string; at?: string }[]; notes?: unknown[] } };
 type Dict = Record<string, string>;
 const dictionaries: Record<Lang, Dict> = {
   en: {
@@ -44,9 +45,50 @@ const dictionaries: Record<Lang, Dict> = {
   },
 };
 const extraTranslations: Record<Lang, Dict> = {
-  en: { categories: 'Categories', accountSection: 'My account', claimHistory: 'Receipt history', rewardShops: 'Shops with rewards', transactions: 'Transactions', myDetails: 'Personal details', quickAccess: 'Your account', interfacePrefs: 'Preferences', helloProfile: 'Your local rewards, at a glance.', approvedReceipts: 'Approved receipts', profileSettingsTitle: 'Profile & settings', inviteFriends: 'Invite friends', inviteMessage: 'Join me on CASH BACK and earn rewards at local shops.', inviteCopied: 'Invitation link copied.', shareUnavailable: 'Sharing is unavailable in this browser.' },
-  fr: { categories: 'Catégories', accountSection: 'Mon compte', claimHistory: 'Historique des reçus', rewardShops: 'Commerces avec récompenses', transactions: 'Transactions', myDetails: 'Informations personnelles', quickAccess: 'Votre compte', interfacePrefs: 'Préférences', helloProfile: 'Vos récompenses locales, en un coup d’œil.', approvedReceipts: 'Reçus approuvés', profileSettingsTitle: 'Profil et paramètres', inviteFriends: 'Inviter des amis', inviteMessage: 'Rejoignez CASH BACK et gagnez des récompenses dans les commerces locaux.', inviteCopied: 'Lien d’invitation copié.', shareUnavailable: 'Le partage est indisponible dans ce navigateur.' },
-  ar: { categories: 'التصنيفات', accountSection: 'حسابي', claimHistory: 'سجل الفواتير', rewardShops: 'متاجر لديها مكافآت', transactions: 'المعاملات', myDetails: 'البيانات الشخصية', quickAccess: 'حسابك', interfacePrefs: 'التفضيلات', helloProfile: 'مكافآتك المحلية، في لمحة.', approvedReceipts: 'الفواتير المقبولة', profileSettingsTitle: 'الملف الشخصي والإعدادات', inviteFriends: 'دعوة الأصدقاء', inviteMessage: 'انضم إليّ في CASH BACK واكسب مكافآت من المتاجر المحلية.', inviteCopied: 'تم نسخ رابط الدعوة.', shareUnavailable: 'المشاركة غير متاحة في هذا المتصفح.' },
+  en: { categories: 'Categories', accountSection: 'My account', claimHistory: 'Receipt history', rewardShops: 'Shops with rewards', transactions: 'Transactions', myDetails: 'Personal details', quickAccess: 'Your account', interfacePrefs: 'Preferences', helloProfile: 'Your local rewards, at a glance.', approvedReceipts: 'Approved receipts', profileSettingsTitle: 'Profile & settings', inviteFriends: 'Invite friends', inviteMessage: 'Join me on CASH BACK and earn rewards at local shops.', inviteCopied: 'Invitation link copied.', shareUnavailable: 'Sharing is unavailable in this browser.', changePhoto:'Change profile photo', photoUploading:'Uploading photo…', photoSaved:'Profile photo updated.', photoInvalidType:'Choose a JPEG, PNG or WebP image.', photoTooLarge:'Photo must be 5 MB or smaller.', photoUploadError:'Could not update your photo. Please try again.', noTransactions:'No transactions yet', historyLoad:'Loading your history…', receiptHistoryIntro:'Every receipt you have sent for review.', transactionHistoryIntro:'Every reward earned and redeemed across your shops.' },
+  fr: { categories: 'Catégories', accountSection: 'Mon compte', claimHistory: 'Historique des reçus', rewardShops: 'Commerces avec récompenses', transactions: 'Transactions', myDetails: 'Informations personnelles', quickAccess: 'Votre compte', interfacePrefs: 'Préférences', helloProfile: 'Vos récompenses locales, en un coup d’œil.', approvedReceipts: 'Reçus approuvés', profileSettingsTitle: 'Profil et paramètres', inviteFriends: 'Inviter des amis', inviteMessage: 'Rejoignez CASH BACK et gagnez des récompenses dans les commerces locaux.', inviteCopied: 'Lien d’invitation copié.', shareUnavailable: 'Le partage est indisponible dans ce navigateur.', changePhoto:'Modifier la photo de profil', photoUploading:'Envoi de la photo…', photoSaved:'Photo de profil mise à jour.', photoInvalidType:'Choisissez une image JPEG, PNG ou WebP.', photoTooLarge:'La photo doit faire 5 Mo maximum.', photoUploadError:'Impossible de modifier la photo. Réessayez.', noTransactions:'Aucune transaction pour le moment', historyLoad:'Chargement de l’historique…', receiptHistoryIntro:'Tous les reçus envoyés pour vérification.', transactionHistoryIntro:'Toutes les récompenses gagnées et utilisées dans vos commerces.' },
+  ar: { categories: 'التصنيفات', accountSection: 'حسابي', claimHistory: 'سجل الفواتير', rewardShops: 'متاجر لديها مكافآت', transactions: 'المعاملات', myDetails: 'البيانات الشخصية', quickAccess: 'حسابك', interfacePrefs: 'التفضيلات', helloProfile: 'مكافآتك المحلية، في لمحة.', approvedReceipts: 'الفواتير المقبولة', profileSettingsTitle: 'الملف الشخصي والإعدادات', inviteFriends: 'دعوة الأصدقاء', inviteMessage: 'انضم إليّ في CASH BACK واكسب مكافآت من المتاجر المحلية.', inviteCopied: 'تم نسخ رابط الدعوة.', shareUnavailable: 'المشاركة غير متاحة في هذا المتصفح.', changePhoto:'تغيير الصورة الشخصية', photoUploading:'جارٍ رفع الصورة…', photoSaved:'تم تحديث الصورة الشخصية.', photoInvalidType:'اختر صورة JPEG أو PNG أو WebP.', photoTooLarge:'يجب ألا يتجاوز حجم الصورة 5 ميغابايت.', photoUploadError:'تعذر تحديث الصورة. يرجى المحاولة مجدداً.', noTransactions:'لا توجد معاملات بعد', historyLoad:'جارٍ تحميل السجل…', receiptHistoryIntro:'كل الإيصالات التي أرسلتها للمراجعة.', transactionHistoryIntro:'كل المكافآت المكتسبة والمستخدمة لدى متاجرك.' },
+};
+const cameraTranslations: Record<Lang, Dict> = {
+  en: {
+    receipt: 'Take a receipt photo',
+    receiptHint: 'Take a clear photo of the full receipt. Rewards are added after review.',
+    uploadRequired: 'Take a photo of the receipt first.',
+    captureReceipt: 'Photograph the receipt',
+    cameraHint: 'Point the camera at the full receipt, then take a photo.',
+    cameraStarting: 'Opening the camera…',
+    takeReceiptPhoto: 'Take receipt photo',
+    retakeReceiptPhoto: 'Retake photo',
+    cameraFallback: 'Open device camera',
+    cameraUnavailable: 'The camera could not open. Check camera permission or use your device camera.',
+    photoReady: 'Receipt photo is ready.',
+  },
+  fr: {
+    receipt: 'Photographier un reçu',
+    receiptHint: 'Photographiez clairement le reçu en entier. Les récompenses seront ajoutées après vérification.',
+    uploadRequired: 'Photographiez d’abord le reçu.',
+    captureReceipt: 'Photographier le reçu',
+    cameraHint: 'Cadrez le reçu en entier, puis prenez la photo.',
+    cameraStarting: 'Ouverture de la caméra…',
+    takeReceiptPhoto: 'Prendre le reçu en photo',
+    retakeReceiptPhoto: 'Reprendre la photo',
+    cameraFallback: 'Ouvrir la caméra de l’appareil',
+    cameraUnavailable: 'La caméra ne s’est pas ouverte. Vérifiez son autorisation ou utilisez la caméra de l’appareil.',
+    photoReady: 'La photo du reçu est prête.',
+  },
+  ar: {
+    receipt: 'تصوير إيصال الفاتورة',
+    receiptHint: 'صوّر الإيصال كاملاً بوضوح. تُضاف المكافأة بعد مراجعة الفاتورة.',
+    uploadRequired: 'يرجى تصوير إيصال الفاتورة أولاً.',
+    captureReceipt: 'تصوير إيصال الفاتورة',
+    cameraHint: 'وجّه الكاميرا نحو الإيصال كاملاً ثم التقط الصورة.',
+    cameraStarting: 'جارٍ فتح الكاميرا…',
+    takeReceiptPhoto: 'التقاط صورة الإيصال',
+    retakeReceiptPhoto: 'إعادة التصوير',
+    cameraFallback: 'فتح كاميرا الجهاز',
+    cameraUnavailable: 'تعذر فتح الكاميرا. تحقق من الإذن أو افتح كاميرا الجهاز.',
+    photoReady: 'صورة الإيصال جاهزة.',
+  },
 };
 const wilayas = ['Adrar','Chlef','Laghouat','Oum El Bouaghi','Batna','Béjaïa','Biskra','Béchar','Blida','Bouira','Tamanrasset','Tébessa','Tlemcen','Tiaret','Tizi Ouzou','Alger','Djelfa','Jijel','Sétif','Saïda','Skikda','Sidi Bel Abbès','Annaba','Guelma','Constantine','Médéa','Mostaganem','M’Sila','Mascara','Ouargla','Oran','El Bayadh','Illizi','Bordj Bou Arréridj','Boumerdès','El Tarf','Tindouf','Tissemsilt','El Oued','Khenchela','Souk Ahras','Tipaza','Mila','Aïn Defla','Naâma','Aïn Témouchent','Ghardaïa','Relizane','Timimoun','Bordj Badji Mokhtar','Ouled Djellal','Béni Abbès','In Salah','In Guezzam','Touggourt','Djanet','El M’Ghair','El Meniaa'];
 const libyanCities = ['Tripoli','Benghazi','Misrata','Bayda','Zawiya','Zliten','Ajdabiya','Tobruk','Sabha','Sirte','Derna','Khoms','Gharyan','Tarhuna','Bani Walid','Jalu','Kufra','Ghadames','Murzuq','Nalut','Sabratha','Surman','Yefren','Ubari','Brak','Marj'];
@@ -56,6 +98,11 @@ const cityArabic = Object.fromEntries([...wilayas.map((name,index)=>[name,wilaya
 const localizeCity = (name:string|undefined, lang:Lang) => name && lang==='ar' ? cityArabic[name] || name : name || '';
 const browseCategories = ['restaurants','cafes','clothing','electronics','malls','groceries','perfume','gifts','shops'] as const;
 const formatMoney = (n: number, country = 'Algeria') => `${Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${country === 'Libya' ? 'LYD' : 'DZD'}`;
+const timestampOf = (value: unknown) => {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+  const parsed = Date.parse(String(value ?? ''));
+  return Number.isFinite(parsed) ? parsed : 0;
+};
 const getHttpStatus = (error: unknown) => {
   if (!error || typeof error !== 'object') return 0;
   const value = error as { status?: unknown; statusCode?: unknown; response?: { status?: unknown } };
@@ -95,15 +142,25 @@ function AppInner() {
   const [country, setCountry] = useState('Algeria'); const [city, setCity] = useState(''); const [address, setAddress] = useState(''); const [mapsUrl, setMapsUrl] = useState(''); const [category, setCategory] = useState(''); const [logoData, setLogoData] = useState('');
   const [search, setSearch] = useState(''); const [selectedMerchant, setSelectedMerchant] = useState<Merchant|null>(null);
   const [selectedCategory, setSelectedCategory] = useState(''); const [cityFilter, setCityFilter] = useState('');
-  const [profilePanel, setProfilePanel] = useState<'wallet'|'claims'|'transactions'|null>(null);
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoFailed, setPhotoFailed] = useState(false);
+  const [receiptCameraActive, setReceiptCameraActive] = useState(false);
+  const [receiptCameraStarting, setReceiptCameraStarting] = useState(false);
+  const [receiptCameraError, setReceiptCameraError] = useState('');
+  const receiptVideoRef = useRef<HTMLVideoElement>(null);
+  const receiptPhotoInputRef = useRef<HTMLInputElement>(null);
+  const receiptCameraStreamRef = useRef<MediaStream|null>(null);
+  const receiptCameraRequestRef = useRef(0);
   const [dialog, setDialog] = useState<'receipt'|'redeem'|null>(null); const [receiptMerchantId, setReceiptMerchantId] = useState(''); const [receiptFile, setReceiptFile] = useState(''); const [invoice, setInvoice] = useState(''); const [purchaseAmount, setPurchaseAmount] = useState(''); const [purchaseDate, setPurchaseDate] = useState(new Date().toISOString().slice(0,10)); const [redeemAmount, setRedeemAmount] = useState('');
   const [reason, setReason] = useState(''); const [rateValue, setRateValue] = useState('');
-  const t = (key: string) => extraTranslations[lang][key] || dictionaries[lang][key] || (key.startsWith('cat_') ? key.slice(4) : key);
+  const t = (key: string) => cameraTranslations[lang][key] || extraTranslations[lang][key] || dictionaries[lang][key] || (key.startsWith('cat_') ? key.slice(4) : key);
   const { data: session, isLoading, isError, error: queryError, refetch } = useGetCashbackSession({ query: { queryKey: getGetCashbackSessionQueryKey(), enabled: authReady, retry: false, refetchOnWindowFocus: false } });
   const sessionHttpStatus = getHttpStatus(queryError);
   const register = useRegisterCashbackProfile(); const submitReceipt = useSubmitCashbackReceipt(); const decideReceipt = useDecideCashbackReceipt();
   const decideMerchant = useDecideCashbackMerchant(); const redeem = useRedeemMerchantCashback(); const preferences = useUpdateCashbackPreferences(); const updateRate = useUpdateCashbackRate();
   const login = useLoginCashback(); const signOut = useLogoutCashback();
+  const createPhotoUpload = useCreateCashbackProfilePhotoUpload();
+  const saveProfilePhoto = useSaveCashbackProfilePhoto();
   const user = session as Session|undefined;
   const state = user?.state || {};
   const merchants = state.merchants || []; const claims = state.claims || []; const txns = state.txns || [];
@@ -114,14 +171,17 @@ function AppInner() {
   const isRtl = lang === 'ar';
   useEffect(() => { document.documentElement.classList.toggle('dark', theme === 'dark'); document.documentElement.dir = isRtl ? 'rtl' : 'ltr'; document.documentElement.lang = lang; }, [theme, lang, isRtl]);
   useEffect(() => { const id = window.setTimeout(()=>setSplash(false), 1850); return ()=>window.clearTimeout(id); }, []);
-  useEffect(() => {
-    if (!profilePanel) return;
-    const targetId = profilePanel==='wallet'?'profile-panel-wallet':profilePanel==='claims'?'profile-receipt-history':'profile-transactions';
-    const frame = window.requestAnimationFrame(()=>document.getElementById(targetId)?.scrollIntoView({behavior:'smooth',block:'nearest'}));
-    return ()=>window.cancelAnimationFrame(frame);
-  }, [profilePanel]);
    useEffect(() => { setAuthReady(true); }, []);
-  useEffect(() => { if (profile?.preferences?.language) { setLang(profile.preferences.language); setTheme(profile.preferences.theme || 'dark'); } }, [profile?.uid, profile?.preferences?.language, profile?.preferences?.theme]);
+   useEffect(() => { if (profile?.preferences?.language) { setLang(profile.preferences.language); setTheme(profile.preferences.theme || 'dark'); } }, [profile?.uid, profile?.preferences?.language, profile?.preferences?.theme]);
+   useEffect(() => { setPhotoFailed(false); }, [profile?.uid, profile?.avatarUpdatedAt]);
+  useEffect(() => {
+    if (!receiptCameraActive || !receiptCameraStreamRef.current || !receiptVideoRef.current) return;
+    receiptVideoRef.current.srcObject = receiptCameraStreamRef.current;
+    void receiptVideoRef.current.play().catch(() => {
+      setReceiptCameraError(t('cameraUnavailable'));
+      stopReceiptCamera();
+    });
+  }, [receiptCameraActive, dialog]);
   useEffect(() => { if (location.startsWith('/shop/')) { const id = location.split('/')[2]; setSelectedMerchant(merchants.find(m=>m.id===id)||null); } else if (location !== '/shop') setSelectedMerchant(null); }, [location, merchants]);
   const refreshSession = () => client.invalidateQueries({ queryKey: getGetCashbackSessionQueryKey() });
   const availableCities = useMemo(()=>Array.from(new Set(activeMerchants.map(m=>m.city).filter((value): value is string=>Boolean(value)))),[activeMerchants]);
@@ -186,6 +246,80 @@ function AppInner() {
     image.onload=()=>{ URL.revokeObjectURL(source); const scale=Math.min(1,1500/Math.max(image.width,image.height)); const canvas=document.createElement('canvas'); canvas.width=Math.max(1,Math.round(image.width*scale)); canvas.height=Math.max(1,Math.round(image.height*scale)); const context=canvas.getContext('2d'); if(!context){reject(new Error('IMAGE_PROCESSING_FAILED'));return;} context.drawImage(image,0,0,canvas.width,canvas.height); canvas.toBlob(blob=>{if(!blob){reject(new Error('IMAGE_PROCESSING_FAILED'));return;}const reader=new FileReader();reader.onload=()=>resolve(String(reader.result)||'');reader.onerror=reject;reader.readAsDataURL(blob);},'image/jpeg',.78); };
     image.onerror=()=>{URL.revokeObjectURL(source);reject(new Error('IMAGE_PROCESSING_FAILED'));}; image.src=source;
   });
+  function stopReceiptCamera() {
+    receiptCameraRequestRef.current += 1;
+    receiptCameraStreamRef.current?.getTracks().forEach(track => track.stop());
+    receiptCameraStreamRef.current = null;
+    setReceiptCameraActive(false);
+    setReceiptCameraStarting(false);
+  }
+  async function startReceiptCamera() {
+    stopReceiptCamera();
+    setReceiptCameraError('');
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setReceiptCameraError(t('cameraUnavailable'));
+      return;
+    }
+    const requestId = ++receiptCameraRequestRef.current;
+    setReceiptCameraStarting(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+      });
+      if (receiptCameraRequestRef.current !== requestId) {
+        stream.getTracks().forEach(track => track.stop());
+        return;
+      }
+      receiptCameraStreamRef.current = stream;
+      setReceiptCameraActive(true);
+    } catch {
+      if (receiptCameraRequestRef.current === requestId) setReceiptCameraError(t('cameraUnavailable'));
+    } finally {
+      if (receiptCameraRequestRef.current === requestId) setReceiptCameraStarting(false);
+    }
+  }
+  async function captureReceiptPhoto() {
+    const video = receiptVideoRef.current;
+    if (!video || !video.videoWidth || !video.videoHeight) {
+      setReceiptCameraError(t('cameraUnavailable'));
+      return;
+    }
+    const scale = Math.min(1, 1600 / Math.max(video.videoWidth, video.videoHeight));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(video.videoWidth * scale));
+    canvas.height = Math.max(1, Math.round(video.videoHeight * scale));
+    const context = canvas.getContext('2d');
+    if (!context) {
+      setError(t('genericError'));
+      return;
+    }
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    canvas.toBlob(async blob => {
+      if (!blob) {
+        setError(t('genericError'));
+        return;
+      }
+      try {
+        const photo = await fileToData(new File([blob], 'receipt.jpg', { type: 'image/jpeg' }));
+        setReceiptFile(photo);
+        setReceiptCameraError('');
+        stopReceiptCamera();
+      } catch {
+        setError(t('genericError'));
+      }
+    }, 'image/jpeg', .86);
+  }
+  async function handleReceiptPhotoFile(file?: File) {
+    if (!file) return;
+    try {
+      setReceiptFile(await fileToData(file));
+      setReceiptCameraError('');
+      stopReceiptCamera();
+    } catch {
+      setError(t('genericError'));
+    }
+  }
   async function saveLogo(file?: File) { if (!file) return; try { setLogoData(await fileToData(file)); } catch { setError(t('genericError')); } }
   async function saveReceipt() {
     clearMessages();
@@ -193,19 +327,40 @@ function AppInner() {
     if (!Number(purchaseAmount) || Number(purchaseAmount) <= 0 || !purchaseDate) { setError(t('incomplete')); return; }
     try {
       await submitReceipt.mutateAsync({ data: { merchantId:receiptStore.id, invoiceNumber: invoice || null, amount:Number(purchaseAmount), date:purchaseDate, imageData:receiptFile } });
-      invalidate(); setDialog(null); setNotice(t('sendReceipt')); setReceiptFile(''); setInvoice(''); setPurchaseAmount('');
+      invalidate(); stopReceiptCamera(); setDialog(null); setNotice(t('sendReceipt')); setReceiptFile(''); setInvoice(''); setPurchaseAmount('');
     } catch { setError(t('genericError')); }
   }
-  const receiptDialog = dialog==='receipt' ? <Dialog close={()=>setDialog(null)} closeLabel={t('close')} title={t('receipt')}>
+  const receiptDialog = dialog==='receipt' ? <Dialog close={()=>{stopReceiptCamera();setDialog(null);}} closeLabel={t('close')} title={t('receipt')}>
     <div style={{display:'grid',gap:14}}>
       <p className="subtle" style={{margin:0}}>{t('receiptHint')}</p>
+      <section className="receipt-camera-panel" aria-label={t('captureReceipt')}>
+        {receiptFile ? <div className="receipt-photo-preview">
+          <img src={receiptFile} alt={t('captureReceipt')}/>
+          <div className="receipt-camera-actions">
+            <strong role="status">{t('photoReady')}</strong>
+            <button type="button" className="btn btn-outline" onClick={()=>{setReceiptFile('');void startReceiptCamera();}}><Camera size={17}/>{t('retakeReceiptPhoto')}</button>
+          </div>
+        </div> : receiptCameraActive ? <div className="receipt-live-camera">
+          <video ref={receiptVideoRef} autoPlay playsInline muted aria-label={t('captureReceipt')}/>
+          <div className="receipt-camera-actions">
+            <span className="subtle">{t('cameraHint')}</span>
+            <button type="button" className="btn btn-primary" onClick={()=>void captureReceiptPhoto()} data-testid="button-capture-receipt"><Camera size={18}/>{t('takeReceiptPhoto')}</button>
+          </div>
+        </div> : <div className="receipt-camera-fallback">
+          {receiptCameraStarting ? <p role="status" className="subtle">{t('cameraStarting')}</p> : <>
+            <Camera size={30} aria-hidden="true"/>
+            {receiptCameraError&&<p role="alert" className="subtle">{receiptCameraError}</p>}
+            <button type="button" className="btn btn-outline" onClick={()=>receiptPhotoInputRef.current?.click()} data-testid="button-open-device-camera"><Camera size={17}/>{t('cameraFallback')}</button>
+            <input ref={receiptPhotoInputRef} type="file" accept="image/*" capture="environment" aria-label={t('captureReceipt')} className="camera-file-input" data-testid="input-receipt-photo" onChange={e=>{const file=e.target.files?.[0];e.target.value='';void handleReceiptPhotoFile(file);}}/>
+          </>}
+        </div>}
+      </section>
       <SelectField label={t('merchantId')} value={receiptMerchantId || (selectedMerchant?.status==='active'?selectedMerchant.id:'')} onChange={setReceiptMerchantId} options={activeMerchants.map(m=>m.id)} formatOption={id=>activeMerchants.find(m=>m.id===id)?.name||id} testId="select-receipt-merchant"/>
       <Field label={t('amount')} value={purchaseAmount} onChange={setPurchaseAmount} type="number" min="0.01" step="0.01" testId="input-receipt-amount" required/>
       <Field label={t('date')} value={purchaseDate} onChange={setPurchaseDate} type="date" testId="input-receipt-date"/>
       <Field label={t('invoice')} value={invoice} onChange={setInvoice} testId="input-invoice"/>
-      <label style={{display:'grid',gap:8,fontWeight:600}}>{t('upload')}<input type="file" accept="image/*" capture="environment" className="field" data-testid="input-receipt-photo" onChange={async e=>{if(e.target.files?.[0]){try{setReceiptFile(await fileToData(e.target.files[0]));}catch{setError(t('genericError'));}}}}/></label>
       <small className="subtle">{t('privacy')}</small>
-      <button className="btn btn-primary" onClick={()=>void saveReceipt()} disabled={submitReceipt.isPending||activeMerchants.length===0} data-testid="button-submit-receipt"><Upload size={17}/>{submitReceipt.isPending?t('loading'):t('submit')}</button>
+      <button className="btn btn-primary" onClick={()=>void saveReceipt()} disabled={submitReceipt.isPending||activeMerchants.length===0} data-testid="button-submit-receipt"><ReceiptText size={17}/>{submitReceipt.isPending?t('loading'):t('submit')}</button>
     </div>
   </Dialog> : null;
   const redeemDialog = dialog==='redeem' && selectedMerchant ? <Dialog close={()=>setDialog(null)} closeLabel={t('close')} title={t('redeem')}>
@@ -238,10 +393,38 @@ function AppInner() {
     catch { setError(t('genericError')); }
   }
   async function logout() {
+    stopReceiptCamera();
     try { await signOut.mutateAsync(); } catch { /* Clear the local view even if the session endpoint is unreachable. */ }
     client.clear(); setLocation('/'); setAuthMode('login');
   }
-  const nav = (path: string) => { setLocation(path); setDialog(null); clearMessages(); };
+  async function uploadProfilePhoto(file?: File) {
+    if (!file || !profile || photoUploading) return;
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'] as const;
+    if (!allowedTypes.includes(file.type as typeof allowedTypes[number])) {
+      setError(t('photoInvalidType'));
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError(t('photoTooLarge'));
+      return;
+    }
+    setPhotoUploading(true);
+    clearMessages();
+    try {
+      const upload = await createPhotoUpload.mutateAsync({ data: { contentType: file.type as typeof allowedTypes[number], size: file.size } });
+      const response = await fetch(upload.uploadURL, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file });
+      if (!response.ok) throw new Error('PHOTO_UPLOAD_FAILED');
+      await saveProfilePhoto.mutateAsync({ data: { uploadId: upload.uploadId, objectPath: upload.objectPath } });
+      setPhotoFailed(false);
+      await client.invalidateQueries({ queryKey: getGetCashbackSessionQueryKey() });
+      setNotice(t('photoSaved'));
+    } catch {
+      setError(t('photoUploadError'));
+    } finally {
+      setPhotoUploading(false);
+    }
+  }
+  const nav = (path: string) => { stopReceiptCamera(); setLocation(path); setDialog(null); clearMessages(); };
   const header = (account = true) => {
     if (customer && location.startsWith('/profile')) return null;
     return <header className="site-header" style={{ maxWidth:1120, margin:'0 auto', padding:'14px 18px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:12 }}>
@@ -254,7 +437,12 @@ function AppInner() {
       </div>
     </header>;
   };
-  const openReceiptDialog = () => { setReceiptMerchantId(selectedMerchant?.id||''); setDialog('receipt'); };
+  const openReceiptDialog = (merchantId?: string) => {
+    setReceiptMerchantId(merchantId || selectedMerchant?.id || '');
+    setReceiptFile('');
+    setDialog('receipt');
+    void startReceiptCamera();
+  };
   const shell = (content: ReactNode) => <div className="app-shell grain" dir={isRtl?'rtl':'ltr'}>{header()}<main className="page-enter" style={{ maxWidth:1120, margin:'0 auto', padding:'12px 18px 90px' }}>{content}</main>{customer&&<BottomNav path={location} nav={nav} t={t} onReceipt={openReceiptDialog}/ >}{customer&&receiptDialog}</div>;
   const Empty = ({ icon, title, text }: { icon: ReactNode; title: string; text: string }) => <div className="surface" style={{ padding:'38px 24px', textAlign:'center' }}><div style={{ color:'hsl(var(--primary))', marginBottom:10 }}>{icon}</div><h3 style={{ margin:'0 0 6px', fontSize:20 }}>{title}</h3><p className="subtle" style={{ maxWidth:440, margin:'0 auto', lineHeight:1.65 }}>{text}</p></div>;
   const noticeBox = (text:string, isError=false) => <div role={isError?'alert':'status'} data-testid={isError?'status-error':'status-success'} style={{ background:isError?'hsl(var(--destructive) / .12)':'hsl(var(--primary) / .12)', color:isError?'hsl(var(--destructive))':'hsl(var(--foreground))', padding:'12px 15px', borderRadius:12, marginBottom:14, fontWeight:600 }}>{text}</div>;
@@ -314,13 +502,14 @@ function AppInner() {
   }
 
   if (location.startsWith('/settings')) return shell(<SettingsPage lang={lang} theme={theme} setPreference={changePreference} t={t} profile={profile} logout={logout} notice={notice} error={error} />);
-  if (customer && location.startsWith('/profile')) {
+  if (customer && location === '/profile') {
     const customerData=state.customers?.find(c=>c.id===profile.eid);
-    const profileClaims=claims.filter(c=>c.cid===profile.eid).sort((a,b)=>Date.parse(b.created||b.date||'')-Date.parse(a.created||a.date||''));
+    const profileClaims=claims.filter(c=>c.cid===profile.eid).sort((a,b)=>timestampOf(b.created||b.date)-timestampOf(a.created||a.date));
     const initials=profile.name.split(/\s+/).filter(Boolean).slice(0,2).map(part=>part[0]).join('').toLocaleUpperCase();
     const customerTxns=txns.filter(x=>x.cid===profile.eid);
     const customerPayments=(state.cbpays||[]).filter(payment=>payment.cid===profile.eid&&(payment.status==='done'||payment.status==='approved')).sort((a,b)=>Date.parse(b.at||'')-Date.parse(a.at||''));
     const rewardShopCount=activeMerchants.filter(shop=>Number(customerData?.cbm?.[shop.id]||0)>0).length;
+    const photoUrl=`/api/cashback/profile/photo?v=${encodeURIComponent(String(profile.avatarUpdatedAt??''))}`;
     return shell(<section className="profile-page profile-refresh" style={{maxWidth:740,margin:'12px auto',display:'grid',gap:15}}>
       <div className="profile-topbar" dir="ltr">
         <button className="profile-back" onClick={()=>nav('/')} aria-label={t('home')} data-testid="button-profile-back"><ArrowLeft size={20}/></button>
@@ -329,21 +518,26 @@ function AppInner() {
       </div>
       <div className="profile-summary surface">
         <div className="profile-summary-head">
-          <div className="profile-avatar" aria-hidden="true">{initials}</div>
+          <div className="profile-avatar-wrap">
+            {photoFailed||profile.avatarUpdatedAt===undefined?<div className="profile-avatar" aria-hidden="true">{initials}</div>:<img className="profile-avatar profile-avatar-image" src={photoUrl} alt={profile.name} onError={()=>setPhotoFailed(true)} data-testid="img-profile-avatar"/>}
+            <button type="button" className="profile-photo-edit" aria-label={t('changePhoto')} title={t('changePhoto')} disabled={photoUploading} onClick={()=>document.getElementById('input-profile-photo')?.click()} data-testid="button-profile-photo"><Camera size={16}/></button>
+            <input id="input-profile-photo" className="profile-photo-input" type="file" accept="image/jpeg,image/png,image/webp" aria-label={t('changePhoto')} disabled={photoUploading} onChange={event=>{const file=event.currentTarget.files?.[0];void uploadProfilePhoto(file);event.currentTarget.value='';}} data-testid="input-profile-photo"/>
+          </div>
           <div className="profile-identity"><h2 data-testid="text-profile-name">{profile.name}</h2>{profile.phone&&<span data-testid="text-profile-phone">{profile.phone}</span>}{profile.email&&<span data-testid="text-profile-email">{profile.email}</span>}</div>
         </div>
         <div className="profile-stats">
           <div><strong data-testid="text-profile-receipt-count">{profileClaims.length}</strong><span>{t('receipt')}</span></div>
-          <div><strong data-testid="text-profile-transaction-count">{customerTxns.length}</strong><span>{t('transactions')}</span></div>
+          <div><strong data-testid="text-profile-transaction-count">{customerTxns.length+customerPayments.length}</strong><span>{t('transactions')}</span></div>
           <div><strong data-testid="text-profile-reward-shops">{rewardShopCount}</strong><span>{t('rewardShops')}</span></div>
         </div>
+        {photoUploading&&<div className="profile-photo-status" role="status" data-testid="status-profile-photo">{t('photoUploading')}</div>}
       </div>
       <section className="profile-menu surface">
         <h2>{t('quickAccess')}</h2>
         <button className="profile-menu-row" onClick={()=>nav('/settings')} data-testid="button-profile-details"><UserRound size={19}/><span>{t('myDetails')}</span><ArrowLeft className="profile-menu-chevron" size={17}/></button>
-        <button className="profile-menu-row" aria-expanded={profilePanel==='claims'} onClick={()=>setProfilePanel(panel=>panel==='claims'?null:'claims')} data-testid="button-profile-receipts"><ReceiptText size={19}/><span>{t('claimHistory')}</span><ArrowLeft className="profile-menu-chevron" size={17}/></button>
-        <button className="profile-menu-row" aria-expanded={profilePanel==='wallet'} onClick={()=>setProfilePanel(panel=>panel==='wallet'?null:'wallet')} data-testid="button-profile-wallet"><Gift size={19}/><span>{t('walletTitle')}</span><ArrowLeft className="profile-menu-chevron" size={17}/></button>
-        <button className="profile-menu-row" aria-expanded={profilePanel==='transactions'} onClick={()=>setProfilePanel(panel=>panel==='transactions'?null:'transactions')} data-testid="button-profile-transactions"><ArrowDownLeft size={19}/><span>{t('transactions')}</span><ArrowLeft className="profile-menu-chevron" size={17}/></button>
+        <button className="profile-menu-row" onClick={()=>nav('/receipts')} data-testid="button-profile-receipts"><ReceiptText size={19}/><span>{t('claimHistory')}</span><ArrowLeft className="profile-menu-chevron" size={17}/></button>
+        <button className="profile-menu-row" onClick={()=>nav('/wallet')} data-testid="button-profile-wallet"><Gift size={19}/><span>{t('walletTitle')}</span><ArrowLeft className="profile-menu-chevron" size={17}/></button>
+        <button className="profile-menu-row" onClick={()=>nav('/transactions')} data-testid="button-profile-transactions"><ArrowDownLeft size={19}/><span>{t('transactions')}</span><ArrowLeft className="profile-menu-chevron" size={17}/></button>
         <button className="profile-menu-row" onClick={()=>void inviteFriend()} data-testid="button-profile-invite"><Share2 size={19}/><span>{t('inviteFriends')}</span><ArrowLeft className="profile-menu-chevron" size={17}/></button>
       </section>
       <section className="profile-menu profile-preferences surface">
@@ -353,20 +547,28 @@ function AppInner() {
         <button className="profile-menu-row profile-settings-row" onClick={()=>nav('/settings')} data-testid="button-profile-all-settings"><Settings size={19}/><span>{t('settings')}</span><ArrowLeft className="profile-menu-chevron" size={17}/></button>
       </section>
       {(error||notice)&&<div className="profile-feedback" role={error?'alert':'status'}>{error||notice}</div>}
-      {profilePanel==='wallet'&&<section id="profile-panel-wallet" className="profile-data-section profile-history-section" aria-labelledby="profile-wallet-heading">
-        <div className="profile-section-heading"><h2 id="profile-wallet-heading">{t('walletTitle')}</h2><button className="text-link" onClick={()=>nav('/wallet')} data-testid="button-profile-all-wallets">{t('allShops')} <ArrowRight size={15}/></button></div>
-        {activeMerchants.length===0?<div className="surface profile-empty"><Wallet size={22}/><span>{t('noShopsHint')}</span></div>:<div className="profile-wallet-list">{activeMerchants.map(shop=>{
-          const earned=customerTxns.filter(x=>x.mid===shop.id).reduce((sum,x)=>sum+Number(x.cashback||0),0);
-          const rawBalance=customerData?.cbm?.[shop.id];
-          return <button className="surface profile-wallet-row" key={shop.id} onClick={()=>nav(`/wallet/${shop.id}`)} data-testid={`profile-wallet-${shop.id}`}><span className="profile-wallet-mark"><Store size={18}/></span><span className="profile-wallet-name"><strong>{shop.name}</strong><small>{shop.cat?t(`cat_${shop.cat}`):localizeCity(shop.city,lang)||t('merchantId')}</small></span><span className="profile-wallet-values"><strong>{rawBalance===undefined?'—':formatMoney(Number(rawBalance),shop.country)}</strong><small>{t('balance')} · {t('earned')} {formatMoney(earned,shop.country)}</small></span><ArrowRight className="profile-row-arrow" size={16}/></button>;
-        })}</div>}
-      </section>}
-      {profilePanel==='claims'&&<section id="profile-receipt-history" className="profile-data-section profile-history-section"><div className="profile-section-heading"><h2>{t('claimHistory')}</h2><span className="subtle">{profileClaims.length}</span></div>{profileClaims.length===0?<div className="surface profile-empty"><ReceiptText size={22}/><span>{t('noReceipts')}</span></div>:<div style={{display:'grid',gap:9}}>{profileClaims.slice(0,4).map(claim=><ClaimRow key={claim.id} claim={claim} shop={merchants.find(m=>m.id===claim.mid)} t={t}/>)}</div>}</section>}
-      {profilePanel==='transactions'&&<section id="profile-transactions" className="profile-data-section profile-history-section"><div className="profile-section-heading"><h2>{t('transactions')}</h2><span className="subtle">{customerTxns.length+customerPayments.length}</span></div>{customerTxns.length+customerPayments.length===0?<div className="surface profile-empty"><ArrowDownLeft size={22}/><span>{t('noActivity')}</span></div>:<div style={{display:'grid',gap:9}}>
-        {customerPayments.slice(0,4).map(payment=>{const shop=merchants.find(m=>m.id===payment.mid);return <div className="surface profile-transaction-row" key={`payment-${payment.id}`}><span><strong>{shop?.name||t('merchantId')}</strong><small>{t('used')} · {payment.at||''}</small></span><strong>{formatMoney(payment.amount,shop?.country)}</strong></div>;})}
-        {customerTxns.slice(-4).reverse().map(txn=>{const shop=merchants.find(m=>m.id===txn.mid);return <div className="surface profile-transaction-row" key={`txn-${txn.id}`}><span><strong>{shop?.name||t('merchantId')}</strong><small>{t('earned')} · {txn.t||''}</small></span><strong className="profile-earned-value">+{formatMoney(Number(txn.cashback||0),shop?.country)}</strong></div>;})}
-      </div>}</section>}
       <button className="btn btn-outline profile-logout" onClick={()=>void logout()} data-testid="button-logout"><LogOut size={17}/>{t('signOut')}</button>
+    </section>);
+  }
+  if (customer && location === '/receipts') {
+    const profileClaims=claims.filter(c=>c.cid===profile.eid).sort((a,b)=>timestampOf(b.created||b.date)-timestampOf(a.created||a.date));
+    return shell(<section className="history-page page-enter">
+      <div className="profile-topbar" dir="ltr"><button className="profile-back" onClick={()=>nav('/profile')} aria-label={t('profile')} data-testid="button-receipts-back"><ArrowLeft size={20}/></button><h1 dir="auto">{t('claimHistory')}</h1><button className="profile-brand" onClick={()=>nav('/')} aria-label={t('home')} data-testid="link-receipts-brand"><img src="/cashback-logo-transparent.png" alt="CASH BACK"/></button></div>
+      <div className="history-intro"><span className="history-eyebrow">{t('accountSection')}</span><p>{t('receiptHistoryIntro')}</p></div>
+      {isLoading?<div className="history-skeleton" aria-label={t('historyLoad')}><i/><i/><i/></div>:profileClaims.length===0?<div className="surface profile-empty"><ReceiptText size={24}/><span>{t('noReceipts')}</span></div>:<div className="history-list">{profileClaims.map(claim=><ClaimRow key={claim.id} claim={claim} shop={merchants.find(m=>m.id===claim.mid)} t={t}/>)}</div>}
+    </section>);
+  }
+  if (customer && location === '/transactions') {
+    const customerTxns=txns.filter(x=>x.cid===profile.eid);
+    const customerPayments=(state.cbpays||[]).filter(payment=>payment.cid===profile.eid&&(payment.status==='done'||payment.status==='approved'));
+    const historyRows=[
+      ...customerPayments.map(payment=>({id:`payment-${payment.id}`,at:payment.at||'',kind:'used' as const,mid:payment.mid,value:Number(payment.amount)})),
+      ...customerTxns.map(txn=>({id:`txn-${txn.id}`,at:txn.t||'',kind:'earned' as const,mid:txn.mid,value:Number(txn.cashback||0)})),
+    ].sort((a,b)=>timestampOf(b.at)-timestampOf(a.at));
+    return shell(<section className="history-page page-enter">
+      <div className="profile-topbar" dir="ltr"><button className="profile-back" onClick={()=>nav('/profile')} aria-label={t('profile')} data-testid="button-transactions-back"><ArrowLeft size={20}/></button><h1 dir="auto">{t('transactions')}</h1><button className="profile-brand" onClick={()=>nav('/')} aria-label={t('home')} data-testid="link-transactions-brand"><img src="/cashback-logo-transparent.png" alt="CASH BACK"/></button></div>
+      <div className="history-intro"><span className="history-eyebrow">{t('accountSection')}</span><p>{t('transactionHistoryIntro')}</p></div>
+      {isLoading?<div className="history-skeleton" aria-label={t('historyLoad')}><i/><i/><i/></div>:historyRows.length===0?<div className="surface profile-empty"><ArrowDownLeft size={24}/><span>{t('noTransactions')}</span></div>:<div className="history-list">{historyRows.map(row=>{const shop=merchants.find(m=>m.id===row.mid);return <div className="surface profile-transaction-row history-transaction" key={row.id} data-testid={`row-transaction-${row.id}`}><span><strong>{shop?.name||t('merchantId')}</strong><small>{t(row.kind)} · {row.at||'—'}</small></span><strong className={row.kind==='earned'?'profile-earned-value':''}>{row.kind==='earned'?'+':''}{formatMoney(row.value,shop?.country)}</strong></div>;})}</div>}
     </section>);
   }
   if (customer && location === '/wallet') return shell(<CustomerWallet profile={profile} state={state} merchants={merchants} txns={txns} claims={claims} setSelected={(m)=>{setSelectedMerchant(m);nav(`/wallet/${m.id}`)}} t={t} lang={lang} />);
@@ -374,7 +576,7 @@ function AppInner() {
     const mid=location.split('/')[2]; const shop=merchants.find(m=>m.id===mid);
     return <>{shell(shop?<WalletDetail shop={shop} profile={profile} state={state} txns={txns} t={t} openRedeem={()=>{setSelectedMerchant(shop);setDialog('redeem');}}/>:<Empty icon={<Wallet size={28}/>} title={t('walletTitle')} text={t('noShopsHint')}/>)}{redeemDialog}</>;
   }
-  if (customer && selectedMerchant && location.startsWith('/shop/')) return shell(<ShopDetail shop={selectedMerchant} t={t} lang={lang} onBack={()=>nav('/')} onReceipt={()=>{setReceiptMerchantId(selectedMerchant.id);setDialog('receipt');}} onWallet={()=>nav(`/wallet/${selectedMerchant.id}`)} />);
+  if (customer && selectedMerchant && location.startsWith('/shop/')) return shell(<ShopDetail shop={selectedMerchant} t={t} lang={lang} onBack={()=>nav('/')} onReceipt={()=>openReceiptDialog(selectedMerchant.id)} onWallet={()=>nav(`/wallet/${selectedMerchant.id}`)} />);
   if (customer && location.startsWith('/shop')) return shell(<Empty icon={<Store size={28}/>} title={t('details')} text={t('noShopsHint')}/>);
   if (customer && location.startsWith('/settings')) return null;
 
@@ -397,7 +599,7 @@ function AppInner() {
     {shell(<>
       <section className="home-identity">
         <button className="home-profile" onClick={()=>nav('/profile')} data-testid="button-home-profile">
-          <span className="home-avatar" aria-hidden="true">{profile.name.split(/\s+/).filter(Boolean).slice(0,2).map(part=>part[0]).join('').toLocaleUpperCase()}</span>
+          {profile.avatarUpdatedAt!==undefined&&!photoFailed?<img className="home-avatar home-avatar-image" src={`/api/cashback/profile/photo?v=${encodeURIComponent(String(profile.avatarUpdatedAt))}`} alt="" aria-hidden="true" onError={()=>setPhotoFailed(true)}/>:<span className="home-avatar" aria-hidden="true">{profile.name.split(/\s+/).filter(Boolean).slice(0,2).map(part=>part[0]).join('').toLocaleUpperCase()}</span>}
           <span className="home-profile-copy"><small>{t('hello')}</small><strong>{profile.name}</strong></span>
           <ArrowRight size={17}/>
         </button>
@@ -408,7 +610,7 @@ function AppInner() {
         <label className="shop-search"><Search size={17}/><input className="field" value={search} onChange={e=>setSearch(e.target.value)} placeholder={t('search')} aria-label={t('search')} data-testid="input-search-shops"/></label>
       </div>
       <section className="promo-banner home-promo">
-        <div className="home-promo-copy"><span className="home-promo-kicker">{t('tagline')}</span><div className="home-promo-rate"><strong>{state.settings?.cashback ?? 4}%</strong><span>{t('cashback')}</span></div><h1>{t('customerEntry')}</h1><p>{t('customerBlurb')}</p><button className="btn btn-promo" onClick={openReceiptDialog} data-testid="button-promo-receipt"><Camera size={18}/>{t('receipt')}</button></div>
+        <div className="home-promo-copy"><span className="home-promo-kicker">{t('tagline')}</span><div className="home-promo-rate"><strong>{state.settings?.cashback ?? 4}%</strong><span>{t('cashback')}</span></div><h1>{t('customerEntry')}</h1><p>{t('customerBlurb')}</p><button className="btn btn-promo" onClick={()=>openReceiptDialog()} data-testid="button-promo-receipt"><Camera size={18}/>{t('receipt')}</button></div>
         <div className="promo-art" aria-hidden="true"><div className="promo-ticket"><ReceiptText size={34}/><strong>{t('cashback')}</strong><span><Gift size={20}/></span></div><span className="promo-orbit promo-orbit-one"/><span className="promo-orbit promo-orbit-two"/></div>
       </section>
       <section className="category-section">
@@ -471,8 +673,14 @@ function CustomerWallet({profile,state,merchants,txns,claims,setSelected,t,lang}
 function WalletDetail({shop,profile,state,txns,t,openRedeem}:{shop:Merchant;profile:Session['profile'];state:Session['state'];txns:Txn[];t:(s:string)=>string;openRedeem:()=>void}) {
   const customer=state.customers?.find(c=>c.id===profile.eid);const balance=Number(customer?.cbm?.[shop.id]||0);
   const entries=txns.filter(x=>x.cid===profile.eid&&x.mid===shop.id);
-  const earned=entries.reduce((a,x)=>a+Number(x.cashback||0),0);const used=state.cbpays?.filter(x=>x.cid===profile.eid&&x.mid===shop.id&&(x.status==='done'||x.status==='approved')).reduce((a,x)=>a+Number(x.amount||0),0)||0;
-  return <div style={{maxWidth:780,margin:'18px auto',display:'grid',gap:17}}><PageTitle icon={<Wallet/>} title={shop.name} eyebrow={t('walletHint')}/><section style={{padding:25,borderRadius:22,background:'linear-gradient(125deg,#ef7f12,#f1b445)',color:'#241307'}}><span style={{fontWeight:700}}>{t('balance')}</span><strong style={{display:'block',fontSize:42,lineHeight:1.25}}>{formatMoney(balance,shop.country)}</strong><div style={{display:'flex',gap:20,marginTop:10,fontSize:14}}><span>{t('earned')}: {formatMoney(earned,shop.country)}</span><span>{t('used')}: {formatMoney(used,shop.country)}</span></div></section><button onClick={openRedeem} className="btn btn-primary" disabled={balance<=0} data-testid="button-redeem"><Banknote size={18}/>{t('redeem')} · {shop.name}</button><section><h2 style={{fontSize:22}}>{t('ledger')}</h2>{entries.length===0?<div className="surface" style={{padding:20}}><p className="subtle">{t('noActivity')}</p></div>:entries.map(x=><div className="surface" key={x.id} data-testid={`row-ledger-${x.id}`} style={{display:'flex',justifyContent:'space-between',padding:14,marginBottom:8}}><span>{x.t||t('earned')}</span><strong>{formatMoney(x.cashback||0,shop.country)}</strong></div>)}</section></div>;
+  const payments=state.cbpays?.filter(x=>x.cid===profile.eid&&x.mid===shop.id&&(x.status==='done'||x.status==='approved'))||[];
+  const earned=entries.reduce((a,x)=>a+Number(x.cashback||0),0);
+  const used=payments.reduce((a,x)=>a+Number(x.amount||0),0);
+  const activity=[
+    ...entries.map(x=>({id:`earn-${x.id}`,at:x.t||'',kind:'earned' as const,amount:Number(x.cashback||0)})),
+    ...payments.map(x=>({id:`use-${x.id}`,at:x.at||'',kind:'used' as const,amount:Number(x.amount||0)})),
+  ].sort((a,b)=>timestampOf(b.at)-timestampOf(a.at));
+  return <div style={{maxWidth:780,margin:'18px auto',display:'grid',gap:17}}><PageTitle icon={<Wallet/>} title={shop.name} eyebrow={t('walletHint')}/><section style={{padding:25,borderRadius:22,background:'linear-gradient(125deg,#ef7f12,#f1b445)',color:'#241307'}}><span style={{fontWeight:700}}>{t('balance')}</span><strong style={{display:'block',fontSize:42,lineHeight:1.25}}>{formatMoney(balance,shop.country)}</strong><div style={{display:'flex',gap:20,marginTop:10,fontSize:14}}><span>{t('earned')}: {formatMoney(earned,shop.country)}</span><span>{t('used')}: {formatMoney(used,shop.country)}</span></div></section><button onClick={openRedeem} className="btn btn-primary" disabled={balance<=0} data-testid="button-redeem"><Banknote size={18}/>{t('redeem')} · {shop.name}</button><section><h2 style={{fontSize:22}}>{t('ledger')}</h2>{activity.length===0?<div className="surface" style={{padding:20}}><p className="subtle">{t('noActivity')}</p></div>:activity.map(row=><div className="surface" key={row.id} data-testid={`row-ledger-${row.id}`} style={{display:'flex',justifyContent:'space-between',padding:14,marginBottom:8}}><span><strong>{shop.name}</strong><small className="subtle" style={{display:'block'}}>{t(row.kind)} · {row.at||'—'}</small></span><strong className={row.kind==='earned'?'profile-earned-value':''}>{row.kind==='earned'?'+':'−'}{formatMoney(row.amount,shop.country)}</strong></div>)}</section></div>;
 }
 function ShopDetail({shop,t,onBack,onReceipt,onWallet,lang}:{shop:Merchant;t:(s:string)=>string;onBack:()=>void;onReceipt:()=>void;onWallet:()=>void;lang:Lang}) {
   return <div style={{maxWidth:820,margin:'10px auto',display:'grid',gap:18}}><button onClick={onBack} className="btn btn-outline" style={{justifySelf:'start'}} data-testid="button-back-shops"><ArrowLeft size={17}/>{t('allShops')}</button><div className="surface" style={{overflow:'hidden'}}><MediaImage id={shop.logoId} alt={shop.name} style={{width:'100%',height:'clamp(180px,38vw,330px)',objectFit:'cover'}}/><div style={{padding:'clamp(20px,4vw,32px)'}}><div style={{display:'flex',justifyContent:'space-between',gap:10,alignItems:'start'}}><div><span className="subtle">{shop.cat?t(`cat_${shop.cat}`):t('merchant')}</span><h1 style={{fontSize:34,margin:'3px 0'}}>{shop.name}</h1></div><div style={{color:'hsl(var(--primary))',fontSize:25,fontWeight:800}}>{shop.cashbackRate??0}%</div></div><p className="subtle" style={{display:'flex',alignItems:'center',gap:6}}><MapPin size={16}/>{shop.address||localizeCity(shop.city,lang)}</p>{shop.mapsUrl&&<a href={shop.mapsUrl} target="_blank" rel="noreferrer" className="btn btn-outline" style={{textDecoration:'none'}} data-testid="link-shop-map"><LocateFixed size={17}/>{t('shopOpen')}</a>}<div style={{display:'flex',gap:10,flexWrap:'wrap',marginTop:20}}><button className="btn btn-primary" onClick={onReceipt} data-testid="button-shop-receipt"><ReceiptText size={18}/>{t('receipt')}</button><button className="btn btn-outline" onClick={onWallet} data-testid="button-shop-wallet"><Wallet size={18}/>{t('spendHere')}</button></div></div></div></div>;

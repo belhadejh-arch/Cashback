@@ -28,6 +28,7 @@ export const GetCashbackSessionResponse = zod.object({
   "name": zod.string(),
   "phone": zod.string().nullish(),
   "email": zod.string().nullish(),
+  "avatarUpdatedAt": zod.number().int().nullish(),
   "preferences": zod.record(zod.string(), zod.unknown()).optional()
 }),
   "state": zod.record(zod.string(), zod.unknown())
@@ -88,6 +89,7 @@ export const RegisterCashbackProfileResponse = zod.object({
   "name": zod.string(),
   "phone": zod.string().nullish(),
   "email": zod.string().nullish(),
+  "avatarUpdatedAt": zod.number().int().nullish(),
   "preferences": zod.record(zod.string(), zod.unknown()).optional()
 })
 
@@ -114,6 +116,7 @@ export const LoginCashbackResponse = zod.object({
   "name": zod.string(),
   "phone": zod.string().nullish(),
   "email": zod.string().nullish(),
+  "avatarUpdatedAt": zod.number().int().nullish(),
   "preferences": zod.record(zod.string(), zod.unknown()).optional()
 })
 
@@ -218,8 +221,53 @@ export const UpdateCashbackPreferencesResponse = zod.object({
   "name": zod.string(),
   "phone": zod.string().nullish(),
   "email": zod.string().nullish(),
+  "avatarUpdatedAt": zod.number().int().nullish(),
   "preferences": zod.record(zod.string(), zod.unknown()).optional()
 })
+
+
+/**
+ * @summary Create a short-lived private upload URL for a profile photo
+ */
+export const createCashbackProfilePhotoUploadBodySizeMax = 5242880;
+
+
+
+export const CreateCashbackProfilePhotoUploadBody = zod.object({
+  "contentType": zod.enum(['image/jpeg', 'image/png', 'image/webp']),
+  "size": zod.number().int().min(1).max(createCashbackProfilePhotoUploadBodySizeMax)
+})
+
+export const CreateCashbackProfilePhotoUploadResponse = zod.object({
+  "uploadURL": zod.string().url(),
+  "objectPath": zod.string(),
+  "uploadId": zod.string()
+})
+
+
+/**
+ * @summary Attach an uploaded image to the authenticated profile
+ */
+export const saveCashbackProfilePhotoBodyUploadIdMax = 80;
+
+export const saveCashbackProfilePhotoBodyObjectPathMax = 500;
+
+
+
+export const SaveCashbackProfilePhotoBody = zod.object({
+  "uploadId": zod.string().min(1).max(saveCashbackProfilePhotoBodyUploadIdMax),
+  "objectPath": zod.string().min(1).max(saveCashbackProfilePhotoBodyObjectPathMax)
+})
+
+export const SaveCashbackProfilePhotoResponse = zod.object({
+  "avatarUpdatedAt": zod.number().int()
+})
+
+
+/**
+ * @summary Read the authenticated user's private profile photo
+ */
+export const GetCashbackProfilePhotoResponse = zod.unknown()
 
 
 /**

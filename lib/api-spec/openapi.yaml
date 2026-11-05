@@ -206,6 +206,62 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CashbackProfile"
+  /cashback/profile/photo/upload-url:
+    post:
+      operationId: createCashbackProfilePhotoUpload
+      tags: [cashback]
+      summary: Create a short-lived private upload URL for a profile photo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfilePhotoUploadInput"
+      responses:
+        "201":
+          description: Upload URL created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfilePhotoUpload"
+  /cashback/profile/photo:
+    patch:
+      operationId: saveCashbackProfilePhoto
+      tags: [cashback]
+      summary: Attach an uploaded image to the authenticated profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfilePhotoFinalizeInput"
+      responses:
+        "200":
+          description: Profile photo updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfilePhotoResult"
+    get:
+      operationId: getCashbackProfilePhoto
+      tags: [cashback]
+      summary: Read the authenticated user's private profile photo
+      responses:
+        "200":
+          description: Profile photo bytes
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/webp:
+              schema:
+                type: string
+                format: binary
   /cashback/settings/rate:
     patch:
       operationId: updateCashbackRate
@@ -262,6 +318,7 @@ components:
         name: { type: string }
         phone: { type: ["string", "null"] }
         email: { type: ["string", "null"] }
+        avatarUpdatedAt: { type: ["integer", "null"] }
         preferences:
           type: object
           additionalProperties: true
@@ -331,6 +388,30 @@ components:
       properties:
         language: { type: string, enum: [ar, en, fr] }
         theme: { type: string, enum: [dark, light] }
+    ProfilePhotoUploadInput:
+      type: object
+      required: [contentType, size]
+      properties:
+        contentType: { type: string, enum: [image/jpeg, image/png, image/webp] }
+        size: { type: integer, minimum: 1, maximum: 5242880 }
+    ProfilePhotoUpload:
+      type: object
+      required: [uploadURL, objectPath, uploadId]
+      properties:
+        uploadURL: { type: string, format: uri }
+        objectPath: { type: string }
+        uploadId: { type: string }
+    ProfilePhotoFinalizeInput:
+      type: object
+      required: [uploadId, objectPath]
+      properties:
+        uploadId: { type: string, minLength: 1, maxLength: 80 }
+        objectPath: { type: string, minLength: 1, maxLength: 500 }
+    ProfilePhotoResult:
+      type: object
+      required: [avatarUpdatedAt]
+      properties:
+        avatarUpdatedAt: { type: integer }
     CashbackRateUpdate:
       type: object
       required: [rate]
