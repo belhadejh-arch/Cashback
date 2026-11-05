@@ -144,7 +144,6 @@
 .app-shell:has(.home-shops-section) .activity-row { border-radius:17px; background:linear-gradient(135deg,hsl(22 18% 12%),hsl(20 17% 9%)); }
 .app-shell:has(.home-shops-section) .bottom-nav { border:1px solid hsl(24 20% 24% / .8); border-bottom:0; border-radius:24px 24px 0 0; background:hsl(22 19% 9% / .96); }
 .app-shell:has(.home-shops-section) .bottom-nav-item.is-active { color:hsl(28 96% 55%); }
-.app-shell:has(.home-shops-section) .bottom-nav-receipt > span { width:62px; height:62px; border-color:hsl(22 18% 9%); background:linear-gradient(140deg,hsl(25 98% 55%),hsl(15 88% 45%)); box-shadow:0 6px 23px hsl(23 96% 47% / .35); }
 @media (max-width:700px) {
   .customer-home-header { min-height:78px; padding:8px 14px; gap:7px; }
   .home-header-avatar { width:45px; height:45px; }
@@ -924,4 +923,98 @@ html:not(.dark) .app-shell:has(.home-shops-section) .bottom-nav {
 html:not(.dark) .app-shell:has(.home-shops-section) .home-notification-row.is-unread {
   border-color:hsl(28 75% 62% / .55);
   background:hsl(28 90% 95%);
+}
+
+/* Keep the customer's home header on one centered line on narrow phones. */
+.customer-home-header {
+  grid-template-columns:minmax(72px,.8fr) minmax(126px,auto) minmax(126px,1fr);
+  direction:ltr;
+}
+.home-header-profile,.home-header-brand,.home-header-actions { align-self:center; }
+.home-header-brand { justify-self:center; width:70px; height:60px; display:grid; place-items:center; }
+.home-header-brand img { width:100%; height:100%; object-fit:contain; filter:drop-shadow(0 3px 10px hsl(var(--primary) / .2)); }
+.home-header-copy strong { font-size:13px; }
+
+/* Dedicated, full-page receipt capture and notifications. */
+.full-page-tool { display:grid; gap:12px; width:min(100%,680px); margin:0 auto; }
+.full-page-tool-header { margin:0; }
+.full-page-tool-header h1 { font-size:17px; }
+.capture-page-hint { margin:0; color:hsl(var(--muted-foreground)); font-size:13px; line-height:1.5; text-align:center; }
+.receipt-page-camera { min-height:min(46dvh,460px); }
+.receipt-page-camera .receipt-live-camera video,
+.receipt-page-camera .receipt-photo-preview img { width:100%; height:min(46dvh,460px); min-height:280px; max-height:none; object-fit:contain; }
+.receipt-page-camera .receipt-camera-fallback { min-height:min(46dvh,460px); }
+.capture-receipt-fields { display:grid; gap:10px; }
+.capture-receipt-fields label { font-size:12px!important; }
+.capture-receipt-fields .field { min-height:42px; }
+.notifications-page { display:grid; gap:14px; max-width:740px; margin:8px auto; }
+.notification-page-list { display:grid; gap:10px; }
+.notification-page-list .home-notification-row { padding:14px; }
+.notification-page-list .home-notification-row p { margin:0 0 5px; font-size:13px; line-height:1.5; }
+.notification-page-list .home-notification-row small { font-size:11px; }
+
+/* The directory keeps every shop and category visible instead of using the home carousel. */
+.shops-directory-page > div:first-child h1 { font-size:24px!important; }
+.app-shell:has(.shops-directory-page) .category-rail {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  overflow:visible;
+  gap:8px;
+}
+.app-shell:has(.shops-directory-page) .category-chip { width:100%; min-width:0; min-height:62px; justify-content:center; font-size:11px; }
+.app-shell:has(.shops-directory-page) .merchant-grid {
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:12px;
+  overflow:visible;
+  margin:0;
+  padding:0;
+}
+.app-shell:has(.shops-directory-page) .merchant-card {
+  width:100%;
+  min-width:0;
+  min-height:142px;
+  flex:none;
+  grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr);
+}
+.app-shell:has(.shops-directory-page) .merchant-card-image { height:100%; min-height:142px; }
+.app-shell:has(.shops-directory-page) .merchant-card-copy { gap:7px; padding:10px; }
+.app-shell:has(.shops-directory-page) .merchant-card-title h3 { font-size:14px; }
+.app-shell:has(.shops-directory-page) .merchant-location { font-size:11px; }
+
+/* Use Changa consistently and slightly reduce dense mobile labels. */
+.shop-count,.profile-refresh .profile-stats strong { font-family:'Changa',sans-serif!important; }
+.app-shell:has(.home-shops-section) .home-section-head h2 { font-size:17px; }
+.app-shell:has(.home-shops-section) .home-section-head .text-link { flex:0 0 auto; min-width:max-content; white-space:nowrap; font-size:12px; }
+.app-shell:has(.home-shops-section) .merchant-card-title h3 { font-size:15px; }
+.app-shell:has(.home-shops-section) .merchant-card-copy { gap:7px; padding:11px 10px; }
+
+@media (max-width:700px) {
+  .customer-home-header {
+    grid-template-columns:minmax(65px,.75fr) minmax(118px,auto) minmax(120px,1fr);
+    gap:6px;
+    padding-inline:12px;
+  }
+  .home-header-brand { justify-self:center; width:62px; height:54px; }
+  .home-header-copy strong { max-width:82px; font-size:12px; }
+  .full-page-tool-header h1 { font-size:16px; }
+  .receipt-page-camera .receipt-live-camera video,
+  .receipt-page-camera .receipt-photo-preview img { height:42dvh; min-height:250px; }
+  .app-shell:has(.shops-directory-page) .merchant-grid { grid-template-columns:minmax(0,1fr); }
+  .app-shell:has(.shops-directory-page) .merchant-card { min-height:138px; }
+  .app-shell:has(.shops-directory-page) .merchant-card-image { min-height:138px; }
+}
+@media (max-width:390px) {
+  .customer-home-header {
+    grid-template-columns:68px minmax(112px,1fr) minmax(108px,1fr);
+    gap:4px;
+    padding-inline:10px;
+  }
+  .home-header-avatar { width:40px; height:40px; }
+  .home-header-profile { gap:5px; }
+  .home-header-copy strong { max-width:68px; font-size:11px; }
+  .home-header-brand { width:56px; height:50px; }
+  .home-header-icon { width:32px; height:32px; }
+  .app-shell:has(.home-shops-section) .home-promo-copy h1 { font-size:23px; }
+  .app-shell:has(.home-shops-section) .home-promo-copy p { font-size:11px; }
 }

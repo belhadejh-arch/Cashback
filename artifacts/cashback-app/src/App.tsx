@@ -94,7 +94,7 @@ const cameraTranslations: Record<Lang, Dict> = {
 const homeNavTranslations: Record<Lang, Dict> = {
   en: { stores: 'Shops', more: 'More', cameraNav: 'Receipt photo', viewAll: 'View all', notifications: 'Notifications', noNotifications: 'No notifications yet', homeBrandTagline:'Shop more. Earn more.', homePromoTitle:'Cash back on your purchases', homePromoSubtitle:'Earn rewards every time you shop locally.', homeCashback:'Cashback', homeCameraAction:'Photograph your receipt now' },
   fr: { stores: 'Commerces', more: 'Plus', cameraNav: 'Photo du reçu', viewAll: 'Tout voir', notifications: 'Notifications', noNotifications: 'Aucune notification pour le moment', homeBrandTagline:'Achetez plus. Gagnez plus.', homePromoTitle:'Du cashback sur vos achats', homePromoSubtitle:'Gagnez des récompenses dans les commerces locaux.', homeCashback:'Cashback', homeCameraAction:'Photographiez votre reçu maintenant' },
-  ar: { stores: 'المتاجر', more: 'المزيد', cameraNav: 'تصوير فاتورة', viewAll: 'عرض الكل', notifications: 'الإشعارات', noNotifications: 'لا توجد إشعارات بعد', homeBrandTagline:'اشترِ أكثر... اربح أكثر', homePromoTitle:'كاش باك على مشترياتك', homePromoSubtitle:'استرجع جزءاً من قيمة مشترياتك من المتاجر المشاركة.', homeCashback:'كاش باك', homeCameraAction:'صوّر فاتورتك الآن' },
+  ar: { stores: 'المتاجر', more: 'المزيد', wallet: 'محفظتي', walletTitle: 'محفظتي', cameraNav: 'تصوير فاتورة', viewAll: 'عرض الكل', notifications: 'الإشعارات', noNotifications: 'لا توجد إشعارات بعد', homeBrandTagline:'اشترِ أكثر... اربح أكثر', homePromoTitle:'كاش باك على مشترياتك', homePromoSubtitle:'استرجع جزءاً من قيمة مشترياتك من المتاجر المشاركة.', homeCashback:'كاش باك', homeCameraAction:'صوّر فاتورتك الآن' },
 };
 const wilayas = ['Adrar','Chlef','Laghouat','Oum El Bouaghi','Batna','Béjaïa','Biskra','Béchar','Blida','Bouira','Tamanrasset','Tébessa','Tlemcen','Tiaret','Tizi Ouzou','Alger','Djelfa','Jijel','Sétif','Saïda','Skikda','Sidi Bel Abbès','Annaba','Guelma','Constantine','Médéa','Mostaganem','M’Sila','Mascara','Ouargla','Oran','El Bayadh','Illizi','Bordj Bou Arréridj','Boumerdès','El Tarf','Tindouf','Tissemsilt','El Oued','Khenchela','Souk Ahras','Tipaza','Mila','Aïn Defla','Naâma','Aïn Témouchent','Ghardaïa','Relizane','Timimoun','Bordj Badji Mokhtar','Ouled Djellal','Béni Abbès','In Salah','In Guezzam','Touggourt','Djanet','El M’Ghair','El Meniaa'];
 const libyanCities = ['Tripoli','Benghazi','Misrata','Bayda','Zawiya','Zliten','Ajdabiya','Tobruk','Sabha','Sirte','Derna','Khoms','Gharyan','Tarhuna','Bani Walid','Jalu','Kufra','Ghadames','Murzuq','Nalut','Sabratha','Surman','Yefren','Ubari','Brak','Marj'];
@@ -153,12 +153,11 @@ function AppInner() {
   const [receiptCameraActive, setReceiptCameraActive] = useState(false);
   const [receiptCameraStarting, setReceiptCameraStarting] = useState(false);
   const [receiptCameraError, setReceiptCameraError] = useState('');
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const receiptVideoRef = useRef<HTMLVideoElement>(null);
   const receiptPhotoInputRef = useRef<HTMLInputElement>(null);
   const receiptCameraStreamRef = useRef<MediaStream|null>(null);
   const receiptCameraRequestRef = useRef(0);
-  const [dialog, setDialog] = useState<'receipt'|'redeem'|null>(null); const [receiptMerchantId, setReceiptMerchantId] = useState(''); const [receiptFile, setReceiptFile] = useState(''); const [invoice, setInvoice] = useState(''); const [purchaseAmount, setPurchaseAmount] = useState(''); const [purchaseDate, setPurchaseDate] = useState(new Date().toISOString().slice(0,10)); const [redeemAmount, setRedeemAmount] = useState('');
+  const [dialog, setDialog] = useState<'redeem'|null>(null); const [receiptMerchantId, setReceiptMerchantId] = useState(''); const [receiptFile, setReceiptFile] = useState(''); const [invoice, setInvoice] = useState(''); const [purchaseAmount, setPurchaseAmount] = useState(''); const [purchaseDate, setPurchaseDate] = useState(new Date().toISOString().slice(0,10)); const [redeemAmount, setRedeemAmount] = useState('');
   const [reason, setReason] = useState(''); const [rateValue, setRateValue] = useState('');
   const t = (key: string) => homeNavTranslations[lang][key] || cameraTranslations[lang][key] || extraTranslations[lang][key] || dictionaries[lang][key] || (key.startsWith('cat_') ? key.slice(4) : key);
   const { data: session, isLoading, isError, error: queryError, refetch } = useGetCashbackSession({ query: { queryKey: getGetCashbackSessionQueryKey(), enabled: authReady, retry: false, refetchOnWindowFocus: false } });
@@ -193,7 +192,7 @@ function AppInner() {
       setReceiptCameraError(t('cameraUnavailable'));
       stopReceiptCamera();
     });
-  }, [receiptCameraActive, dialog]);
+  }, [receiptCameraActive, location]);
   useEffect(() => { if (location.startsWith('/shop/')) { const id = location.split('/')[2]; setSelectedMerchant(merchants.find(m=>m.id===id)||null); } else if (location !== '/shop') setSelectedMerchant(null); }, [location, merchants]);
   const refreshSession = () => client.invalidateQueries({ queryKey: getGetCashbackSessionQueryKey() });
   const availableCities = useMemo(()=>Array.from(new Set(activeMerchants.map(m=>m.city).filter((value): value is string=>Boolean(value)))),[activeMerchants]);
@@ -292,6 +291,13 @@ function AppInner() {
       if (receiptCameraRequestRef.current === requestId) setReceiptCameraStarting(false);
     }
   }
+  useEffect(() => {
+    if (customer && location === '/capture-receipt') {
+      if (!receiptFile && !receiptCameraActive && !receiptCameraStarting) void startReceiptCamera();
+    } else if (receiptCameraActive || receiptCameraStarting || receiptCameraStreamRef.current) {
+      stopReceiptCamera();
+    }
+  }, [customer, location, receiptFile, receiptCameraActive, receiptCameraStarting]);
   async function captureReceiptPhoto() {
     const video = receiptVideoRef.current;
     if (!video || !video.videoWidth || !video.videoHeight) {
@@ -340,34 +346,39 @@ function AppInner() {
     if (!Number(purchaseAmount) || Number(purchaseAmount) <= 0 || !purchaseDate) { setError(t('incomplete')); return; }
     try {
       await submitReceipt.mutateAsync({ data: { merchantId:receiptStore.id, invoiceNumber: invoice || null, amount:Number(purchaseAmount), date:purchaseDate, imageData:receiptFile } });
-      invalidate(); stopReceiptCamera(); setDialog(null); setNotice(t('sendReceipt')); setReceiptFile(''); setInvoice(''); setPurchaseAmount('');
+      invalidate(); stopReceiptCamera(); setLocation('/receipts'); setNotice(t('sendReceipt')); setReceiptFile(''); setInvoice(''); setPurchaseAmount('');
     } catch { setError(t('genericError')); }
   }
-  const receiptDialog = dialog==='receipt' ? <Dialog close={()=>{stopReceiptCamera();setDialog(null);}} closeLabel={t('close')} title={t('receipt')}>
-    <div style={{display:'grid',gap:14}}>
-      <p className="subtle" style={{margin:0}}>{t('receiptHint')}</p>
-      <section className="receipt-camera-panel" aria-label={t('captureReceipt')}>
-        {receiptFile ? <div className="receipt-photo-preview">
-          <img src={receiptFile} alt={t('captureReceipt')}/>
-          <div className="receipt-camera-actions">
-            <strong role="status">{t('photoReady')}</strong>
-            <button type="button" className="btn btn-outline" onClick={()=>{setReceiptFile('');void startReceiptCamera();}}><Camera size={17}/>{t('retakeReceiptPhoto')}</button>
-          </div>
-        </div> : receiptCameraActive ? <div className="receipt-live-camera">
-          <video ref={receiptVideoRef} autoPlay playsInline muted aria-label={t('captureReceipt')}/>
-          <div className="receipt-camera-actions">
-            <span className="subtle">{t('cameraHint')}</span>
-            <button type="button" className="btn btn-primary" onClick={()=>void captureReceiptPhoto()} data-testid="button-capture-receipt"><Camera size={18}/>{t('takeReceiptPhoto')}</button>
-          </div>
-        </div> : <div className="receipt-camera-fallback">
-          {receiptCameraStarting ? <p role="status" className="subtle">{t('cameraStarting')}</p> : <>
-            <Camera size={30} aria-hidden="true"/>
-            {receiptCameraError&&<p role="alert" className="subtle">{receiptCameraError}</p>}
-            <button type="button" className="btn btn-outline" onClick={()=>receiptPhotoInputRef.current?.click()} data-testid="button-open-device-camera"><Camera size={17}/>{t('cameraFallback')}</button>
-            <input ref={receiptPhotoInputRef} type="file" accept="image/*" capture="environment" aria-label={t('captureReceipt')} className="camera-file-input" data-testid="input-receipt-photo" onChange={e=>{const file=e.target.files?.[0];e.target.value='';void handleReceiptPhotoFile(file);}}/>
-          </>}
-        </div>}
-      </section>
+  const receiptPageContent = <section className="full-page-tool capture-page">
+    <div className="profile-topbar full-page-tool-header" dir="ltr">
+      <button className="profile-back" onClick={()=>nav(receiptStore?`/shop/${receiptStore.id}`:'/')} aria-label={t('home')} data-testid="button-capture-back"><ArrowLeft size={20}/></button>
+      <h1 dir="auto">{t('captureReceipt')}</h1>
+      <button className="profile-brand" onClick={()=>nav('/')} aria-label={t('home')} data-testid="link-capture-brand"><img src="/cashback-logo-transparent.png" alt="CASH BACK"/></button>
+    </div>
+    <p className="capture-page-hint">{t('cameraHint')}</p>
+    <section className="receipt-camera-panel receipt-page-camera" aria-label={t('captureReceipt')}>
+      {receiptFile ? <div className="receipt-photo-preview">
+        <img src={receiptFile} alt={t('captureReceipt')}/>
+        <div className="receipt-camera-actions">
+          <strong role="status">{t('photoReady')}</strong>
+          <button type="button" className="btn btn-outline" onClick={()=>{setReceiptFile('');void startReceiptCamera();}} data-testid="button-retake-receipt"><Camera size={17}/>{t('retakeReceiptPhoto')}</button>
+        </div>
+      </div> : receiptCameraActive ? <div className="receipt-live-camera">
+        <video ref={receiptVideoRef} autoPlay playsInline muted aria-label={t('captureReceipt')}/>
+        <div className="receipt-camera-actions">
+          <span className="subtle">{t('cameraHint')}</span>
+          <button type="button" className="btn btn-primary" onClick={()=>void captureReceiptPhoto()} data-testid="button-capture-receipt"><Camera size={18}/>{t('takeReceiptPhoto')}</button>
+        </div>
+      </div> : <div className="receipt-camera-fallback">
+        {receiptCameraStarting ? <p role="status" className="subtle">{t('cameraStarting')}</p> : <>
+          <Camera size={30} aria-hidden="true"/>
+          {receiptCameraError&&<p role="alert" className="subtle">{receiptCameraError}</p>}
+          <button type="button" className="btn btn-outline" onClick={()=>receiptPhotoInputRef.current?.click()} data-testid="button-open-device-camera"><Camera size={17}/>{t('cameraFallback')}</button>
+          <input ref={receiptPhotoInputRef} type="file" accept="image/*" capture="environment" aria-label={t('captureReceipt')} className="camera-file-input" data-testid="input-receipt-photo" onChange={e=>{const file=e.target.files?.[0];e.target.value='';void handleReceiptPhotoFile(file);}}/>
+        </>}
+      </div>}
+    </section>
+    <div className="capture-receipt-fields">
       <SelectField label={t('merchantId')} value={receiptMerchantId || (selectedMerchant?.status==='active'?selectedMerchant.id:'')} onChange={setReceiptMerchantId} options={activeMerchants.map(m=>m.id)} formatOption={id=>activeMerchants.find(m=>m.id===id)?.name||id} testId="select-receipt-merchant"/>
       <Field label={t('amount')} value={purchaseAmount} onChange={setPurchaseAmount} type="number" min="0.01" step="0.01" testId="input-receipt-amount" required/>
       <Field label={t('date')} value={purchaseDate} onChange={setPurchaseDate} type="date" testId="input-receipt-date"/>
@@ -375,15 +386,7 @@ function AppInner() {
       <small className="subtle">{t('privacy')}</small>
       <button className="btn btn-primary" onClick={()=>void saveReceipt()} disabled={submitReceipt.isPending||activeMerchants.length===0} data-testid="button-submit-receipt"><ReceiptText size={17}/>{submitReceipt.isPending?t('loading'):t('submit')}</button>
     </div>
-  </Dialog> : null;
-  const notificationDialog = notificationsOpen ? <Dialog close={()=>setNotificationsOpen(false)} closeLabel={t('close')} title={t('notifications')}>
-    <div className="home-notifications-list">
-      {customerNotes.length===0 ? <p className="subtle">{t('noNotifications')}</p> : customerNotes.map(note=><article className={`surface home-notification-row ${note.read?'is-read':'is-unread'}`} key={note.id} data-testid={`notification-${note.id}`}>
-        <span className="home-notification-mark" aria-hidden="true"><Bell size={16}/></span>
-        <div><p>{note.text}</p>{note.t&&<small className="subtle">{new Date(note.t).toLocaleString(lang==='ar'?'ar-DZ':lang==='fr'?'fr-FR':'en')}</small>}</div>
-      </article>)}
-    </div>
-  </Dialog> : null;
+  </section>;
   const redeemDialog = dialog==='redeem' && selectedMerchant ? <Dialog close={()=>setDialog(null)} closeLabel={t('close')} title={t('redeem')}>
     <div style={{display:'grid',gap:14}}>
       <p className="subtle" style={{margin:0}}>{selectedMerchant.name}</p>
@@ -447,17 +450,17 @@ function AppInner() {
   }
   const nav = (path: string) => { stopReceiptCamera(); setLocation(path); setDialog(null); clearMessages(); };
   const header = (account = true) => {
-    if (customer && location.startsWith('/profile')) return null;
+    if (customer && (location.startsWith('/profile') || location==='/notifications' || location==='/capture-receipt')) return null;
     if (customer && location === '/') return <header className="customer-home-header">
       <button className="home-header-profile" onClick={()=>nav('/profile')} data-testid="button-home-profile">
         {profile.avatarUpdatedAt!==undefined&&!photoFailed
-          ? <img className="home-header-avatar" src={`/api/cashback/profile/photo?v=${encodeURIComponent(String(profile.avatarUpdatedAt))}`} alt="" aria-hidden="true" onError={()=>setPhotoFailed(true)}/>
+          ? <img className="home-header-avatar" src={`/api/cashback/profile/photo?v=${encodeURIComponent(String(profile.avatarUpdatedAt))}`} alt="" aria-hidden="true" loading="eager" onLoad={()=>setPhotoFailed(false)} onError={()=>setPhotoFailed(true)}/>
           : <span className="home-header-avatar home-header-initials" aria-hidden="true">{profile.name.split(/\s+/).filter(Boolean).slice(0,2).map(part=>part[0]).join('').toLocaleUpperCase()}</span>}
         <span className="home-header-copy"><small>{t('hello')}</small><strong>{profile.name}</strong></span>
       </button>
-      <button onClick={()=>nav('/')} data-testid="link-brand" className="home-header-brand"><span className="home-header-mark"><img src="/cashback-logo-transparent.png" alt="" aria-hidden="true"/></span><span><strong>CASH BACK</strong><small>{t('homeBrandTagline')}</small></span></button>
+      <button onClick={()=>nav('/')} data-testid="link-brand" className="home-header-brand"><img src="/cashback-logo-transparent.png" alt="CASH BACK"/></button>
       <div className="home-header-actions">
-        <button className="home-header-icon" onClick={()=>setNotificationsOpen(true)} aria-label={t('notifications')} data-testid="button-home-notifications"><Bell size={20}/>{notificationCount>0&&<span className="home-header-badge">{notificationCount>9?'9+':notificationCount}</span>}</button>
+        <button className="home-header-icon" onClick={()=>nav('/notifications')} aria-label={t('notifications')} data-testid="button-home-notifications"><Bell size={20}/>{notificationCount>0&&<span className="home-header-badge">{notificationCount>9?'9+':notificationCount}</span>}</button>
         <button className="home-header-icon" onClick={()=>void logout()} aria-label={t('signOut')} data-testid="button-header-logout"><LogOut size={19}/></button>
       </div>
     </header>;
@@ -471,13 +474,13 @@ function AppInner() {
       </div>
     </header>;
   };
-  const openReceiptDialog = (merchantId?: string) => {
+  const openReceiptPage = (merchantId?: string) => {
     setReceiptMerchantId(merchantId || selectedMerchant?.id || '');
     setReceiptFile('');
-    setDialog('receipt');
-    void startReceiptCamera();
+    setPurchaseDate(new Date().toISOString().slice(0,10));
+    nav('/capture-receipt');
   };
-  const shell = (content: ReactNode) => <div className="app-shell grain" dir={isRtl?'rtl':'ltr'}>{header()}<main className="page-enter" style={{ maxWidth:1120, margin:'0 auto', padding:'12px 18px 90px' }}>{content}</main>{customer&&<BottomNav path={location} nav={nav} t={t} onReceipt={openReceiptDialog}/ >}{customer&&receiptDialog}{customer&&notificationDialog}</div>;
+  const shell = (content: ReactNode, showBottomNav = true) => <div className="app-shell grain" dir={isRtl?'rtl':'ltr'}>{header()}<main className="page-enter" style={{ maxWidth:1120, margin:'0 auto', padding:showBottomNav?'12px 18px 90px':'12px 18px 24px' }}>{content}</main>{customer&&showBottomNav&&<BottomNav path={location} nav={nav} t={t} onReceipt={openReceiptPage}/ >}</div>;
   const Empty = ({ icon, title, text }: { icon: ReactNode; title: string; text: string }) => <div className="surface" style={{ padding:'38px 24px', textAlign:'center' }}><div style={{ color:'hsl(var(--primary))', marginBottom:10 }}>{icon}</div><h3 style={{ margin:'0 0 6px', fontSize:20 }}>{title}</h3><p className="subtle" style={{ maxWidth:440, margin:'0 auto', lineHeight:1.65 }}>{text}</p></div>;
   const noticeBox = (text:string, isError=false) => <div role={isError?'alert':'status'} data-testid={isError?'status-error':'status-success'} style={{ background:isError?'hsl(var(--destructive) / .12)':'hsl(var(--primary) / .12)', color:isError?'hsl(var(--destructive))':'hsl(var(--foreground))', padding:'12px 15px', borderRadius:12, marginBottom:14, fontWeight:600 }}>{text}</div>;
   const statusLabel = (s:string) => s==='approved'?t('approved'):s==='rejected'?t('rejected'):t('pending');
@@ -553,7 +556,7 @@ function AppInner() {
       <div className="profile-summary surface">
         <div className="profile-summary-head">
           <div className="profile-avatar-wrap">
-            {photoFailed||profile.avatarUpdatedAt===undefined?<div className="profile-avatar" aria-hidden="true">{initials}</div>:<img className="profile-avatar profile-avatar-image" src={photoUrl} alt={profile.name} onError={()=>setPhotoFailed(true)} data-testid="img-profile-avatar"/>}
+            {photoFailed||profile.avatarUpdatedAt===undefined?<div className="profile-avatar" aria-hidden="true">{initials}</div>:<img className="profile-avatar profile-avatar-image" src={photoUrl} alt={profile.name} loading="eager" onLoad={()=>setPhotoFailed(false)} onError={()=>setPhotoFailed(true)} data-testid="img-profile-avatar"/>}
             <button type="button" className="profile-photo-edit" aria-label={t('changePhoto')} title={t('changePhoto')} disabled={photoUploading} onClick={()=>document.getElementById('input-profile-photo')?.click()} data-testid="button-profile-photo"><Camera size={16}/></button>
             <input id="input-profile-photo" className="profile-photo-input" type="file" accept="image/jpeg,image/png,image/webp" aria-label={t('changePhoto')} disabled={photoUploading} onChange={event=>{const file=event.currentTarget.files?.[0];void uploadProfilePhoto(file);event.currentTarget.value='';}} data-testid="input-profile-photo"/>
           </div>
@@ -584,11 +587,26 @@ function AppInner() {
       <button className="btn btn-outline profile-logout" onClick={()=>void logout()} data-testid="button-logout"><LogOut size={17}/>{t('signOut')}</button>
     </section>);
   }
+  if (customer && location === '/notifications') return shell(<section className="history-page notifications-page page-enter">
+    <div className="profile-topbar full-page-tool-header" dir="ltr">
+      <button className="profile-back" onClick={()=>nav('/')} aria-label={t('home')} data-testid="button-notifications-back"><ArrowLeft size={20}/></button>
+      <h1 dir="auto">{t('notifications')}</h1>
+      <button className="profile-brand" onClick={()=>nav('/')} aria-label={t('home')} data-testid="link-notifications-brand"><img src="/cashback-logo-transparent.png" alt="CASH BACK"/></button>
+    </div>
+    {customerNotes.length===0 ? <div className="surface profile-empty"><Bell size={24}/><span>{t('noNotifications')}</span></div> : <div className="notification-page-list">
+      {customerNotes.map(note=><article className={`surface home-notification-row ${note.read?'is-read':'is-unread'}`} key={note.id} data-testid={`notification-${note.id}`}>
+        <span className="home-notification-mark" aria-hidden="true"><Bell size={18}/></span>
+        <div><p>{note.text}</p>{note.t&&<small className="subtle">{new Date(note.t).toLocaleString(lang==='ar'?'ar-DZ':lang==='fr'?'fr-FR':'en')}</small>}</div>
+      </article>)}
+    </div>}
+  </section>);
+  if (customer && location === '/capture-receipt') return shell(<>{error&&noticeBox(error,true)}{notice&&noticeBox(notice)}{receiptPageContent}</>,false);
   if (customer && location === '/receipts') {
     const profileClaims=claims.filter(c=>c.cid===profile.eid).sort((a,b)=>timestampOf(b.created||b.date)-timestampOf(a.created||a.date));
     return shell(<section className="history-page page-enter">
       <div className="profile-topbar" dir="ltr"><button className="profile-back" onClick={()=>nav('/profile')} aria-label={t('profile')} data-testid="button-receipts-back"><ArrowLeft size={20}/></button><h1 dir="auto">{t('claimHistory')}</h1><button className="profile-brand" onClick={()=>nav('/')} aria-label={t('home')} data-testid="link-receipts-brand"><img src="/cashback-logo-transparent.png" alt="CASH BACK"/></button></div>
       <div className="history-intro"><span className="history-eyebrow">{t('accountSection')}</span><p>{t('receiptHistoryIntro')}</p></div>
+      {error&&noticeBox(error,true)}{notice&&noticeBox(notice)}
       {isLoading?<div className="history-skeleton" aria-label={t('historyLoad')}><i/><i/><i/></div>:profileClaims.length===0?<div className="surface profile-empty"><ReceiptText size={24}/><span>{t('noReceipts')}</span></div>:<div className="history-list">{profileClaims.map(claim=><ClaimRow key={claim.id} claim={claim} shop={merchants.find(m=>m.id===claim.mid)} t={t}/>)}</div>}
     </section>);
   }
@@ -630,7 +648,7 @@ function AppInner() {
     const mid=location.split('/')[2]; const shop=merchants.find(m=>m.id===mid);
     return <>{shell(shop?<WalletDetail shop={shop} profile={profile} state={state} txns={txns} t={t} openRedeem={()=>{setSelectedMerchant(shop);setDialog('redeem');}}/>:<Empty icon={<Wallet size={28}/>} title={t('walletTitle')} text={t('noShopsHint')}/>)}{redeemDialog}</>;
   }
-  if (customer && selectedMerchant && location.startsWith('/shop/')) return shell(<ShopDetail shop={selectedMerchant} t={t} lang={lang} onBack={()=>nav('/')} onReceipt={()=>openReceiptDialog(selectedMerchant.id)} onWallet={()=>nav(`/wallet/${selectedMerchant.id}`)} />);
+  if (customer && selectedMerchant && location.startsWith('/shop/')) return shell(<ShopDetail shop={selectedMerchant} t={t} lang={lang} onBack={()=>nav('/')} onReceipt={()=>openReceiptPage(selectedMerchant.id)} onWallet={()=>nav(`/wallet/${selectedMerchant.id}`)} />);
   if (customer && location.startsWith('/shop')) return shell(<Empty icon={<Store size={28}/>} title={t('details')} text={t('noShopsHint')}/>);
   if (customer && location.startsWith('/settings')) return null;
 
@@ -656,7 +674,7 @@ function AppInner() {
         <label className="area-select"><span><MapPin size={16}/>{t('shopArea')}</span><select className="field" value={cityFilter} onChange={e=>setCityFilter(e.target.value)} aria-label={t('shopArea')} data-testid="select-shop-area"><option value="">{availableCountries.length===1?t(availableCountries[0]==='Libya'?'libya':'algeria'):t('allShops')}</option>{availableCities.map(city=><option key={city} value={city}>{localizeCity(city,lang)}</option>)}</select></label>
       </div>
       <section className="promo-banner home-promo">
-        <div className="home-promo-copy"><span className="home-promo-kicker">{t('homeBrandTagline')}</span><div className="home-promo-rate"><strong>{state.settings?.cashback ?? 4}%</strong><span>{t('homeCashback')}</span></div><h1>{t('homePromoTitle')}</h1><p>{t('homePromoSubtitle')}</p><button className="btn btn-promo" onClick={()=>openReceiptDialog()} data-testid="button-promo-receipt"><Camera size={18}/>{t('homeCameraAction')}</button></div>
+        <div className="home-promo-copy"><span className="home-promo-kicker">{t('homeBrandTagline')}</span><div className="home-promo-rate"><strong>{state.settings?.cashback ?? 4}%</strong><span>{t('homeCashback')}</span></div><h1>{t('homePromoTitle')}</h1><p>{t('homePromoSubtitle')}</p><button className="btn btn-promo" onClick={()=>openReceiptPage()} data-testid="button-promo-receipt"><Camera size={18}/>{t('homeCameraAction')}</button></div>
         <div className="promo-art" aria-hidden="true"><div className="promo-ticket"><ReceiptText size={34}/><strong>{t('cashback')}</strong><span><Gift size={20}/></span></div><span className="promo-orbit promo-orbit-one"/><span className="promo-orbit promo-orbit-two"/></div>
       </section>
       <section className="category-section">
@@ -666,7 +684,7 @@ function AppInner() {
         </div>
       </section>
       <section id="home-shops" className="home-shops-section">
-        <div className="home-section-head"><div><h2>{t('nearby')}</h2><p className="subtle">{cityFilter?localizeCity(cityFilter,lang):availableCountries.length===1?t(availableCountries[0]==='Libya'?'libya':'algeria'):t('allShops')}</p></div><button className="text-link" onClick={()=>nav('/shops')} data-testid="button-view-shops">{t('viewAll')}</button></div>
+        <div className="home-section-head"><div><h2>{t('nearby')}</h2><p className="subtle">{cityFilter?localizeCity(cityFilter,lang):availableCountries.length===1?t(availableCountries[0]==='Libya'?'libya':'algeria'):t('allShops')}</p></div><button className="text-link" onClick={()=>nav('/shops')} data-testid="button-view-shops">{t('allShops')}</button></div>
         {filtered.length===0 ? <Empty icon={<Compass size={30}/>} title={t('noShops')} text={t('noShopsHint')}/> : <div className="merchant-grid">{filtered.map(shop=><button key={shop.id} className="surface merchant-card" onClick={()=>nav(`/shop/${shop.id}`)} data-testid={`card-shop-${shop.id}`}>
           <div className="merchant-card-image"><MediaImage id={shop.logoId} alt={shop.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>{shop.cashbackRate!==undefined&&<span className="merchant-rate"><strong>{shop.cashbackRate}%</strong><small>{t('cashback')}</small></span>}</div>
           <div className="merchant-card-copy"><div className="merchant-card-title"><div><h3>{shop.name}</h3><span className="subtle">{shop.cat?t(`cat_${shop.cat}`):t('merchant')}</span></div><ArrowRight size={17}/></div>
