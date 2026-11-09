@@ -205,6 +205,8 @@ function projectState(
   if (profile.role === "admin") return state;
   if (profile.role === "customer") {
     const customer = customers.find((entry: any) => entry.id === profile.eid);
+    const customerBalanceState = customer ? { ...customer } : null;
+    if (customerBalanceState) delete customerBalanceState.wallet;
     const activeMerchants = merchants
       .filter((merchant: any) => merchant.status === "active")
       .map((merchant: any) => {
@@ -242,7 +244,7 @@ function projectState(
     return {
       settings,
       merchants: activeMerchants,
-      customers: customer ? [customer] : [],
+      customers: customerBalanceState ? [customerBalanceState] : [],
       claims: claims.filter((claim: any) => claim.cid === profile.eid),
       txns: txns.filter((transaction: any) => transaction.cid === profile.eid),
       cbpays: cbpays.filter((payment: any) => payment.cid === profile.eid),
@@ -351,7 +353,7 @@ router.post("/cashback/register", async (req, res) => {
       );
       if (duplicate) throw new CashbackError(409, "PHONE_ALREADY_REGISTERED");
       if (input.role === "customer") {
-        state.customers.push({ id, name, phone: phone || null, wallet: 0, cbm: {} });
+        state.customers.push({ id, name, phone: phone || null, cbm: {} });
       } else {
         state.merchants.push({
           id,
@@ -722,7 +724,6 @@ router.patch("/cashback/receipts/:id/decision", async (req, res) => {
       if (parsed.data.approved) {
         const cashbackRate = Number(merchant.cashbackRate ?? state.settings?.cashback ?? 4);
         const cashback = Math.round(claim.amount * cashbackRate) / 100;
-        customer.wallet = Math.round((Number(customer.wallet ?? 0) + cashback) * 100) / 100;
         customer.cbm ??= {};
         customer.cbm[merchant.id] = Math.round(
           (Number(customer.cbm[merchant.id] ?? 0) + cashback) * 100,
@@ -890,7 +891,6 @@ router.post("/cashback/wallet/redemptions", async (req, res) => {
       if (amount > available) throw new CashbackError(400, "INSUFFICIENT_MERCHANT_BALANCE");
       customer.cbm[merchant.id] = Math.round((available - amount) * 100) / 100;
       if (customer.cbm[merchant.id] <= 0) delete customer.cbm[merchant.id];
-      customer.wallet = Math.round((Number(customer.wallet ?? 0) - amount) * 100) / 100;
       state.cbpays ??= [];
       const payment = {
         id: `redeem_${randomUUID().replaceAll("-", "").slice(0, 18)}`,
