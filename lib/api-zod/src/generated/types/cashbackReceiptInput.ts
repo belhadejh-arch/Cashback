@@ -20,6 +20,8 @@ export interface CashbackReceiptInput {
      */
   amount: number;
   date: Date;
-  /** @maxLength 650000 */
-  imageData: string;
+  /** @maxLength 80 */
+  uploadId?: string;
+  /** @maxLength 500 */
+  objectPath?: string;
 }

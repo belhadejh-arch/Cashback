@@ -38,9 +38,11 @@ export class CashbackError extends Error {
 
 const emptyState = (): CashbackState => ({
   settings: { cashback: 4, platformCommission: 2, claimHours: 720 },
+  categories: ["restaurants", "cafes", "clothing", "electronics", "malls", "groceries", "perfume", "gifts", "shops"],
   merchants: [],
   customers: [],
   claims: [],
+  ratings: [],
   txns: [],
   cbpays: [],
   notes: [],
@@ -52,9 +54,10 @@ function normalizeState(state: CashbackState): CashbackState {
   state.settings.cashback ??= 4;
   state.settings.platformCommission ??= 2;
   state.settings.claimHours ??= 720;
-  for (const key of ["merchants", "customers", "claims", "txns", "cbpays", "notes", "audit"]) {
+  for (const key of ["merchants", "customers", "claims", "ratings", "txns", "cbpays", "notes", "audit"]) {
     if (!Array.isArray(state[key])) state[key] = [];
   }
+  state.categories ??= ["restaurants", "cafes", "clothing", "electronics", "malls", "groceries", "perfume", "gifts", "shops"];
   state.merchants.forEach((merchant: any) => {
     merchant.status ??= "active";
     merchant.cat ??= "shops";

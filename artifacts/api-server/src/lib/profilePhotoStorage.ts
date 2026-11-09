@@ -62,6 +62,18 @@ export async function createProfilePhotoUpload(uid: string): Promise<{
   };
 }
 
+export async function createReceiptPhotoUpload(
+  uid: string,
+  uploadId: string,
+): Promise<{ uploadURL: string; objectPath: string }> {
+  const fullPath = `${bucketPrefix()}/receipt-images/${uid}/${uploadId}`;
+  const { bucketName, objectName } = parseStoragePath(fullPath);
+  return {
+    uploadURL: await signUpload(bucketName, objectName),
+    objectPath: `/objects/${objectName}`,
+  };
+}
+
 export async function getProfilePhotoFile(objectPath: string): Promise<File> {
   if (!objectPath.startsWith("/objects/")) throw new Error("Invalid object path");
   const { bucketName, objectName } = parseStoragePath(
@@ -71,6 +83,42 @@ export async function getProfilePhotoFile(objectPath: string): Promise<File> {
   const [exists] = await file.exists();
   if (!exists) throw new Error("Profile photo not found");
   return file;
+}
+
+export async function readPrivateImage(
+  objectPath: string,
+  maxBytes = 5 * 1024 * 1024,
+): Promise<{ buffer: Buffer; contentType: string; size: number }> {
+  const file = await getProfilePhotoFile(objectPath);
+  const [metadata] = await file.getMetadata();
+  const contentType = String(metadata.contentType ?? "");
+  const size = Number(metadata.size ?? 0);
+  if (
+    !["image/jpeg", "image/png", "image/webp"].includes(contentType) ||
+    !Number.isFinite(size) ||
+    size <= 0 ||
+    size > maxBytes
+  ) {
+    throw new Error("Invalid uploaded image metadata");
+  }
+  const [buffer] = await file.download();
+  if (buffer.length !== size || !imageBufferMatchesType(buffer, contentType)) {
+    throw new Error("Uploaded image content does not match its content type");
+  }
+  return { buffer, contentType, size };
+}
+
+function imageBufferMatchesType(buffer: Buffer, contentType: string): boolean {
+  if (contentType === "image/jpeg") {
+    return buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
+  }
+  if (contentType === "image/png") {
+    return buffer.length >= 8 &&
+      buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+  }
+  return buffer.length >= 12 &&
+    buffer.toString("ascii", 0, 4) === "RIFF" &&
+    buffer.toString("ascii", 8, 12) === "WEBP";
 }
 
 export async function readProfilePhoto(

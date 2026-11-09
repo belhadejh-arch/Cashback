@@ -7,9 +7,12 @@
  */
 
 export * from './actionResult';
+export * from './cashbackCategoriesUpdate';
+export * from './cashbackCategoriesUpdateCategoriesItem';
 export * from './cashbackLogin';
 export * from './cashbackLoginRole';
 export * from './cashbackMerchantDecision';
+export * from './cashbackMerchantRating';
 export * from './cashbackPreferences';
 export * from './cashbackPreferencesLanguage';
 export * from './cashbackPreferencesTheme';
@@ -32,3 +35,6 @@ export * from './profilePhotoResult';
 export * from './profilePhotoUpload';
 export * from './profilePhotoUploadInput';
 export * from './profilePhotoUploadInputContentType';
+export * from './receiptPhotoUpload';
+export * from './receiptPhotoUploadInput';
+export * from './receiptPhotoUploadInputContentType';

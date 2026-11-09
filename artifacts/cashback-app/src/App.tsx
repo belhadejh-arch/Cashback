@@ -6,7 +6,8 @@ import {
   useDecideCashbackReceipt, useDecideCashbackMerchant, useRedeemMerchantCashback,
   useUpdateCashbackPreferences, useUpdateCashbackRate, useGetCashbackMedia,
   useLoginCashback, useLogoutCashback, useCreateCashbackProfilePhotoUpload,
-  useSaveCashbackProfilePhoto,
+  useSaveCashbackProfilePhoto, useCreateCashbackReceiptPhotoUpload,
+  useCancelCashbackReceipt, useRateCashbackMerchant, useUpdateCashbackCategories,
 } from '@workspace/api-client-react';
 import { useLocation } from 'wouter';
 import { QRCodeSVG } from 'qrcode.react';
@@ -14,7 +15,7 @@ import {
   ArrowDownLeft, ArrowLeft, ArrowRight, BadgeCheck, Banknote, Bell, Camera, Check, ChevronDown, Home,
   CircleHelp, Clock3, Compass, Coffee, FileCheck2, FilePlus2, Gift, Globe2, Laptop, LogOut, MapPin, Moon, Share2,
   Plus, ReceiptText, Search, Settings, ShieldCheck, Store, Sun, UserRound, Wallet,
-  X, RefreshCw, LockKeyhole, Percent, LocateFixed, MoreHorizontal, Shirt, ShoppingBag, Tag, Utensils,
+  X, RefreshCw, LockKeyhole, Percent, LocateFixed, MoreHorizontal, Shirt, ShoppingBag, Star, Tag, Utensils,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Route, Switch, Router as WouterRouter } from 'wouter';
@@ -22,11 +23,11 @@ import NotFound from '@/pages/not-found';
 
 type Lang = 'en' | 'fr' | 'ar';
 type Theme = 'dark' | 'light';
-type Merchant = { id: string; name: string; cat?: string; status?: string; country?: string; city?: string; address?: string; mapsUrl?: string; lat?: number; lng?: number; cashbackRate?: number; logoId?: string; publicId?: string; qrValue?: string };
-type Claim = { id: string; mid: string; cid: string; invoiceNumber?: string; date?: string; amount: number; photoId?: string; status: string; created?: string; cashback?: number; reason?: string };
+type Merchant = { id: string; name: string; cat?: string; status?: string; country?: string; city?: string; address?: string; mapsUrl?: string; lat?: number; lng?: number; cashbackRate?: number; logoId?: string; publicId?: string; qrValue?: string; description?: string; rating?: number; ratingCount?: number; userRating?: number };
+type Claim = { id: string; mid: string; cid: string; invoiceNumber?: string; date?: string; amount: number; photoId?: string; status: string; created?: string; cashback?: number; reason?: string; submitIp?: string; submittedByUid?: string; possibleDuplicate?: boolean };
 type Txn = { id: string; t?: string; mid: string; cid: string; amount: number; cashback?: number; method?: string };
 type CashbackNote = { id: string; to?: string; text: string; t?: number; read?: boolean };
-type Session = { profile: { uid: string; role: string; eid: string; name: string; phone?: string; email?: string; avatarUpdatedAt?: number; preferences?: { language?: Lang; theme?: Theme }; status?: string; rejectionReason?: string }; state: { settings?: { cashback?: number; claimHours?: number }; merchants?: Merchant[]; customers?: { id: string; name: string; phone?: string; wallet?: number; cbm?: Record<string, number> }[]; claims?: Claim[]; txns?: Txn[]; cbpays?: { id: string; cid: string; mid: string; amount: number; status: string; at?: string }[]; notes?: CashbackNote[] } };
+type Session = { profile: { uid: string; role: string; eid: string; name: string; phone?: string; email?: string; avatarUpdatedAt?: number; preferences?: { language?: Lang; theme?: Theme }; status?: string; rejectionReason?: string }; state: { settings?: { cashback?: number; claimHours?: number }; categories?: string[]; merchants?: Merchant[]; customers?: { id: string; name: string; phone?: string; wallet?: number; cbm?: Record<string, number> }[]; claims?: Claim[]; txns?: Txn[]; cbpays?: { id: string; cid: string; mid: string; amount: number; status: string; at?: string }[]; notes?: CashbackNote[] } };
 type Dict = Record<string, string>;
 const dictionaries: Record<Lang, Dict> = {
   en: {
@@ -43,6 +44,17 @@ const dictionaries: Record<Lang, Dict> = {
     tagline:'مكافأة صغيرة، في متجرك المفضل.', algeria:'الجزائر', libya:'ليبيا', localTag:'مكافآت محلية · شمال أفريقيا', separationNudge:'متجر واحد. رصيد واحد.', separationHint:'تبقى المكافآت لدى المتجر الذي منحها.', welcome:'سعداء بعودتك.', login:'تسجيل الدخول', createAccount:'إنشاء حساب', customer:'عميل', merchant:'صاحب متجر', admin:'مسؤول',
     email:'البريد الإلكتروني', loginIdentifier:'البريد الإلكتروني أو رقم الهاتف', phoneNotVerified:'رقم الهاتف غير مؤكد. التحقق عبر SMS غير متاح حالياً؛ سجّل الدخول بالبريد الإلكتروني.', phoneSignupHint:'التحقق عبر SMS غير موصول حالياً. استخدم البريد الإلكتروني للدخول إلى أن يتم تأكيد الهاتف.', accountTypeMismatch:'نوع هذا الحساب لا يطابق الخيار المحدد.', rejectionReasonRequired:'اكتب سبب الرفض قبل رفض الطلب.', password:'كلمة المرور', confirmPassword:'تأكيد كلمة المرور', phone:'رقم الهاتف', name:'الاسم الكامل', forgot:'هل نسيت كلمة المرور؟', reset:'إرسال رابط الاستعادة', register:'إنشاء الحساب', continue:'متابعة', verify:'تأكيد الهاتف', code:'رمز التحقق عبر SMS', sendCode:'إرسال الرمز', verifyCode:'تأكيد الرمز', back:'العودة إلى الدخول',
     home:'اكتشف المتاجر', wallet:'مكافآتي', profile:'الملف الشخصي', settings:'الإعدادات', signOut:'تسجيل الخروج', hello:'مرحباً بعودتك', nearby:'متاجر محلية تستحق زيارتك', noShops:'اكتشاف متاجرك المحلية يبدأ هنا', noShopsHint:'ستظهر المتاجر المشاركة عند انضمامها إلى CASH BACK.', search:'ابحث عن متجر أو فئة', details:'تفاصيل المتجر', earn:'اكسب', cashback:'استرداد نقدي', spendHere:'استخدم المكافآت هنا', receipt:'إرسال إيصال', receiptHint:'حمّل صورة واضحة للإيصال. تُضاف المكافآت بعد المراجعة.', amount:'قيمة الشراء', invoice:'رقم الفاتورة (اختياري)', date:'تاريخ الشراء', upload:'اختر صورة الإيصال', submit:'إرسال للمراجعة', walletTitle:'رصيد مستقل لكل متجر', walletHint:'تبقى المكافآت لدى المتجر الذي منحها، وتُستخدم لديه فقط.', earned:'المكتسب', used:'المستخدم', balance:'الرصيد المتاح', ledger:'النشاط', noActivity:'لا يوجد نشاط بعد', redeem:'استخدام المكافآت', redeemAmount:'قيمة الاستخدام', confirmRedeem:'تأكيد الاستخدام', pending:'قيد المراجعة', approved:'مقبول', rejected:'مرفوض', noReceipts:'لا توجد إيصالات بعد', preferences:'تفضيلاتك', language:'اللغة', theme:'المظهر', light:'فاتح', dark:'داكن', save:'حفظ التفضيلات', saved:'تم حفظ التفضيلات', customerEntry:'تسوّق محلياً واكسب مكافآت.', customerBlurb:'اكسب رصيداً منفصلاً لدى كل متجر مشارك، واستخدمه في زيارتك القادمة.', shopEntry:'امنح زبائنك سبباً للعودة.', shopBlurb:'انضم إلى شبكة مكافآت محلية تحتفي بالزبائن الدائمين.', applyShop:'قدّم متجرك', statusPending:'طلبك قيد المراجعة', pendingHint:'تم إرسال طلب انضمامك إلى الإدارة بنجاح. نراجع تفاصيل متجرك وستتوفر أدوات البيع بعد الموافقة.', statusRejected:'لم تتم الموافقة على الطلب', reason:'ملاحظة المراجعة', retry:'تواصل مع الدعم لمعرفة الخطوات التالية', merchantDashboard:'لوحة المتجر', merchantActive:'متجرك نشط', salesOnly:'تمت الموافقة على متجرك. يراجع فريق CASH BACK إيصالات العملاء.', rate:'نسبة المكافأة', customers:'العملاء', sales:'المبيعات', receiptQueue:'مراجعة الإيصالات', merchantQueue:'طلبات المتاجر', adminDashboard:'لوحة المراجعة', noPending:'لا توجد طلبات معلقة', approve:'موافقة', decline:'رفض', rejectionReason:'سبب الرفض', apply:'إرسال الطلب', country:'الدولة', city:'المدينة / الولاية', location:'عنوان المتجر', mapLink:'رابط الخرائط أو الإحداثيات', category:'فئة المتجر', logo:'صورة أو شعار المتجر', shopName:'اسم المتجر', choose:'اختر', close:'إغلاق', loading:'جارٍ تحميل حسابك…', retryLoad:'إعادة المحاولة', loadError:'تعذر تحميل حسابك.', authError:'تعذر إتمام العملية. تحقق من بياناتك وحاول مجدداً.', success:'تم', resetSent:'تم إرسال رسالة استعادة كلمة المرور.', noAccount:'جديد على CASH BACK؟', haveAccount:'لديك حساب بالفعل؟', shopOpen:'فتح الخريطة', rateSaved:'تم تحديث النسبة', allShops:'كل المتاجر', profileText:'بيانات الحساب', adminSettings:'إعدادات البرنامج', claimHours:'مهلة إرسال الإيصال', noPermission:'هذه الصفحة غير متاحة لهذا الحساب.', genericError:'حدث خطأ. يرجى المحاولة مجدداً.', uploadRequired:'يرجى اختيار صورة أولاً.', incomplete:'أكمل الحقول المطلوبة.', passwordsDiffer:'كلمتا المرور غير متطابقتين.', camera:'استخدم صورة واضحة', privacy:'يُستخدم إيصالك لمراجعة المكافأة فقط.', phoneStep:'أرسلنا رمزاً إلى هاتفك.', phoneLogin:'الدخول برقم الهاتف', emailLogin:'استخدام البريد الإلكتروني', mapNote:'رابط خرائط أو خط العرض والطول', noHistory:'لا توجد مشتريات مسجلة بعد', merchantId:'المتجر', clear:'مسح', applyPending:'تم إرسال طلب انضمامك إلى الإدارة بنجاح.', sendReceipt:'تم إرسال الإيصال للمراجعة', redeemDone:'تم تسجيل الاستخدام', finishPhoneProfile:'تم التحقق من هاتفك. أكمل بيانات الحساب.', recentActivity:'النشاط الأخير', shopArea:'منطقة المتاجر', cat_restaurants:'مطاعم', cat_cafes:'مقاهٍ', cat_clothing:'ملابس', cat_electronics:'إلكترونيات', cat_malls:'مراكز تجارية', cat_groceries:'مواد غذائية', cat_perfume:'عطور', cat_gifts:'هدايا', cat_shops:'محلات أخرى', cat_other:'أخرى', qrCode:'رمز QR الخاص بالمتجر',
+  },
+};
+const featureTranslations: Record<Lang, Dict> = {
+  en: {
+    rating:'Rating', noRatings:'No ratings yet', ratingCount:'ratings', rateAfterPurchase:'Submit an approved receipt here to rate this shop.', ratingSaved:'Your rating was saved.', merchantInfo:'About this shop', merchantBalance:'Your balance at this shop', cancelReceipt:'Cancel receipt', receiptCancelled:'Receipt cancelled.', cancelled:'Cancelled', cancelReceiptConfirm:'Cancel this receipt submission?', receiptTooOld:'This receipt is outside the allowed submission period.', duplicateReceipt:'This invoice or photo was already submitted.', receiptCustomer:'Customer', submittedAt:'Submitted', submittedIp:'Submission IP', allReceipts:'All receipts', searchReceipts:'Search invoices, customers, or shops', categoriesManager:'Shop categories', categoriesHint:'Choose which categories are visible to customers.', categoriesSaved:'Shop categories saved.', categoriesAtLeastOne:'Keep at least one category active.', imageUploadError:'The receipt photo could not be uploaded. Please take a new photo and try again.', ratingRequiresApprovedReceipt:'You can rate a shop after one of your receipts is approved.', possibleDuplicate:'Possible duplicate: same shop, customer, date, and amount.', useMyLocation:'Sort by distance', nearbySorted:'Nearby shops are sorted by distance.', locationUnavailable:'Location is not available on this device.', locationDenied:'Location access was denied.', kmAway:'km away', allCountries:'All countries', allCities:'All cities',
+  },
+  fr: {
+    rating:'Note', noRatings:'Aucune note pour le moment', ratingCount:'avis', rateAfterPurchase:'Envoyez un reçu approuvé pour ce commerce afin de le noter.', ratingSaved:'Votre note a été enregistrée.', merchantInfo:'À propos du commerce', merchantBalance:'Votre solde dans ce commerce', cancelReceipt:'Annuler le reçu', receiptCancelled:'Reçu annulé.', cancelled:'Annulé', cancelReceiptConfirm:'Annuler l’envoi de ce reçu ?', receiptTooOld:'Ce reçu dépasse le délai autorisé.', duplicateReceipt:'Cette facture ou cette photo a déjà été envoyée.', receiptCustomer:'Client', submittedAt:'Envoyé', submittedIp:'IP d’envoi', allReceipts:'Tous les reçus', searchReceipts:'Rechercher une facture, un client ou un commerce', categoriesManager:'Catégories des commerces', categoriesHint:'Choisissez les catégories visibles par les clients.', categoriesSaved:'Catégories enregistrées.', categoriesAtLeastOne:'Gardez au moins une catégorie active.', imageUploadError:'La photo du reçu n’a pas pu être envoyée. Prenez une nouvelle photo et réessayez.', ratingRequiresApprovedReceipt:'Vous pouvez noter un commerce après l’approbation de l’un de vos reçus.', possibleDuplicate:'Doublon possible : même commerce, client, date et montant.', useMyLocation:'Trier par distance', nearbySorted:'Les commerces proches sont triés par distance.', locationUnavailable:'La position est indisponible sur cet appareil.', locationDenied:'L’accès à la position a été refusé.', kmAway:'km', allCountries:'Tous les pays', allCities:'Toutes les villes',
+  },
+  ar: {
+    rating:'التقييم', noRatings:'لا توجد تقييمات بعد', ratingCount:'تقييمات', rateAfterPurchase:'أرسل فاتورة مقبولة من هذا المتجر لتتمكن من تقييمه.', ratingSaved:'تم حفظ تقييمك.', merchantInfo:'معلومات المتجر', merchantBalance:'رصيدك لدى هذا المتجر', cancelReceipt:'إلغاء الفاتورة', receiptCancelled:'تم إلغاء الفاتورة.', cancelled:'ملغاة', cancelReceiptConfirm:'هل تريد إلغاء إرسال هذه الفاتورة؟', receiptTooOld:'تاريخ الفاتورة أقدم من المدة المسموح بها.', duplicateReceipt:'تم إرسال هذه الفاتورة أو صورتها من قبل.', receiptCustomer:'الزبون', submittedAt:'تاريخ الإرسال', submittedIp:'عنوان IP عند الإرسال', allReceipts:'كل الفواتير', searchReceipts:'ابحث برقم الفاتورة أو اسم الزبون أو المتجر', categoriesManager:'تصنيفات المتاجر', categoriesHint:'اختر التصنيفات التي تظهر للزبائن.', categoriesSaved:'تم حفظ تصنيفات المتاجر.', categoriesAtLeastOne:'يجب إبقاء تصنيف واحد على الأقل.', imageUploadError:'تعذر رفع صورة الفاتورة. التقط صورة جديدة ثم حاول مجدداً.', ratingRequiresApprovedReceipt:'يمكنك تقييم المتجر بعد قبول فاتورة واحدة على الأقل.', possibleDuplicate:'اشتباه بتكرار: المتجر والزبون والتاريخ والمبلغ متطابقة.', useMyLocation:'ترتيب حسب المسافة', nearbySorted:'تم ترتيب المتاجر الأقرب حسب المسافة.', locationUnavailable:'الموقع غير متاح على هذا الجهاز.', locationDenied:'لم تسمح بالوصول إلى الموقع.', kmAway:'كم', allCountries:'كل الدول', allCities:'كل المدن',
   },
 };
 const extraTranslations: Record<Lang, Dict> = {
@@ -108,6 +120,29 @@ const libyanCitiesArabic = ['طرابلس','بنغازي','مصراتة','الب
 const cityArabic = Object.fromEntries([...wilayas.map((name,index)=>[name,wilayasArabic[index]]),...libyanCities.map((name,index)=>[name,libyanCitiesArabic[index]])]) as Record<string,string>;
 const localizeCity = (name:string|undefined, lang:Lang) => name && lang==='ar' ? cityArabic[name] || name : name || '';
 const browseCategories = ['restaurants','cafes','clothing','electronics','malls','groceries','perfume','gifts','shops'] as const;
+function merchantCoordinates(merchant: Merchant): {lat:number;lng:number}|null {
+  if (merchant.lat!=null && merchant.lng!=null && Number.isFinite(Number(merchant.lat)) && Number.isFinite(Number(merchant.lng)) && Math.abs(Number(merchant.lat))<=90 && Math.abs(Number(merchant.lng))<=180) {
+    return {lat:Number(merchant.lat),lng:Number(merchant.lng)};
+  }
+  const source=String(merchant.mapsUrl||'');
+  let decoded=source;
+  try { decoded=decodeURIComponent(source); } catch { /* keep the original Maps URL */ }
+  const match=decoded.match(/@(-?\d{1,2}(?:\.\d+)?),\s*(-?\d{1,3}(?:\.\d+)?)/)
+    || decoded.match(/!3d(-?\d{1,2}(?:\.\d+)?)!4d(-?\d{1,3}(?:\.\d+)?)/)
+    || decoded.match(/[?&](?:q|query|ll)=(-?\d{1,2}(?:\.\d+)?)[,%+ ]+(-?\d{1,3}(?:\.\d+)?)/)
+    || decoded.match(/^(-?\d{1,2}(?:\.\d+)?),\s*(-?\d{1,3}(?:\.\d+)?)$/);
+  if (!match) return null;
+  const lat=Number(match[1]),lng=Number(match[2]);
+  return Math.abs(lat)<=90&&Math.abs(lng)<=180?{lat,lng}:null;
+}
+function distanceKm(from:{lat:number;lng:number},merchant:Merchant):number {
+  const to=merchantCoordinates(merchant);
+  if (!to) return Number.POSITIVE_INFINITY;
+  const radians=(degree:number)=>degree*Math.PI/180;
+  const dLat=radians(to.lat-from.lat),dLng=radians(to.lng-from.lng);
+  const a=Math.sin(dLat/2)**2+Math.cos(radians(from.lat))*Math.cos(radians(to.lat))*Math.sin(dLng/2)**2;
+  return 6371*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
 const merchantApplicationCategories = ['groceries','clothing','electronics','cafes','restaurants'] as const;
 const formatMoney = (n: number, country = 'Algeria') => `${Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${country === 'Libya' ? 'LYD' : 'DZD'}`;
 const timestampOf = (value: unknown) => {
@@ -153,7 +188,8 @@ function AppInner() {
   const [phone, setPhone] = useState(''); const [name, setName] = useState('');
   const [country, setCountry] = useState('Algeria'); const [city, setCity] = useState(''); const [address, setAddress] = useState(''); const [mapsUrl, setMapsUrl] = useState(''); const [category, setCategory] = useState(''); const [logoData, setLogoData] = useState('');
   const [search, setSearch] = useState(''); const [selectedMerchant, setSelectedMerchant] = useState<Merchant|null>(null);
-  const [selectedCategory, setSelectedCategory] = useState(''); const [cityFilter, setCityFilter] = useState('');
+   const [selectedCategory, setSelectedCategory] = useState(''); const [countryFilter, setCountryFilter] = useState(''); const [cityFilter, setCityFilter] = useState('');
+   const [nearbyCoords, setNearbyCoords] = useState<{lat:number;lng:number}|null>(null);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [photoFailed, setPhotoFailed] = useState(false);
   const [receiptCameraActive, setReceiptCameraActive] = useState(false);
@@ -165,11 +201,12 @@ function AppInner() {
   const receiptCameraRequestRef = useRef(0);
   const [dialog, setDialog] = useState<'redeem'|null>(null); const [receiptMerchantId, setReceiptMerchantId] = useState(''); const [receiptFile, setReceiptFile] = useState(''); const [invoice, setInvoice] = useState(''); const [purchaseAmount, setPurchaseAmount] = useState(''); const [purchaseDate, setPurchaseDate] = useState(new Date().toISOString().slice(0,10)); const [redeemAmount, setRedeemAmount] = useState('');
   const [reason, setReason] = useState(''); const [rateValue, setRateValue] = useState('');
-   const t = (key: string) => homeNavTranslations[lang][key] || cameraTranslations[lang][key] || authStatusTranslations[lang][key] || extraTranslations[lang][key] || dictionaries[lang][key] || (key.startsWith('cat_') ? key.slice(4) : key);
+   const t = (key: string) => homeNavTranslations[lang][key] || cameraTranslations[lang][key] || authStatusTranslations[lang][key] || featureTranslations[lang][key] || extraTranslations[lang][key] || dictionaries[lang][key] || (key.startsWith('cat_') ? key.slice(4) : key);
   const { data: session, isLoading, isError, error: queryError, refetch } = useGetCashbackSession({ query: { queryKey: getGetCashbackSessionQueryKey(), enabled: authReady, retry: false, refetchOnWindowFocus: false } });
   const sessionHttpStatus = getHttpStatus(queryError);
-  const register = useRegisterCashbackProfile(); const submitReceipt = useSubmitCashbackReceipt(); const decideReceipt = useDecideCashbackReceipt();
+   const register = useRegisterCashbackProfile(); const submitReceipt = useSubmitCashbackReceipt(); const receiptPhotoUpload = useCreateCashbackReceiptPhotoUpload(); const cancelReceiptRequest = useCancelCashbackReceipt(); const decideReceipt = useDecideCashbackReceipt();
   const decideMerchant = useDecideCashbackMerchant(); const redeem = useRedeemMerchantCashback(); const preferences = useUpdateCashbackPreferences(); const updateRate = useUpdateCashbackRate();
+   const rateMerchant = useRateCashbackMerchant(); const updateCategories = useUpdateCashbackCategories();
   const login = useLoginCashback(); const signOut = useLogoutCashback();
   const createPhotoUpload = useCreateCashbackProfilePhotoUpload();
   const saveProfilePhoto = useSaveCashbackProfilePhoto();
@@ -177,7 +214,10 @@ function AppInner() {
   const state = user?.state || {};
   const merchants = state.merchants || []; const claims = state.claims || []; const txns = state.txns || [];
   const profile = user?.profile;
-  const activeMerchants = merchants.filter(m=>m.status==='active');
+   const activeMerchants = merchants.filter(m=>m.status==='active');
+   const activeCategories: string[] = Array.isArray(state.categories)
+     ? state.categories.filter(category=>browseCategories.includes(category as typeof browseCategories[number]))
+     : [...browseCategories];
   const customerNotes = (state.notes||[])
     .filter(note=>!note.to||note.to===profile?.eid)
     .slice()
@@ -201,15 +241,30 @@ function AppInner() {
   }, [receiptCameraActive, location]);
   useEffect(() => { if (location.startsWith('/shop/')) { const id = location.split('/')[2]; setSelectedMerchant(merchants.find(m=>m.id===id)||null); } else if (location !== '/shop') setSelectedMerchant(null); }, [location, merchants]);
   const refreshSession = () => client.invalidateQueries({ queryKey: getGetCashbackSessionQueryKey() });
-  const availableCities = useMemo(()=>Array.from(new Set(activeMerchants.map(m=>m.city).filter((value): value is string=>Boolean(value)))),[activeMerchants]);
+   const availableCities = useMemo(()=>Array.from(new Set(activeMerchants.filter(m=>!countryFilter||m.country===countryFilter).map(m=>m.city).filter((value): value is string=>Boolean(value)))),[activeMerchants,countryFilter]);
   const availableCountries = useMemo(()=>Array.from(new Set(activeMerchants.map(m=>m.country).filter((value): value is string=>Boolean(value)))),[activeMerchants]);
-  const filtered = useMemo(()=>activeMerchants.filter(m=>
-    `${m.name} ${m.cat||''} ${m.city||''} ${m.address||''}`.toLowerCase().includes(search.toLowerCase()) &&
-    (!selectedCategory || m.cat===selectedCategory) &&
-    (!cityFilter || m.city===cityFilter)
-  ), [activeMerchants,search,selectedCategory,cityFilter]);
+   const filtered = useMemo(()=>{
+     const matches=activeMerchants.filter(m=>
+       `${m.name} ${m.cat||''} ${m.city||''} ${m.address||''}`.toLowerCase().includes(search.toLowerCase()) &&
+       (!selectedCategory || m.cat===selectedCategory) &&
+       (!countryFilter || m.country===countryFilter) &&
+       (!cityFilter || m.city===cityFilter)
+     );
+     return nearbyCoords
+       ? matches.sort((a,b)=>distanceKm(nearbyCoords,a)-distanceKm(nearbyCoords,b))
+       : matches;
+   }, [activeMerchants,search,selectedCategory,countryFilter,cityFilter,nearbyCoords]);
   const customer = profile?.role === 'customer'; const merchant = profile?.role === 'merchant'; const admin = profile?.role === 'admin';
   const clearMessages = () => { setError(''); setNotice(''); };
+  function requestNearbySort() {
+    clearMessages();
+    if (!navigator.geolocation) { setError(t('locationUnavailable')); return; }
+    navigator.geolocation.getCurrentPosition(
+      position=>{setNearbyCoords({lat:position.coords.latitude,lng:position.coords.longitude});setNotice(t('nearbySorted'));},
+      error=>setError(error.code===error.PERMISSION_DENIED?t('locationDenied'):t('locationUnavailable')),
+      {enableHighAccuracy:false,timeout:10000,maximumAge:60000},
+    );
+  }
   const showErr = (caught: unknown) => {
     const code = (caught as { data?: { error?: string } })?.data?.error;
     if (code === 'EMAIL_ALREADY_REGISTERED') {
@@ -220,6 +275,14 @@ function AppInner() {
       setError(t('accountTypeMismatch'));
     } else if (code === 'REJECTION_REASON_REQUIRED') {
       setError(t('rejectionReasonRequired'));
+    } else if (code === 'DUPLICATE_RECEIPT') {
+      setError(t('duplicateReceipt'));
+    } else if (code === 'RECEIPT_TOO_OLD') {
+      setError(t('receiptTooOld'));
+    } else if (code === 'RATING_REQUIRES_APPROVED_RECEIPT') {
+      setError(t('ratingRequiresApprovedReceipt'));
+    } else if (code === 'INVALID_RECEIPT_IMAGE' || code === 'RECEIPT_IMAGE_REQUIRED') {
+      setError(t('imageUploadError'));
     } else if (code === 'INVALID_REQUEST' || code === 'INVALID_PROFILE' || code === 'MERCHANT_FIELDS_REQUIRED') {
       setError(t('incomplete'));
     } else {
@@ -356,9 +419,23 @@ function AppInner() {
     if (!receiptStore || !receiptFile) { setError(t('uploadRequired')); return; }
     if (!Number(purchaseAmount) || Number(purchaseAmount) <= 0 || !purchaseDate) { setError(t('incomplete')); return; }
     try {
-      await submitReceipt.mutateAsync({ data: { merchantId:receiptStore.id, invoiceNumber: invoice || null, amount:Number(purchaseAmount), date:purchaseDate, imageData:receiptFile } });
+      const blob = await (await fetch(receiptFile)).blob();
+      const contentType = blob.type as 'image/jpeg'|'image/png'|'image/webp';
+      if (!['image/jpeg','image/png','image/webp'].includes(contentType) || blob.size <= 0 || blob.size > 5 * 1024 * 1024) {
+        throw new Error('INVALID_RECEIPT_IMAGE');
+      }
+      const upload = await receiptPhotoUpload.mutateAsync({ data: { contentType, size: blob.size } });
+      const stored = await fetch(upload.uploadURL, { method:'PUT', headers:{'Content-Type':contentType}, body:blob });
+      if (!stored.ok) throw new Error('RECEIPT_PHOTO_UPLOAD_FAILED');
+      await submitReceipt.mutateAsync({ data: { merchantId:receiptStore.id, invoiceNumber: invoice || null, amount:Number(purchaseAmount), date:purchaseDate, uploadId:upload.uploadId, objectPath:upload.objectPath } });
       invalidate(); stopReceiptCamera(); setLocation('/receipts'); setNotice(t('sendReceipt')); setReceiptFile(''); setInvoice(''); setPurchaseAmount('');
-    } catch { setError(t('genericError')); }
+    } catch (caught) {
+      const code = (caught as { data?: { error?: string } })?.data?.error || (caught as Error)?.message;
+      if (code === 'DUPLICATE_RECEIPT') setError(t('duplicateReceipt'));
+      else if (code === 'RECEIPT_TOO_OLD') setError(t('receiptTooOld'));
+      else if (code === 'INVALID_RECEIPT_IMAGE' || code === 'RECEIPT_IMAGE_REQUIRED' || code === 'RECEIPT_PHOTO_UPLOAD_FAILED') setError(t('imageUploadError'));
+      else showErr(caught);
+    }
   }
   const receiptPageContent = <section className="full-page-tool capture-page">
     <div className="profile-topbar full-page-tool-header" dir="ltr">
@@ -395,7 +472,7 @@ function AppInner() {
       <Field label={t('date')} value={purchaseDate} onChange={setPurchaseDate} type="date" testId="input-receipt-date"/>
       <Field label={t('invoice')} value={invoice} onChange={setInvoice} testId="input-invoice"/>
       <small className="subtle">{t('privacy')}</small>
-      <button className="btn btn-primary" onClick={()=>void saveReceipt()} disabled={submitReceipt.isPending||activeMerchants.length===0} data-testid="button-submit-receipt"><ReceiptText size={17}/>{submitReceipt.isPending?t('loading'):t('submit')}</button>
+      <button className="btn btn-primary" onClick={()=>void saveReceipt()} disabled={submitReceipt.isPending||receiptPhotoUpload.isPending||activeMerchants.length===0} data-testid="button-submit-receipt"><ReceiptText size={17}/>{submitReceipt.isPending||receiptPhotoUpload.isPending?t('loading'):t('submit')}</button>
     </div>
   </section>;
   const redeemDialog = dialog==='redeem' && selectedMerchant ? <Dialog close={()=>setDialog(null)} closeLabel={t('close')} title={t('redeem')}>
@@ -427,6 +504,33 @@ function AppInner() {
     if(!Number.isFinite(rate) || rate<0 || rate>100) { setError(t('incomplete')); return; }
     try { await updateRate.mutateAsync({ data:{ rate } }); invalidate(); setNotice(t('rateSaved')); }
     catch { setError(t('genericError')); }
+  }
+  async function saveCategories(categories: string[]) {
+    if (!categories.length) { setError(t('categoriesAtLeastOne')); return; }
+    try {
+      await updateCategories.mutateAsync({ data:{ categories:categories as typeof browseCategories[number][] } });
+      invalidate();
+      setNotice(t('categoriesSaved'));
+    } catch { setError(t('genericError')); }
+  }
+  async function rateShop(shop: Merchant, rating: number) {
+    try {
+      await rateMerchant.mutateAsync({ id:shop.id, data:{ rating } });
+      invalidate();
+      setNotice(t('ratingSaved'));
+    } catch (caught) {
+      if ((caught as { data?: { error?: string } })?.data?.error === 'RATING_REQUIRES_APPROVED_RECEIPT') {
+        setError(t('ratingRequiresApprovedReceipt'));
+      } else setError(t('genericError'));
+    }
+  }
+  async function cancelClaim(claim: Claim) {
+    if (claim.status !== 'pending' || !window.confirm(t('cancelReceiptConfirm'))) return;
+    try {
+      await cancelReceiptRequest.mutateAsync({ id:claim.id });
+      invalidate();
+      setNotice(t('receiptCancelled'));
+    } catch { setError(t('genericError')); }
   }
   async function logout() {
     stopReceiptCamera();
@@ -495,7 +599,7 @@ function AppInner() {
   const shell = (content: ReactNode, showBottomNav = true) => <div className="app-shell grain" dir={isRtl?'rtl':'ltr'}>{header()}<main className="page-enter" style={{ maxWidth:1120, margin:'0 auto', padding:showBottomNav?'12px 18px 90px':'12px 18px 24px' }}>{content}</main>{customer&&showBottomNav&&<BottomNav path={location} nav={nav} t={t} onReceipt={openReceiptPage}/ >}</div>;
   const Empty = ({ icon, title, text }: { icon: ReactNode; title: string; text: string }) => <div className="surface" style={{ padding:'38px 24px', textAlign:'center' }}><div style={{ color:'hsl(var(--primary))', marginBottom:10 }}>{icon}</div><h3 style={{ margin:'0 0 6px', fontSize:20 }}>{title}</h3><p className="subtle" style={{ maxWidth:440, margin:'0 auto', lineHeight:1.65 }}>{text}</p></div>;
   const noticeBox = (text:string, isError=false) => <div role={isError?'alert':'status'} data-testid={isError?'status-error':'status-success'} style={{ background:isError?'hsl(var(--destructive) / .12)':'hsl(var(--primary) / .12)', color:isError?'hsl(var(--destructive))':'hsl(var(--foreground))', padding:'12px 15px', borderRadius:12, marginBottom:14, fontWeight:600 }}>{text}</div>;
-  const statusLabel = (s:string) => s==='approved'?t('approved'):s==='rejected'?t('rejected'):t('pending');
+  const statusLabel = (s:string) => s==='approved'?t('approved'):s==='rejected'?t('rejected'):s==='cancelled'?t('cancelled'):t('pending');
   const statusPill = (s:string) => <span className="status-pill" data-testid={`status-${s}`}>{statusLabel(s)}</span>;
 
   if (splash) return <div className="splash"><img src="/splash.png" alt="CASH BACK" /></div>;
@@ -619,7 +723,7 @@ function AppInner() {
       <div className="profile-topbar" dir="ltr"><button className="profile-back" onClick={()=>nav('/profile')} aria-label={t('profile')} data-testid="button-receipts-back"><ArrowLeft size={20}/></button><h1 dir="auto">{t('claimHistory')}</h1><button className="profile-brand" onClick={()=>nav('/')} aria-label={t('home')} data-testid="link-receipts-brand"><img src="/cashback-logo-transparent.png" alt="CASH BACK"/></button></div>
       <div className="history-intro"><span className="history-eyebrow">{t('accountSection')}</span><p>{t('receiptHistoryIntro')}</p></div>
       {error&&noticeBox(error,true)}{notice&&noticeBox(notice)}
-      {isLoading?<div className="history-skeleton" aria-label={t('historyLoad')}><i/><i/><i/></div>:profileClaims.length===0?<div className="surface profile-empty"><ReceiptText size={24}/><span>{t('noReceipts')}</span></div>:<div className="history-list">{profileClaims.map(claim=><ClaimRow key={claim.id} claim={claim} shop={merchants.find(m=>m.id===claim.mid)} t={t}/>)}</div>}
+      {isLoading?<div className="history-skeleton" aria-label={t('historyLoad')}><i/><i/><i/></div>:profileClaims.length===0?<div className="surface profile-empty"><ReceiptText size={24}/><span>{t('noReceipts')}</span></div>:<div className="history-list">{profileClaims.map(claim=><ClaimRow key={claim.id} claim={claim} shop={merchants.find(m=>m.id===claim.mid)} t={t} onCancel={()=>void cancelClaim(claim)}/>)}</div>}
     </section>);
   }
   if (customer && location === '/transactions') {
@@ -639,18 +743,19 @@ function AppInner() {
     <PageTitle icon={<Store size={19}/>} title={t('stores')} eyebrow={t('nearby')}/>
     <div className="discovery-tools">
       <label className="shop-search"><Search size={17}/><input className="field" value={search} onChange={e=>setSearch(e.target.value)} placeholder={t('search')} aria-label={t('search')} data-testid="input-search-shops"/></label>
-      <label className="area-select"><span><MapPin size={16}/>{t('shopArea')}</span><select className="field" value={cityFilter} onChange={e=>setCityFilter(e.target.value)} aria-label={t('shopArea')} data-testid="select-shop-area"><option value="">{availableCountries.length===1?t(availableCountries[0]==='Libya'?'libya':'algeria'):t('allShops')}</option>{availableCities.map(city=><option key={city} value={city}>{localizeCity(city,lang)}</option>)}</select></label>
+      <label className="area-select"><span><Globe2 size={16}/>{t('country')}</span><select className="field" value={countryFilter||(availableCountries.length===1?availableCountries[0]:'')} onChange={e=>{setCountryFilter(e.target.value);setCityFilter('');}} aria-label={t('country')} data-testid="select-shop-country"><option value="">{t('allCountries')}</option>{availableCountries.map(country=><option key={country} value={country}>{t(country==='Libya'?'libya':'algeria')}</option>)}</select></label>
+      <label className="area-select"><span><MapPin size={16}/>{t('city')}</span><select className="field" value={cityFilter} onChange={e=>setCityFilter(e.target.value)} aria-label={t('city')} data-testid="select-shop-area"><option value="">{t('allCities')}</option>{availableCities.map(city=><option key={city} value={city}>{localizeCity(city,lang)}</option>)}</select></label>
     </div>
     <section className="category-section">
       <div className="home-section-head"><h2>{t('categories')}</h2><button className="text-link" onClick={()=>setSelectedCategory('')} data-testid="button-view-categories">{t('viewAll')}</button></div>
-      <div className="category-rail" role="group" aria-label={t('categories')}>{browseCategories.map(cat=><button key={cat} className={`category-chip ${selectedCategory===cat?'is-active':''}`} onClick={()=>setSelectedCategory(selectedCategory===cat?'':cat)} aria-pressed={selectedCategory===cat} data-testid={`filter-category-${cat}`}><CategoryIcon category={cat}/>{t(`cat_${cat}`)}</button>)}</div>
+      <div className="category-rail" role="group" aria-label={t('categories')}>{activeCategories.map(cat=><button key={cat} className={`category-chip ${selectedCategory===cat?'is-active':''}`} onClick={()=>setSelectedCategory(selectedCategory===cat?'':cat)} aria-pressed={selectedCategory===cat} data-testid={`filter-category-${cat}`}><CategoryIcon category={cat}/>{t(`cat_${cat}`)}</button>)}</div>
     </section>
     <section className="home-shops-section">
-      <div className="home-section-head"><div><h2>{t('nearby')}</h2><p className="subtle">{cityFilter?localizeCity(cityFilter,lang):availableCountries.length===1?t(availableCountries[0]==='Libya'?'libya':'algeria'):t('allShops')}</p></div><button className="text-link" onClick={()=>{setSearch('');setCityFilter('');setSelectedCategory('');}} data-testid="button-view-shops">{t('viewAll')}</button></div>
+      <div className="home-section-head"><div><h2>{t('nearby')}</h2><p className="subtle">{cityFilter?localizeCity(cityFilter,lang):countryFilter?t(countryFilter==='Libya'?'libya':'algeria'):availableCountries.length===1?t(availableCountries[0]==='Libya'?'libya':'algeria'):t('allShops')}</p></div><div style={{display:'flex',gap:10}}><button className="text-link" onClick={requestNearbySort} aria-label={t('useMyLocation')} title={t('useMyLocation')} data-testid="button-sort-nearby"><LocateFixed size={17}/></button><button className="text-link" onClick={()=>{setSearch('');setCountryFilter('');setCityFilter('');setSelectedCategory('');}} data-testid="button-view-shops">{t('viewAll')}</button></div></div>
       {filtered.length===0 ? <Empty icon={<Compass size={30}/>} title={t('noShops')} text={t('noShopsHint')}/> : <div className="merchant-grid">{filtered.map(shop=><button key={shop.id} className="surface merchant-card" onClick={()=>nav(`/shop/${shop.id}`)} data-testid={`card-shop-${shop.id}`}>
         <div className="merchant-card-image"><MediaImage id={shop.logoId} alt={shop.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>{shop.cashbackRate!==undefined&&<span className="merchant-rate"><strong>{shop.cashbackRate}%</strong><small>{t('cashback')}</small></span>}</div>
         <div className="merchant-card-copy"><div className="merchant-card-title"><div><h3>{shop.name}</h3><span className="subtle">{shop.cat?t(`cat_${shop.cat}`):t('merchant')}</span></div><ArrowRight size={17}/></div>
-          {(shop.city||shop.address)&&<div className="merchant-location"><MapPin size={14}/><span>{localizeCity(shop.city,lang)||shop.address}</span></div>}
+           {(shop.city||shop.address)&&<div className="merchant-location"><MapPin size={14}/><span>{localizeCity(shop.city,lang)||shop.address}{nearbyCoords&&Number.isFinite(distanceKm(nearbyCoords,shop))&&<> · {distanceKm(nearbyCoords,shop).toFixed(1)} {t('kmAway')}</>}</span></div>}
         </div>
       </button>)}</div>}
     </section>
@@ -660,7 +765,7 @@ function AppInner() {
     const mid=location.split('/')[2]; const shop=merchants.find(m=>m.id===mid);
     return <>{shell(shop?<WalletDetail shop={shop} profile={profile} state={state} txns={txns} t={t} openRedeem={()=>{setSelectedMerchant(shop);setDialog('redeem');}}/>:<Empty icon={<Wallet size={28}/>} title={t('walletTitle')} text={t('noShopsHint')}/>)}{redeemDialog}</>;
   }
-  if (customer && selectedMerchant && location.startsWith('/shop/')) return shell(<ShopDetail shop={selectedMerchant} t={t} lang={lang} onBack={()=>nav('/')} onReceipt={()=>openReceiptPage(selectedMerchant.id)} onWallet={()=>nav(`/wallet/${selectedMerchant.id}`)} />);
+  if (customer && selectedMerchant && location.startsWith('/shop/')) return shell(<ShopDetail shop={selectedMerchant} balance={selectedBalance} canRate={claims.some(claim=>claim.mid===selectedMerchant.id&&claim.cid===profile.eid&&claim.status==='approved')} ratingPending={rateMerchant.isPending} onRate={rating=>void rateShop(selectedMerchant,rating)} t={t} lang={lang} onBack={()=>nav('/')} onReceipt={()=>openReceiptPage(selectedMerchant.id)} onWallet={()=>nav(`/wallet/${selectedMerchant.id}`)} />);
   if (customer && location.startsWith('/shop')) return shell(<Empty icon={<Store size={28}/>} title={t('details')} text={t('noShopsHint')}/>);
   if (customer && location.startsWith('/settings')) return null;
 
@@ -670,7 +775,7 @@ function AppInner() {
     const shop=merchants.find(m=>m.id===profile.eid);
     return shell(<MerchantDashboard shop={shop} state={state} claims={claims} t={t} notice={notice} error={error} />);
   }
-  if (admin) return shell(<AdminDashboard merchants={merchants} claims={claims} state={state} t={t} lang={lang} reason={reason} setReason={setReason} decideShop={decideShop} decideClaim={decideClaim} rate={rateValue} setRate={setRateValue} saveRate={saveRate} notice={notice} error={error} />);
+  if (admin) return shell(<AdminDashboard merchants={merchants} claims={claims} state={state} t={t} lang={lang} reason={reason} setReason={setReason} decideShop={decideShop} decideClaim={decideClaim} rate={rateValue} setRate={setRateValue} saveRate={saveRate} saveCategories={saveCategories} notice={notice} error={error} />);
   if (!customer) return shell(<Empty icon={<CircleHelp size={28}/>} title={t('noPermission')} text={t('retryLoad')}/>);
 
   const customerClaims=claims.filter(c=>c.cid===profile.eid);
@@ -683,7 +788,8 @@ function AppInner() {
     {shell(<>
       <div className="discovery-tools">
         <label className="shop-search"><Search size={17}/><input className="field" value={search} onChange={e=>setSearch(e.target.value)} placeholder={t('search')} aria-label={t('search')} data-testid="input-search-shops"/></label>
-        <label className="area-select"><span><MapPin size={16}/>{t('shopArea')}</span><select className={`field ${!cityFilter&&availableCountries.length!==1?'area-select-all':''}`} value={cityFilter} onChange={e=>setCityFilter(e.target.value)} aria-label={t('shopArea')} data-testid="select-shop-area"><option value="">{availableCountries.length===1?t(availableCountries[0]==='Libya'?'libya':'algeria'):t('allShops')}</option>{availableCities.map(city=><option key={city} value={city}>{localizeCity(city,lang)}</option>)}</select></label>
+        <label className="area-select"><span><Globe2 size={16}/>{t('country')}</span><select className="field" value={countryFilter||(availableCountries.length===1?availableCountries[0]:'')} onChange={e=>{setCountryFilter(e.target.value);setCityFilter('');}} aria-label={t('country')} data-testid="select-shop-country"><option value="">{t('allCountries')}</option>{availableCountries.map(country=><option key={country} value={country}>{t(country==='Libya'?'libya':'algeria')}</option>)}</select></label>
+        <label className="area-select"><span><MapPin size={16}/>{t('city')}</span><select className="field" value={cityFilter} onChange={e=>setCityFilter(e.target.value)} aria-label={t('city')} data-testid="select-shop-area"><option value="">{t('allCities')}</option>{availableCities.map(city=><option key={city} value={city}>{localizeCity(city,lang)}</option>)}</select></label>
       </div>
       <section className="promo-banner home-promo">
         <div className="home-promo-copy"><span className="home-promo-kicker">{t('homeBrandTagline')}</span><div className="home-promo-rate"><strong>{state.settings?.cashback ?? 4}%</strong><span>{t('homeCashback')}</span></div><h1>{t('homePromoTitle')}</h1><p>{t('homePromoSubtitle')}</p><button className="btn btn-promo" onClick={()=>openReceiptPage()} data-testid="button-promo-receipt"><Camera size={18}/>{t('homeCameraAction')}</button></div>
@@ -692,15 +798,15 @@ function AppInner() {
       <section className="category-section">
         <div className="home-section-head"><h2>{t('categories')}</h2><button className="text-link" onClick={()=>nav('/shops')} data-testid="button-view-categories">{t('viewAll')}</button></div>
         <div className="category-rail" role="group" aria-label={t('categories')}>
-          {browseCategories.map(cat=><button key={cat} className={`category-chip ${selectedCategory===cat?'is-active':''}`} onClick={()=>setSelectedCategory(selectedCategory===cat?'':cat)} aria-pressed={selectedCategory===cat} data-testid={`filter-category-${cat}`}><CategoryIcon category={cat}/>{t(`cat_${cat}`)}</button>)}
+          {activeCategories.map(cat=><button key={cat} className={`category-chip ${selectedCategory===cat?'is-active':''}`} onClick={()=>setSelectedCategory(selectedCategory===cat?'':cat)} aria-pressed={selectedCategory===cat} data-testid={`filter-category-${cat}`}><CategoryIcon category={cat}/>{t(`cat_${cat}`)}</button>)}
         </div>
       </section>
       <section id="home-shops" className="home-shops-section">
-        <div className="home-section-head"><div><h2>{t('nearby')}</h2><p className="subtle">{cityFilter?localizeCity(cityFilter,lang):availableCountries.length===1?t(availableCountries[0]==='Libya'?'libya':'algeria'):t('allShops')}</p></div><button className="text-link" onClick={()=>nav('/shops')} data-testid="button-view-shops">{t('viewAll')}</button></div>
+        <div className="home-section-head"><div><h2>{t('nearby')}</h2><p className="subtle">{cityFilter?localizeCity(cityFilter,lang):countryFilter?t(countryFilter==='Libya'?'libya':'algeria'):availableCountries.length===1?t(availableCountries[0]==='Libya'?'libya':'algeria'):t('allShops')}</p></div><div style={{display:'flex',gap:10}}><button className="text-link" onClick={requestNearbySort} aria-label={t('useMyLocation')} title={t('useMyLocation')} data-testid="button-sort-nearby"><LocateFixed size={17}/>{/* accessible location sort */}</button><button className="text-link" onClick={()=>nav('/shops')} data-testid="button-view-shops">{t('viewAll')}</button></div></div>
         {filtered.length===0 ? <Empty icon={<Compass size={30}/>} title={t('noShops')} text={t('noShopsHint')}/> : <div className="merchant-grid">{filtered.map(shop=><button key={shop.id} className="surface merchant-card" onClick={()=>nav(`/shop/${shop.id}`)} data-testid={`card-shop-${shop.id}`}>
           <div className="merchant-card-image"><MediaImage id={shop.logoId} alt={shop.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>{shop.cashbackRate!==undefined&&<span className="merchant-rate"><strong>{shop.cashbackRate}%</strong><small>{t('cashback')}</small></span>}</div>
           <div className="merchant-card-copy"><div className="merchant-card-title"><div><h3>{shop.name}</h3><span className="subtle">{shop.cat?t(`cat_${shop.cat}`):t('merchant')}</span></div><ArrowRight size={17}/></div>
-            {(shop.city||shop.address)&&<div className="merchant-location"><MapPin size={14}/><span>{localizeCity(shop.city,lang)||shop.address}</span></div>}
+             {(shop.city||shop.address)&&<div className="merchant-location"><MapPin size={14}/><span>{localizeCity(shop.city,lang)||shop.address}{nearbyCoords&&Number.isFinite(distanceKm(nearbyCoords,shop))&&<> · {distanceKm(nearbyCoords,shop).toFixed(1)} {t('kmAway')}</>}</span></div>}
           </div>
         </button>)}</div>}
       </section>
@@ -745,7 +851,13 @@ function CategoryIcon({category}:{category:string}) {
   if(category==='gifts') return <Gift size={17}/>;
   return <Tag size={17}/>;
 }
-function ClaimRow({claim,shop,t}:{claim:Claim;shop?:Merchant;t:(s:string)=>string}) { return <div className="surface" data-testid={`row-claim-${claim.id}`} style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:10,padding:14}}><div><strong>{shop?.name||t('merchantId')}</strong><div className="subtle" style={{fontSize:12}}>{claim.date||claim.created||'—'} · {formatMoney(claim.amount,shop?.country)}</div></div><span className="status-pill">{claim.status==='approved'?t('approved'):claim.status==='rejected'?t('rejected'):t('pending')}</span></div>; }
+function ClaimRow({claim,shop,t,onCancel}:{claim:Claim;shop?:Merchant;t:(s:string)=>string;onCancel?:()=>void}) {
+  const status = claim.status==='approved'?t('approved'):claim.status==='rejected'?t('rejected'):claim.status==='cancelled'?t('cancelled'):t('pending');
+  return <div className="surface" data-testid={`row-claim-${claim.id}`} style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:10,padding:14,flexWrap:'wrap'}}>
+    <div><strong>{shop?.name||t('merchantId')}</strong><div className="subtle" style={{fontSize:12}}>{claim.date||claim.created||'—'} · {formatMoney(claim.amount,shop?.country)}</div></div>
+    <div style={{display:'flex',alignItems:'center',gap:8}}><span className="status-pill">{status}</span>{claim.status==='pending'&&onCancel&&<button className="btn btn-outline" onClick={onCancel} data-testid={`button-cancel-receipt-${claim.id}`}><X size={15}/>{t('cancelReceipt')}</button>}</div>
+  </div>;
+}
 function CustomerWallet({profile,state,merchants,txns,claims,setSelected,t,lang}:{profile:Session['profile'];state:Session['state'];merchants:Merchant[];txns:Txn[];claims:Claim[];setSelected:(m:Merchant)=>void;t:(s:string)=>string;lang:Lang}) {
   const cbm=state.customers?.find(c=>c.id===profile.eid)?.cbm||{};
   const list=merchants.filter(m=>m.status==='active');
@@ -763,16 +875,58 @@ function WalletDetail({shop,profile,state,txns,t,openRedeem}:{shop:Merchant;prof
   ].sort((a,b)=>timestampOf(b.at)-timestampOf(a.at));
   return <div style={{maxWidth:780,margin:'18px auto',display:'grid',gap:17}}><PageTitle icon={<Wallet/>} title={shop.name} eyebrow={t('walletHint')}/><section style={{padding:25,borderRadius:22,background:'linear-gradient(125deg,#ef7f12,#f1b445)',color:'#241307'}}><span style={{fontWeight:700}}>{t('balance')}</span><strong style={{display:'block',fontSize:42,lineHeight:1.25}}>{formatMoney(balance,shop.country)}</strong><div style={{display:'flex',gap:20,marginTop:10,fontSize:14}}><span>{t('earned')}: {formatMoney(earned,shop.country)}</span><span>{t('used')}: {formatMoney(used,shop.country)}</span></div></section><button onClick={openRedeem} className="btn btn-primary" disabled={balance<=0} data-testid="button-redeem"><Banknote size={18}/>{t('redeem')} · {shop.name}</button><section><h2 style={{fontSize:22}}>{t('ledger')}</h2>{activity.length===0?<div className="surface" style={{padding:20}}><p className="subtle">{t('noActivity')}</p></div>:activity.map(row=><div className="surface" key={row.id} data-testid={`row-ledger-${row.id}`} style={{display:'flex',justifyContent:'space-between',padding:14,marginBottom:8}}><span><strong>{shop.name}</strong><small className="subtle" style={{display:'block'}}>{t(row.kind)} · {row.at||'—'}</small></span><strong className={row.kind==='earned'?'profile-earned-value':''}>{row.kind==='earned'?'+':'−'}{formatMoney(row.amount,shop.country)}</strong></div>)}</section></div>;
 }
-function ShopDetail({shop,t,onBack,onReceipt,onWallet,lang}:{shop:Merchant;t:(s:string)=>string;onBack:()=>void;onReceipt:()=>void;onWallet:()=>void;lang:Lang}) {
-  return <div style={{maxWidth:820,margin:'10px auto',display:'grid',gap:18}}><button onClick={onBack} className="btn btn-outline" style={{justifySelf:'start'}} data-testid="button-back-shops"><ArrowLeft size={17}/>{t('allShops')}</button><div className="surface" style={{overflow:'hidden'}}><MediaImage id={shop.logoId} alt={shop.name} style={{width:'100%',height:'clamp(180px,38vw,330px)',objectFit:'cover'}}/><div style={{padding:'clamp(20px,4vw,32px)'}}><div style={{display:'flex',justifyContent:'space-between',gap:10,alignItems:'start'}}><div><span className="subtle">{shop.cat?t(`cat_${shop.cat}`):t('merchant')}</span><h1 style={{fontSize:34,margin:'3px 0'}}>{shop.name}</h1></div><div style={{color:'hsl(var(--primary))',fontSize:25,fontWeight:800}}>{shop.cashbackRate??0}%</div></div><p className="subtle" style={{display:'flex',alignItems:'center',gap:6}}><MapPin size={16}/>{shop.address||localizeCity(shop.city,lang)}</p>{shop.mapsUrl&&<a href={shop.mapsUrl} target="_blank" rel="noreferrer" className="btn btn-outline" style={{textDecoration:'none'}} data-testid="link-shop-map"><LocateFixed size={17}/>{t('shopOpen')}</a>}<div style={{display:'flex',gap:10,flexWrap:'wrap',marginTop:20}}><button className="btn btn-primary" onClick={onReceipt} data-testid="button-shop-receipt"><ReceiptText size={18}/>{t('receipt')}</button><button className="btn btn-outline" onClick={onWallet} data-testid="button-shop-wallet"><Wallet size={18}/>{t('spendHere')}</button></div></div></div></div>;
+function ShopDetail({shop,balance,canRate,ratingPending,onRate,t,onBack,onReceipt,onWallet,lang}:{shop:Merchant;balance:number;canRate:boolean;ratingPending:boolean;onRate:(rating:number)=>void;t:(s:string)=>string;onBack:()=>void;onReceipt:()=>void;onWallet:()=>void;lang:Lang}) {
+  return <div style={{maxWidth:820,margin:'10px auto',display:'grid',gap:18}}>
+    <button onClick={onBack} className="btn btn-outline" style={{justifySelf:'start'}} data-testid="button-back-shops"><ArrowLeft size={17}/>{t('allShops')}</button>
+    <div className="surface" style={{overflow:'hidden'}}>
+      <MediaImage id={shop.logoId} alt={shop.name} style={{width:'100%',height:'clamp(180px,38vw,330px)',objectFit:'cover'}}/>
+      <div style={{padding:'clamp(18px,4vw,30px)',display:'grid',gap:16}}>
+        <div style={{display:'flex',justifyContent:'space-between',gap:10,alignItems:'start'}}>
+          <div><span className="subtle">{shop.cat?t(`cat_${shop.cat}`):t('merchant')}</span><h1 style={{fontSize:30,margin:'3px 0'}}>{shop.name}</h1></div>
+          <div style={{color:'hsl(var(--primary))',fontSize:25,fontWeight:800,whiteSpace:'nowrap'}}>{shop.cashbackRate??0}%</div>
+        </div>
+        <div aria-label={t('rating')} style={{display:'flex',alignItems:'center',gap:7,flexWrap:'wrap'}}>
+          <Star size={17} fill="hsl(var(--primary))" color="hsl(var(--primary))"/>
+          <strong>{shop.ratingCount?Number(shop.rating||0).toFixed(1):t('noRatings')}</strong>
+          {!!shop.ratingCount&&<span className="subtle">({shop.ratingCount} {t('ratingCount')})</span>}
+        </div>
+        <div style={{display:'flex',alignItems:'center',gap:6}} className="subtle"><MapPin size={16}/>{shop.address||localizeCity(shop.city,lang)||'—'}</div>
+        {shop.mapsUrl&&<a href={shop.mapsUrl} target="_blank" rel="noreferrer" className="btn btn-outline" style={{textDecoration:'none',justifySelf:'start'}} data-testid="link-shop-map"><LocateFixed size={17}/>{t('shopOpen')}</a>}
+        {shop.description&&<section><h2 style={{fontSize:20,margin:'0 0 5px'}}>{t('merchantInfo')}</h2><p className="subtle" style={{margin:0,lineHeight:1.7}}>{shop.description}</p></section>}
+        <section className="surface" style={{padding:16,display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,flexWrap:'wrap'}}>
+          <div><span className="subtle">{t('merchantBalance')}</span><strong style={{display:'block',fontSize:24,color:'hsl(var(--primary))'}}>{formatMoney(balance,shop.country)}</strong></div>
+          <button className="btn btn-outline" onClick={onWallet} data-testid="button-shop-wallet"><Wallet size={18}/>{t('spendHere')}</button>
+        </section>
+        <section>
+          <strong>{t('rating')}</strong>
+          <div style={{display:'flex',alignItems:'center',gap:5,marginTop:7}} role="group" aria-label={t('rating')}>
+            {[1,2,3,4,5].map(value=><button key={value} type="button" className="btn btn-outline" aria-label={`${t('rating')} ${value}`} aria-pressed={Number(shop.userRating||0)===value} disabled={!canRate||ratingPending} onClick={()=>onRate(value)} data-testid={`button-rate-shop-${value}`} style={{padding:8,minHeight:40,color:Number(shop.userRating||0)>=value?'hsl(var(--primary))':undefined}}><Star size={18} fill={Number(shop.userRating||0)>=value?'currentColor':'none'}/></button>)}
+          </div>
+          {!canRate&&<p className="subtle" style={{margin:'6px 0 0',fontSize:13}}>{t('rateAfterPurchase')}</p>}
+        </section>
+        <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
+          <button className="btn btn-primary" onClick={onReceipt} data-testid="button-shop-receipt"><ReceiptText size={18}/>{t('receipt')}</button>
+        </div>
+      </div>
+    </div>
+  </div>;
 }
 function MerchantDashboard({shop,state,claims,t,notice,error}:{shop?:Merchant;state:Session['state'];claims:Claim[];t:(s:string)=>string;notice:string;error:string}) {
   const ownClaims=claims.filter(c=>c.mid===shop?.id);const open=ownClaims.filter(c=>c.status==='pending');
   return <div style={{maxWidth:900,margin:'18px auto',display:'grid',gap:20}}>{error&&<div role="alert" className="surface" style={{padding:12,color:'hsl(var(--destructive))'}}>{error}</div>}{notice&&<div role="status" className="surface" style={{padding:12}}>{notice}</div>}<PageTitle icon={<Store/>} title={shop?.name||t('merchantDashboard')} eyebrow={t('merchantActive')}/><div className="surface" style={{padding:20,display:'flex',alignItems:'start',gap:14}}><BadgeCheck color="hsl(var(--primary))"/><div><strong>{t('merchantActive')}</strong><p className="subtle" style={{margin:'4px 0'}}>{t('salesOnly')}</p></div></div><div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(170px,1fr))',gap:12}}><Metric label={t('customers')} value={String(state.customers?.length||0)} icon={<UserRound/>}/><Metric label={t('sales')} value={String(ownClaims.filter(c=>c.status==='approved').length)} icon={<ReceiptText/>}/><Metric label={t('receiptQueue')} value={String(open.length)} icon={<Clock3/>}/></div><section className="surface" style={{padding:20}}><strong>{t('rate')}</strong><strong style={{display:'block',fontSize:30,color:'hsl(var(--primary))'}}>{shop?.cashbackRate??0}%</strong>{shop?.publicId&&<div style={{marginTop:14,display:'grid',gridTemplateColumns:'auto 1fr',alignItems:'center',gap:14}}><QRCodeSVG value={shop.qrValue||`cashback://merchant/${shop.publicId}`} size={156} bgColor="#ffffff" fgColor="#140b05" level="M"/><div><strong>{t('qrCode')}</strong><div className="subtle" style={{marginTop:6}}>{t('merchantId')}: {shop.publicId}</div></div></div>}</section><h2 style={{marginBottom:0}}>{t('receiptQueue')}</h2>{open.length===0?<div className="surface" style={{padding:20}}>{t('noPending')}</div>:open.map(c=><ClaimRow key={c.id} claim={c} shop={shop} t={t}/>)}</div>;
 }
 function Metric({label,value,icon}:{label:string;value:string;icon:ReactNode}) { return <div className="surface" style={{padding:17}}><div style={{color:'hsl(var(--primary))'}}>{icon}</div><strong style={{fontSize:27,display:'block'}}>{value}</strong><span className="subtle">{label}</span></div>; }
-function AdminDashboard({merchants,claims,state,t,lang,reason,setReason,decideShop,decideClaim,rate,setRate,saveRate,notice,error}:{merchants:Merchant[];claims:Claim[];state:Session['state'];t:(s:string)=>string;lang:Lang;reason:string;setReason:(s:string)=>void;decideShop:(m:Merchant,a:boolean)=>void;decideClaim:(c:Claim,a:boolean)=>void;rate:string;setRate:(s:string)=>void;saveRate:()=>void;notice:string;error:string}) {
+function AdminDashboard({merchants,claims,state,t,lang,reason,setReason,decideShop,decideClaim,rate,setRate,saveRate,saveCategories,notice,error}:{merchants:Merchant[];claims:Claim[];state:Session['state'];t:(s:string)=>string;lang:Lang;reason:string;setReason:(s:string)=>void;decideShop:(m:Merchant,a:boolean)=>void;decideClaim:(c:Claim,a:boolean)=>void;rate:string;setRate:(s:string)=>void;saveRate:()=>void;saveCategories:(categories:string[])=>void;notice:string;error:string}) {
+  const configuredCategories=state.categories||[...browseCategories];
+  const [selectedCategories,setSelectedCategories]=useState<string[]>(configuredCategories);
+  useEffect(()=>setSelectedCategories(configuredCategories),[configuredCategories.join('|')]);
+  const [receiptSearch,setReceiptSearch]=useState('');
   const newMerchants=merchants.filter(m=>m.status==='pending');const newClaims=claims.filter(c=>c.status==='pending');
+  const receiptHistory=claims.slice().sort((a,b)=>timestampOf(b.created||b.date)-timestampOf(a.created||a.date)).filter(claim=>{
+    const shop=merchants.find(m=>m.id===claim.mid);
+    const customer=state.customers?.find(entry=>entry.id===claim.cid);
+    return `${claim.invoiceNumber||''} ${claim.id} ${shop?.name||''} ${customer?.name||''}`.toLowerCase().includes(receiptSearch.trim().toLowerCase());
+  });
   return <div style={{maxWidth:1000,margin:'18px auto',display:'grid',gap:20}}>
     {error&&<div role="alert" className="surface" style={{padding:12,color:'hsl(var(--destructive))'}}>{error}</div>}
     {notice&&<div role="status" className="surface" style={{padding:12}}>{notice}</div>}
@@ -788,6 +942,17 @@ function AdminDashboard({merchants,claims,state,t,lang,reason,setReason,decideSh
         <input className="field" type="number" min="0" max="100" step=".1" value={rate||String(state.settings?.cashback||0)} onChange={e=>setRate(e.target.value)} data-testid="input-admin-rate"/>
         <button className="btn btn-primary" onClick={saveRate} data-testid="button-admin-save-rate"><Percent size={17}/>{t('save')}</button>
       </div>
+    </section>
+    <section className="surface" style={{padding:18,display:'grid',gap:12}}>
+      <div><strong>{t('categoriesManager')}</strong><p className="subtle" style={{margin:'4px 0 0'}}>{t('categoriesHint')}</p></div>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:8}}>
+        {browseCategories.map(category=><label key={category} className="surface" style={{padding:'10px 12px',display:'flex',alignItems:'center',gap:8,cursor:'pointer'}}>
+          <input type="checkbox" checked={selectedCategories.includes(category)} onChange={event=>setSelectedCategories(current=>event.target.checked?[...current,category]:current.filter(item=>item!==category))} data-testid={`toggle-category-${category}`}/>
+          <span>{t(`cat_${category}`)}</span>
+        </label>)}
+      </div>
+      {!selectedCategories.length&&<small role="alert" className="subtle">{t('categoriesAtLeastOne')}</small>}
+      <button className="btn btn-primary" disabled={!selectedCategories.length} onClick={()=>saveCategories(selectedCategories)} data-testid="button-save-categories"><Check size={17}/>{t('save')}</button>
     </section>
     <ReviewList title={t('merchantQueue')} empty={newMerchants.length===0?t('noPending'):''}>
       {newMerchants.map(m=><div className="surface" key={m.id} data-testid={`review-merchant-${m.id}`} style={{padding:16,display:'grid',gap:12}}>
@@ -811,7 +976,7 @@ function AdminDashboard({merchants,claims,state,t,lang,reason,setReason,decideSh
       {newClaims.map(c=>{
         const shop=merchants.find(m=>m.id===c.mid);
         return <div className="surface" key={c.id} data-testid={`review-receipt-${c.id}`} style={{padding:16,display:'grid',gap:12}}>
-          <div><strong>{shop?.name||t('merchantId')}</strong><div className="subtle">{c.invoiceNumber||c.date||'—'} · {formatMoney(c.amount,shop?.country)}</div></div>
+          <div><strong>{shop?.name||t('merchantId')}</strong><div className="subtle">{c.invoiceNumber||c.date||'—'} · {formatMoney(c.amount,shop?.country)}</div><div className="subtle">{t('receiptCustomer')}: {state.customers?.find(customer=>customer.id===c.cid)?.name||c.cid} · {t('submittedAt')}: {c.created?new Date(c.created).toLocaleString(lang==='ar'?'ar-DZ':lang==='fr'?'fr-FR':'en'):'—'}{c.submitIp?` · ${t('submittedIp')}: ${c.submitIp}`:''}</div>{c.possibleDuplicate&&<strong style={{color:'hsl(var(--destructive))',fontSize:13}}>{t('possibleDuplicate')}</strong>}</div>
           {c.photoId&&<MediaImage id={c.photoId} alt={t('receipt')} style={{width:'100%',maxHeight:280,objectFit:'contain',background:'hsl(var(--muted))',borderRadius:12}}/>}
           <Field label={t('rejectionReason')} value={reason} onChange={setReason} testId={`input-reason-receipt-${c.id}`}/>
           <div style={{display:'flex',gap:9}}>
@@ -819,6 +984,24 @@ function AdminDashboard({merchants,claims,state,t,lang,reason,setReason,decideSh
             <button className="btn btn-outline" onClick={()=>decideClaim(c,false)} data-testid={`button-reject-receipt-${c.id}`}><X size={17}/>{t('decline')}</button>
           </div>
         </div>;
+      })}
+    </ReviewList>
+    <ReviewList title={t('allReceipts')} empty={claims.length===0?t('noReceipts'):''}>
+      <input className="field" value={receiptSearch} onChange={event=>setReceiptSearch(event.target.value)} placeholder={t('searchReceipts')} aria-label={t('searchReceipts')} data-testid="input-search-receipts"/>
+      {receiptHistory.length===0?<div className="surface" style={{padding:16}}>{t('noReceipts')}</div>:receiptHistory.map(claim=>{
+        const shop=merchants.find(m=>m.id===claim.mid);
+        const customer=state.customers?.find(entry=>entry.id===claim.cid);
+        const label=claim.status==='approved'?t('approved'):claim.status==='rejected'?t('rejected'):claim.status==='cancelled'?t('cancelled'):t('pending');
+        return <article className="surface" key={claim.id} data-testid={`history-receipt-${claim.id}`} style={{padding:14,display:'grid',gap:8}}>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:10,flexWrap:'wrap'}}>
+            <strong>{shop?.name||t('merchantId')}</strong><span className="status-pill">{label}</span>
+          </div>
+          <div className="subtle">{claim.invoiceNumber||claim.date||'—'} · {formatMoney(claim.amount,shop?.country)} · {t('receiptCustomer')}: {customer?.name||claim.cid}</div>
+          <div className="subtle">{t('submittedAt')}: {claim.created?new Date(claim.created).toLocaleString(lang==='ar'?'ar-DZ':lang==='fr'?'fr-FR':'en'):'—'}{claim.submitIp?` · ${t('submittedIp')}: ${claim.submitIp}`:''}</div>
+          {claim.possibleDuplicate&&<strong style={{color:'hsl(var(--destructive))',fontSize:13}}>{t('possibleDuplicate')}</strong>}
+          {claim.photoId&&<MediaImage id={claim.photoId} alt={t('receipt')} style={{width:'100%',maxHeight:240,objectFit:'contain',background:'hsl(var(--muted))',borderRadius:12}}/>}
+          {claim.reason&&<p className="subtle" style={{margin:0}}>{t('reason')}: {claim.reason}</p>}
+        </article>;
       })}
     </ReviewList>
   </div>;

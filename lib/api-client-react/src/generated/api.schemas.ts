@@ -36,6 +36,30 @@ export interface CashbackProfile {
 
 export interface CashbackState { [key: string]: unknown }
 
+export type ReceiptPhotoUploadInputContentType = typeof ReceiptPhotoUploadInputContentType[keyof typeof ReceiptPhotoUploadInputContentType];
+
+
+export const ReceiptPhotoUploadInputContentType = {
+  'image/jpeg': 'image/jpeg',
+  'image/png': 'image/png',
+  'image/webp': 'image/webp',
+} as const;
+
+export interface ReceiptPhotoUploadInput {
+  contentType: ReceiptPhotoUploadInputContentType;
+  /**
+     * @minimum 1
+     * @maximum 5242880
+     */
+  size: number;
+}
+
+export interface ReceiptPhotoUpload {
+  uploadURL: string;
+  objectPath: string;
+  uploadId: string;
+}
+
 export interface CashbackSession {
   profile: CashbackProfile;
   state: CashbackState;
@@ -135,8 +159,41 @@ export interface CashbackReceiptInput {
      */
   amount: number;
   date: string;
-  /** @maxLength 650000 */
-  imageData: string;
+  /** @maxLength 80 */
+  uploadId?: string;
+  /** @maxLength 500 */
+  objectPath?: string;
+}
+
+export interface CashbackMerchantRating {
+  /**
+     * @minimum 1
+     * @maximum 5
+     */
+  rating: number;
+}
+
+export type CashbackCategoriesUpdateCategoriesItem = typeof CashbackCategoriesUpdateCategoriesItem[keyof typeof CashbackCategoriesUpdateCategoriesItem];
+
+
+export const CashbackCategoriesUpdateCategoriesItem = {
+  restaurants: 'restaurants',
+  cafes: 'cafes',
+  clothing: 'clothing',
+  electronics: 'electronics',
+  malls: 'malls',
+  groceries: 'groceries',
+  perfume: 'perfume',
+  gifts: 'gifts',
+  shops: 'shops',
+} as const;
+
+export interface CashbackCategoriesUpdate {
+  /**
+     * @minItems 1
+     * @maxItems 9
+     */
+  categories: CashbackCategoriesUpdateCategoriesItem[];
 }
 
 export interface CashbackReceipt { [key: string]: unknown }

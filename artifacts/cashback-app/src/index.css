@@ -98,7 +98,7 @@
 .home-notification-row p { margin:0 0 4px; color:hsl(var(--foreground)); line-height:1.5; }
 .home-notification-row small { font-size:11px; }
 .app-shell:has(.home-shops-section) main { max-width:1120px!important; padding-top:14px!important; }
-.app-shell:has(.home-shops-section) .discovery-tools { grid-template-columns:minmax(0,1.5fr) minmax(110px,.58fr); margin:3px 0 20px; }
+.app-shell:has(.home-shops-section) .discovery-tools { grid-template-columns:minmax(110px,1fr) minmax(110px,1fr); margin:3px 0 20px; }
 .app-shell:has(.home-shops-section) .area-select { position:relative; }
 .app-shell:has(.home-shops-section) .area-select > span { position:absolute; z-index:2; inset-inline-start:13px; top:14px; display:flex; width:17px; height:17px; overflow:hidden; color:hsl(var(--primary)); font-size:0; pointer-events:none; }
 .app-shell:has(.home-shops-section) .area-select select,.app-shell:has(.home-shops-section) .shop-search .field {
@@ -505,6 +505,7 @@ button, input, select, textarea { font-family: 'Changa', sans-serif; }
 .home-profile > svg:last-child { color:hsl(var(--muted-foreground)); }
 .home-wallet-shortcut { width:44px; height:44px; display:grid; place-items:center; flex:0 0 auto; border:1px solid hsl(var(--border)); border-radius:15px; background:hsl(var(--card)); color:hsl(var(--primary)); cursor:pointer; }
 .discovery-tools { display:grid; grid-template-columns:minmax(150px,.7fr) minmax(220px,1.5fr); align-items:end; gap:10px; margin-bottom:20px; }
+.discovery-tools .shop-search { grid-column:1 / -1; }
 .area-select,.shop-search { display:grid; gap:6px; min-width:0; }
 .area-select > span { display:flex; align-items:center; gap:6px; color:hsl(var(--muted-foreground)); font-size:12px; font-weight:700; }
 .area-select > span svg,.shop-search > svg { color:hsl(var(--primary)); }

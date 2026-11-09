@@ -13,6 +13,10 @@ import {
   SaveCashbackProfilePhotoResponse,
   UpdateCashbackPreferencesBody,
   UpdateCashbackRateBody,
+  UpdateCashbackCategoriesBody,
+  RateCashbackMerchantBody,
+  CreateCashbackReceiptPhotoUploadBody,
+  CreateCashbackReceiptPhotoUploadResponse,
 } from "@workspace/api-zod";
 import {
   authenticateRequest,
@@ -40,8 +44,10 @@ import {
 } from "../lib/cashback-neon";
 import {
   createProfilePhotoUpload,
+  createReceiptPhotoUpload,
   getProfilePhotoFile,
   profilePhotoMatchesType,
+  readPrivateImage,
   readProfilePhoto,
 } from "../lib/profilePhotoStorage";
 
@@ -59,6 +65,17 @@ const CATEGORIES = new Set([
   "shops",
   "other",
 ]);
+const CUSTOMER_CATEGORIES = [
+  "restaurants",
+  "cafes",
+  "clothing",
+  "electronics",
+  "malls",
+  "groceries",
+  "perfume",
+  "gifts",
+  "shops",
+] as const;
 const MERCHANT_APPLICATION_CATEGORIES = new Set([
   "groceries",
   "clothing",
@@ -160,6 +177,15 @@ async function mutateState<T>(
   throw new CashbackError(409, "WRITE_CONFLICT");
 }
 
+function activeCustomerCategories(value: unknown): string[] {
+  const configured = Array.isArray(value)
+    ? value.filter((category): category is string =>
+        CUSTOMER_CATEGORIES.includes(category),
+      )
+    : [];
+  return configured.length ? configured : [...CUSTOMER_CATEGORIES];
+}
+
 function projectState(
   profile: CashbackProfile,
   state: CashbackState,
@@ -170,6 +196,7 @@ function projectState(
   const txns = Array.isArray(state.txns) ? state.txns : [];
   const cbpays = Array.isArray(state.cbpays) ? state.cbpays : [];
   const notes = Array.isArray(state.notes) ? state.notes : [];
+  const ratings = Array.isArray(state.ratings) ? state.ratings : [];
   const settings = {
     cashback: Number(state.settings?.cashback ?? 4),
     claimHours: Number(state.settings?.claimHours ?? 720),
@@ -178,11 +205,16 @@ function projectState(
   if (profile.role === "admin") return state;
   if (profile.role === "customer") {
     const customer = customers.find((entry: any) => entry.id === profile.eid);
-    return {
-      settings,
-      merchants: merchants
-        .filter((merchant: any) => merchant.status === "active")
-        .map((merchant: any) => ({
+    const activeMerchants = merchants
+      .filter((merchant: any) => merchant.status === "active")
+      .map((merchant: any) => {
+        const merchantRatings = ratings.filter(
+          (rating: any) => rating.mid === merchant.id,
+        );
+        const ownRating = merchantRatings.find(
+          (rating: any) => rating.cid === profile.eid,
+        );
+        return {
           id: merchant.id,
           name: merchant.name,
           cat: merchant.cat,
@@ -197,13 +229,25 @@ function projectState(
           logoId: merchant.logoId,
           publicId: merchant.publicId,
           description: merchant.description,
-        })),
+          rating: merchantRatings.length
+            ? merchantRatings.reduce(
+                (sum: number, entry: any) => sum + Number(entry.rating || 0),
+                0,
+              ) / merchantRatings.length
+            : 0,
+          ratingCount: merchantRatings.length,
+          userRating: Number(ownRating?.rating || 0),
+        };
+      });
+    return {
+      settings,
+      merchants: activeMerchants,
       customers: customer ? [customer] : [],
       claims: claims.filter((claim: any) => claim.cid === profile.eid),
       txns: txns.filter((transaction: any) => transaction.cid === profile.eid),
       cbpays: cbpays.filter((payment: any) => payment.cid === profile.eid),
       notes: notes.filter((note: any) => note.to === profile.eid),
-      categories: [...CATEGORIES],
+      categories: activeCustomerCategories(state.categories),
     };
   }
 
@@ -461,6 +505,39 @@ router.post("/cashback/auth/logout", async (req, res) => {
   }
 });
 
+router.post("/cashback/receipts/upload-url", async (req, res) => {
+  const profile = (req as unknown as AuthenticatedRequest).cashbackProfile;
+  unauthorizedRole(profile, "customer");
+  const parsed = CreateCashbackReceiptPhotoUploadBody.safeParse(req.body);
+  if (!parsed.success) {
+    throw new CashbackError(400, "INVALID_RECEIPT_IMAGE");
+  }
+  const uploadId = `receipt_${randomUUID()}`;
+  const upload = await createReceiptPhotoUpload(profile.uid, uploadId);
+  const saved = await commit([
+    documentWrite(
+      "receipt_uploads",
+      uploadId,
+      {
+        ownerUid: profile.uid,
+        objectPath: upload.objectPath,
+        contentType: parsed.data.contentType,
+        requestedSize: parsed.data.size,
+        expiresAt: Date.now() + 15 * 60 * 1000,
+      },
+      false,
+    ),
+  ]);
+  if (!saved) throw new CashbackError(409, "UPLOAD_ALREADY_EXISTS");
+  res.json(
+    CreateCashbackReceiptPhotoUploadResponse.parse({
+      uploadURL: upload.uploadURL,
+      objectPath: upload.objectPath,
+      uploadId,
+    }),
+  );
+});
+
 router.post("/cashback/receipts", async (req, res) => {
   const profile = (req as unknown as AuthenticatedRequest).cashbackProfile;
   try {
@@ -476,10 +553,51 @@ router.post("/cashback/receipts", async (req, res) => {
       ? input.date.toISOString().slice(0, 10)
       : String(input.date).slice(0, 10);
     const date = new Date(`${dateOnly}T12:00:00Z`);
-    if (Number.isNaN(date.getTime()) || date.getTime() > Date.now() + 86_400_000) {
+    if (
+      !/^\d{4}-\d{2}-\d{2}$/.test(dateOnly) ||
+      Number.isNaN(date.getTime()) ||
+      date.toISOString().slice(0, 10) !== dateOnly ||
+      date.getTime() > Date.now() + 86_400_000
+    ) {
       throw new CashbackError(400, "INVALID_RECEIPT_DATE");
     }
-    const image = validateImageData(input.imageData);
+    if (!input.uploadId || !input.objectPath) {
+      throw new CashbackError(400, "RECEIPT_IMAGE_REQUIRED");
+    }
+    const uploadDoc = await getDocument(`receipt_uploads/${input.uploadId}`);
+    if (!uploadDoc) throw new CashbackError(400, "INVALID_RECEIPT_IMAGE");
+    const upload = decodeCashbackFields(uploadDoc);
+    if (
+      upload.ownerUid !== profile.uid ||
+      upload.objectPath !== input.objectPath ||
+      Number(upload.expiresAt ?? 0) < Date.now() ||
+      !(upload.requestedSize > 0)
+    ) {
+      throw new CashbackError(403, "INVALID_RECEIPT_IMAGE");
+    }
+    let storedImage: Awaited<ReturnType<typeof readPrivateImage>>;
+    try {
+      storedImage = await readPrivateImage(input.objectPath);
+    } catch {
+      throw new CashbackError(400, "INVALID_RECEIPT_IMAGE");
+    }
+    if (
+      storedImage.contentType !== upload.contentType ||
+      storedImage.size > Number(upload.requestedSize)
+    ) {
+      throw new CashbackError(400, "INVALID_RECEIPT_IMAGE");
+    }
+    const base64 = storedImage.buffer.toString("base64");
+    const image = {
+      data: `data:${storedImage.contentType};base64,${base64}`,
+      type: storedImage.contentType,
+      hash: createHash("sha256").update(base64).digest("hex"),
+    };
+    const uploadedPhoto = {
+      uploadId: input.uploadId,
+      objectPath: input.objectPath,
+      size: storedImage.size,
+    };
     const claimId = `rcpt_${randomUUID().replaceAll("-", "").slice(0, 18)}`;
     const mediaId = `receipt_${claimId}`;
     const invoiceNumber = fieldString(input.invoiceNumber ?? "");
@@ -494,7 +612,17 @@ router.post("/cashback/receipts", async (req, res) => {
       if (!merchant || merchant.status !== "active") {
         throw new CashbackError(400, "MERCHANT_UNAVAILABLE");
       }
+      const claimHours = Math.max(1, Number(state.settings?.claimHours ?? 720));
+      if (Date.now() - date.getTime() > claimHours * 60 * 60 * 1000) {
+        throw new CashbackError(400, "RECEIPT_TOO_OLD");
+      }
       state.claims ??= [];
+      if (
+        uploadedPhoto &&
+        state.claims.some((claim: any) => claim.uploadId === uploadedPhoto?.uploadId)
+      ) {
+        throw new CashbackError(409, "RECEIPT_UPLOAD_ALREADY_USED");
+      }
       const sameInvoice = invoiceNumber &&
         state.claims.some((claim: any) =>
           claim.mid === merchant.id &&
@@ -506,6 +634,14 @@ router.post("/cashback/receipts", async (req, res) => {
         claim.ph === legacyPhotoHash(image.data),
       );
       if (sameImage) throw new CashbackError(409, "DUPLICATE_RECEIPT");
+      const possibleDuplicate = !invoiceNumber && state.claims.some(
+        (claim: any) =>
+          claim.mid === merchant.id &&
+          claim.cid === customer.id &&
+          claim.date === dateOnly &&
+          Math.round(Number(claim.amount || 0) * 100) === Math.round(amount * 100) &&
+          claim.status !== "cancelled",
+      );
       const value = {
         id: claimId,
         mid: merchant.id,
@@ -516,6 +652,8 @@ router.post("/cashback/receipts", async (req, res) => {
         amount,
         photoId: mediaId,
         imageHash: image.hash,
+        ...(uploadedPhoto ? { uploadId: uploadedPhoto.uploadId } : {}),
+        ...(possibleDuplicate ? { possibleDuplicate: true } : {}),
         submitIp: String(req.ip ?? ""),
         status: "pending",
         created: Date.now(),
@@ -523,12 +661,20 @@ router.post("/cashback/receipts", async (req, res) => {
       };
       state.claims.unshift(value);
       addNote(state, "admin", `فاتورة جديدة بانتظار المراجعة من ${customer.name}`);
+      if (possibleDuplicate) {
+        addNote(state, "admin", `اشتباه تكرار فاتورة: نفس المتجر والزبون والتاريخ والمبلغ (${merchant.name})`);
+      }
       addNote(state, customer.id, `تم إرسال الفاتورة إلى المراجعة لدى ${merchant.name}`);
       return {
         result: value,
         extraWrites: [
           documentWrite("photos", mediaId, {
-            data: image.data,
+            ...(uploadedPhoto
+              ? {
+                  objectPath: uploadedPhoto.objectPath,
+                  size: uploadedPhoto.size,
+                }
+              : { data: image.data }),
             contentType: image.type,
             ownerUid: profile.uid,
             kind: "receipt",
@@ -612,6 +758,33 @@ router.patch("/cashback/receipts/:id/decision", async (req, res) => {
   }
 });
 
+router.delete("/cashback/receipts/:id", async (req, res) => {
+  const profile = (req as unknown as AuthenticatedRequest).cashbackProfile;
+  try {
+    unauthorizedRole(profile, "customer");
+    const receiptId = getParamId(req);
+    await mutateState((state) => {
+      const claim = (state.claims ?? []).find(
+        (entry: any) => entry.id === receiptId,
+      );
+      if (!claim || claim.cid !== profile.eid) {
+        throw new CashbackError(404, "RECEIPT_NOT_FOUND");
+      }
+      if (claim.status !== "pending") {
+        throw new CashbackError(409, "RECEIPT_NOT_CANCELLABLE");
+      }
+      claim.status = "cancelled";
+      claim.cancelledAt = Date.now();
+      addNote(state, "admin", `تم إلغاء الفاتورة ${receiptId} من صاحب الحساب`);
+      addNote(state, profile.eid, "تم إلغاء إرسال الفاتورة قبل مراجعتها");
+      return { result: { ok: true } };
+    });
+    res.json({ ok: true });
+  } catch (error) {
+    respondError(res, error);
+  }
+});
+
 router.patch("/cashback/merchants/:id/decision", async (req, res) => {
   const profile = (req as unknown as AuthenticatedRequest).cashbackProfile;
   try {
@@ -645,8 +818,54 @@ router.patch("/cashback/merchants/:id/decision", async (req, res) => {
   }
 });
 
+router.post("/cashback/merchants/:id/rating", async (req, res) => {
+  const profile = (req as unknown as AuthenticatedRequest).cashbackProfile;
+  try {
+    unauthorizedRole(profile, "customer");
+    const parsed = RateCashbackMerchantBody.safeParse(req.body);
+    if (!parsed.success) throw new CashbackError(400, "INVALID_RATING");
+    const merchantId = getParamId(req);
+    await mutateState((state) => {
+      const merchant = (state.merchants ?? []).find(
+        (entry: any) => entry.id === merchantId && entry.status === "active",
+      );
+      if (!merchant) throw new CashbackError(404, "MERCHANT_UNAVAILABLE");
+      const eligible = (state.claims ?? []).some(
+        (claim: any) =>
+          claim.mid === merchantId &&
+          claim.cid === profile.eid &&
+          claim.status === "approved",
+      );
+      if (!eligible) {
+        throw new CashbackError(403, "RATING_REQUIRES_APPROVED_RECEIPT");
+      }
+      state.ratings ??= [];
+      const existing = state.ratings.find(
+        (rating: any) => rating.mid === merchantId && rating.cid === profile.eid,
+      );
+      if (existing) {
+        existing.rating = parsed.data.rating;
+        existing.updatedAt = Date.now();
+      } else {
+        state.ratings.push({
+          id: `rating_${randomUUID().replaceAll("-", "").slice(0, 18)}`,
+          mid: merchantId,
+          cid: profile.eid,
+          rating: parsed.data.rating,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        });
+      }
+      return { result: { ok: true } };
+    });
+    res.json({ ok: true });
+  } catch (error) {
+    respondError(res, error);
+  }
+});
+
 router.post("/cashback/wallet/redemptions", async (req, res) => {
-  const profile = (req as AuthenticatedRequest).cashbackProfile;
+  const profile = (req as unknown as AuthenticatedRequest).cashbackProfile;
   try {
     unauthorizedRole(profile, "customer");
     const parsed = RedeemMerchantCashbackBody.safeParse(req.body);
@@ -835,6 +1054,23 @@ router.patch("/cashback/settings/rate", async (req, res) => {
   }
 });
 
+router.patch("/cashback/settings/categories", async (req, res) => {
+  const profile = (req as AuthenticatedRequest).cashbackProfile;
+  try {
+    unauthorizedRole(profile, "admin");
+    const parsed = UpdateCashbackCategoriesBody.safeParse(req.body);
+    if (!parsed.success) throw new CashbackError(400, "INVALID_CATEGORIES");
+    const categories = [...new Set(parsed.data.categories)];
+    await mutateState((state) => {
+      state.categories = categories;
+      return { result: { ok: true, categories } };
+    });
+    res.json({ ok: true, categories });
+  } catch (error) {
+    respondError(res, error);
+  }
+});
+
 router.get("/cashback/media/:id", async (req, res) => {
   const profile = (req as unknown as AuthenticatedRequest).cashbackProfile;
   try {
@@ -861,6 +1097,19 @@ router.get("/cashback/media/:id", async (req, res) => {
           (claim: any) => (claim.photoId === id || claim.id === id) && claim.mid === profile.eid,
         ));
     if (!allowed) throw new CashbackError(403, "FORBIDDEN");
+    if (typeof fields.objectPath === "string" && fields.objectPath) {
+      const photo = await readProfilePhoto(fields.objectPath);
+      res.setHeader("content-type", photo.contentType);
+      res.setHeader("content-length", String(photo.size));
+      res.setHeader("cache-control", "private, max-age=300");
+      res.setHeader("x-content-type-options", "nosniff");
+      photo.body.on("error", (error) => {
+        req.log.warn({ err: error }, "Could not stream receipt photo");
+        if (!res.headersSent) res.status(500).end();
+      });
+      photo.body.pipe(res);
+      return;
+    }
     const encoded = String(fields.data ?? "").match(/^data:(image\/(?:jpeg|png|webp));base64,(.+)$/);
     if (!encoded) throw new CashbackError(404, "MEDIA_NOT_FOUND");
     res.setHeader("content-type", encoded[1]);

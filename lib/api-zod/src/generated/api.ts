@@ -140,7 +140,9 @@ export const submitCashbackReceiptBodyInvoiceNumberMax = 100;
 export const submitCashbackReceiptBodyAmountExclusiveMin = 0;
 export const submitCashbackReceiptBodyAmountMax = 100000000;
 
-export const submitCashbackReceiptBodyImageDataMax = 650000;
+export const submitCashbackReceiptBodyUploadIdMax = 80;
+
+export const submitCashbackReceiptBodyObjectPathMax = 500;
 
 
 
@@ -149,10 +151,30 @@ export const SubmitCashbackReceiptBody = zod.object({
   "invoiceNumber": zod.string().max(submitCashbackReceiptBodyInvoiceNumberMax).nullish(),
   "amount": zod.number().gt(submitCashbackReceiptBodyAmountExclusiveMin).max(submitCashbackReceiptBodyAmountMax),
   "date": zod.coerce.date(),
-  "imageData": zod.string().max(submitCashbackReceiptBodyImageDataMax)
+  "uploadId": zod.string().max(submitCashbackReceiptBodyUploadIdMax).optional(),
+  "objectPath": zod.string().max(submitCashbackReceiptBodyObjectPathMax).optional()
 })
 
 export const SubmitCashbackReceiptResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
+ * @summary Create a private short-lived receipt photo upload
+ */
+export const createCashbackReceiptPhotoUploadBodySizeMax = 5242880;
+
+
+
+export const CreateCashbackReceiptPhotoUploadBody = zod.object({
+  "contentType": zod.enum(['image/jpeg', 'image/png', 'image/webp']),
+  "size": zod.number().int().min(1).max(createCashbackReceiptPhotoUploadBodySizeMax)
+})
+
+export const CreateCashbackReceiptPhotoUploadResponse = zod.object({
+  "uploadURL": zod.string().url(),
+  "objectPath": zod.string(),
+  "uploadId": zod.string()
+})
 
 
 /**
@@ -175,6 +197,16 @@ export const DecideCashbackReceiptResponse = zod.record(zod.string(), zod.unknow
 
 
 /**
+ * @summary Cancel an owned receipt that is still under review
+ */
+export const CancelCashbackReceiptParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const CancelCashbackReceiptResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
  * @summary Approve or reject a merchant application
  */
 export const DecideCashbackMerchantParams = zod.object({
@@ -191,6 +223,24 @@ export const DecideCashbackMerchantBody = zod.object({
 })
 
 export const DecideCashbackMerchantResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
+ * @summary Rate a merchant after an approved receipt
+ */
+export const RateCashbackMerchantParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const rateCashbackMerchantBodyRatingMax = 5;
+
+
+
+export const RateCashbackMerchantBody = zod.object({
+  "rating": zod.number().int().min(1).max(rateCashbackMerchantBodyRatingMax)
+})
+
+export const RateCashbackMerchantResponse = zod.record(zod.string(), zod.unknown())
 
 
 /**
@@ -287,6 +337,20 @@ export const UpdateCashbackRateBody = zod.object({
 })
 
 export const UpdateCashbackRateResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
+ * @summary Update the active merchant categories
+ */
+export const updateCashbackCategoriesBodyCategoriesMax = 9;
+
+
+
+export const UpdateCashbackCategoriesBody = zod.object({
+  "categories": zod.array(zod.enum(['restaurants', 'cafes', 'clothing', 'electronics', 'malls', 'groceries', 'perfume', 'gifts', 'shops'])).min(1).max(updateCashbackCategoriesBodyCategoriesMax)
+})
+
+export const UpdateCashbackCategoriesResponse = zod.record(zod.string(), zod.unknown())
 
 
 /**
