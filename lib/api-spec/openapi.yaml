@@ -230,11 +230,29 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ActionResult"
+  /cashback/wallet/payment-sessions:
+    post:
+      operationId: createCashbackPaymentSession
+      tags: [cashback]
+      summary: Create a short-lived customer session after validating a merchant QR
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CashbackPaymentSessionInput"
+      responses:
+        "201":
+          description: QR validated and payment session created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CashbackPaymentSession"
   /cashback/wallet/redemptions:
     post:
       operationId: redeemMerchantCashback
       tags: [cashback]
-      summary: Spend cashback at its issuing merchant only
+      summary: Confirm a one-time QR payment using merchant-scoped cashback
       requestBody:
         required: true
         content:
@@ -243,7 +261,30 @@ paths:
               $ref: "#/components/schemas/CashbackRedemption"
       responses:
         "201":
-          description: Cashback redeemed
+          description: QR payment confirmed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CashbackPaymentResult"
+  /cashback/wallet/payments/{id}/reversal:
+    post:
+      operationId: reverseCashbackPayment
+      tags: [cashback]
+      summary: Reverse a completed QR payment as an administrator
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 80 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CashbackPaymentReversal"
+      responses:
+        "200":
+          description: Payment reversed and balances restored
           content:
             application/json:
               schema:
@@ -489,10 +530,43 @@ components:
         reason: { type: ["string", "null"], maxLength: 300 }
     CashbackRedemption:
       type: object
-      required: [merchantId, amount]
+      required: [sessionId, amount]
       properties:
-        merchantId: { type: string, minLength: 1 }
+        sessionId: { type: string, minLength: 16, maxLength: 80 }
         amount: { type: number, exclusiveMinimum: 0, maximum: 100000000 }
+    CashbackPaymentSessionInput:
+      type: object
+      required: [merchantId, qrValue]
+      properties:
+        merchantId: { type: string, minLength: 1, maxLength: 80 }
+        qrValue: { type: string, minLength: 1, maxLength: 240 }
+    CashbackPaymentSession:
+      type: object
+      required: [sessionId, merchantId, merchantName, balance, expiresAt]
+      properties:
+        sessionId: { type: string }
+        merchantId: { type: string }
+        merchantName: { type: string }
+        country: { type: ["string", "null"] }
+        balance: { type: number }
+        expiresAt: { type: integer }
+    CashbackPaymentResult:
+      type: object
+      required: [id, reference, status, amount, merchantId, remainingBalance, merchantBalance, at]
+      properties:
+        id: { type: string }
+        reference: { type: string }
+        status: { type: string, enum: [done] }
+        amount: { type: number }
+        merchantId: { type: string }
+        remainingBalance: { type: number }
+        merchantBalance: { type: number }
+        at: { type: integer }
+    CashbackPaymentReversal:
+      type: object
+      required: [reason]
+      properties:
+        reason: { type: string, minLength: 3, maxLength: 300 }
     CashbackPreferences:
       type: object
       required: [language, theme]

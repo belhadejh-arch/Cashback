@@ -217,13 +217,65 @@ export interface CashbackMerchantDecision {
 }
 
 export interface CashbackRedemption {
-  /** @minLength 1 */
-  merchantId: string;
+  /**
+     * @minLength 16
+     * @maxLength 80
+     */
+  sessionId: string;
   /**
      * @maximum 100000000
      * @exclusiveMinimum 0
      */
   amount: number;
+}
+
+export interface CashbackPaymentSessionInput {
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  merchantId: string;
+  /**
+     * @minLength 1
+     * @maxLength 240
+     */
+  qrValue: string;
+}
+
+export interface CashbackPaymentSession {
+  sessionId: string;
+  merchantId: string;
+  merchantName: string;
+  /** @nullable */
+  country?: string | null;
+  balance: number;
+  expiresAt: number;
+}
+
+export type CashbackPaymentResultStatus = typeof CashbackPaymentResultStatus[keyof typeof CashbackPaymentResultStatus];
+
+
+export const CashbackPaymentResultStatus = {
+  done: 'done',
+} as const;
+
+export interface CashbackPaymentResult {
+  id: string;
+  reference: string;
+  status: CashbackPaymentResultStatus;
+  amount: number;
+  merchantId: string;
+  remainingBalance: number;
+  merchantBalance: number;
+  at: number;
+}
+
+export interface CashbackPaymentReversal {
+  /**
+     * @minLength 3
+     * @maxLength 300
+     */
+  reason: string;
 }
 
 export type CashbackPreferencesLanguage = typeof CashbackPreferencesLanguage[keyof typeof CashbackPreferencesLanguage];

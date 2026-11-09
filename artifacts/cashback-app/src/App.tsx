@@ -4,6 +4,7 @@ import {
   getGetCashbackSessionQueryKey, getGetCashbackMediaQueryKey,
   useGetCashbackSession, useRegisterCashbackProfile, useSubmitCashbackReceipt,
   useDecideCashbackReceipt, useDecideCashbackMerchant, useRedeemMerchantCashback,
+  useCreateCashbackPaymentSession, useReverseCashbackPayment,
   useUpdateCashbackPreferences, useUpdateCashbackRate, useGetCashbackMedia,
   useLoginCashback, useLogoutCashback, useCreateCashbackProfilePhotoUpload,
   useSaveCashbackProfilePhoto, useCreateCashbackReceiptPhotoUpload,
@@ -15,7 +16,7 @@ import {
   ArrowDownLeft, ArrowLeft, ArrowRight, BadgeCheck, Banknote, Bell, Camera, Check, ChevronDown, Home,
   CircleHelp, Clock3, Compass, Coffee, FileCheck2, FilePlus2, Gift, Globe2, Laptop, LogOut, MapPin, Moon, Share2,
   Plus, ReceiptText, Search, Settings, ShieldCheck, Store, Sun, UserRound, Wallet,
-  X, RefreshCw, LockKeyhole, Percent, LocateFixed, MoreHorizontal, Shirt, ShoppingBag, Star, Tag, Utensils,
+  X, RefreshCw, LockKeyhole, Percent, LocateFixed, MoreHorizontal, Shirt, ShoppingBag, Star, Tag, Utensils, Download, Printer, ScanLine, RotateCcw, FileDown,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Route, Switch, Router as WouterRouter } from 'wouter';
@@ -23,11 +24,11 @@ import NotFound from '@/pages/not-found';
 
 type Lang = 'en' | 'fr' | 'ar';
 type Theme = 'dark' | 'light';
-type Merchant = { id: string; name: string; cat?: string; status?: string; country?: string; city?: string; address?: string; mapsUrl?: string; lat?: number; lng?: number; cashbackRate?: number; logoId?: string; publicId?: string; qrValue?: string; description?: string; rating?: number; ratingCount?: number; userRating?: number };
+type Merchant = { id: string; name: string; cat?: string; status?: string; country?: string; city?: string; address?: string; mapsUrl?: string; lat?: number; lng?: number; cashbackRate?: number; logoId?: string; publicId?: string; qrValue?: string; description?: string; rating?: number; ratingCount?: number; userRating?: number; payoutBalance?: number; payoutDebt?: number };
 type Claim = { id: string; mid: string; cid: string; invoiceNumber?: string; date?: string; amount: number; photoId?: string; status: string; created?: string; cashback?: number; reason?: string; submitIp?: string; submittedByUid?: string; possibleDuplicate?: boolean };
 type Txn = { id: string; t?: string; mid: string; cid: string; amount: number; cashback?: number; method?: string };
 type CashbackNote = { id: string; to?: string; text: string; t?: number; read?: boolean };
-type Session = { profile: { uid: string; role: string; eid: string; name: string; phone?: string; email?: string; avatarUpdatedAt?: number; preferences?: { language?: Lang; theme?: Theme }; status?: string; rejectionReason?: string }; state: { settings?: { cashback?: number; claimHours?: number }; categories?: string[]; merchants?: Merchant[]; customers?: { id: string; name: string; phone?: string; cbm?: Record<string, number> }[]; claims?: Claim[]; txns?: Txn[]; cbpays?: { id: string; cid: string; mid: string; amount: number; status: string; at?: string }[]; notes?: CashbackNote[] } };
+type Session = { profile: { uid: string; role: string; eid: string; name: string; phone?: string; email?: string; avatarUpdatedAt?: number; preferences?: { language?: Lang; theme?: Theme }; status?: string; rejectionReason?: string }; state: { settings?: { cashback?: number; claimHours?: number }; categories?: string[]; merchants?: Merchant[]; customers?: { id: string; name: string; phone?: string; cbm?: Record<string, number> }[]; claims?: Claim[]; txns?: Txn[]; cbpays?: { id: string; cid: string; mid: string; amount: number; status: string; at?: string|number; reference?: string; method?: string; reversalReason?: string }[]; notes?: CashbackNote[] } };
 type Dict = Record<string, string>;
 const dictionaries: Record<Lang, Dict> = {
   en: {
@@ -112,6 +113,11 @@ const authStatusTranslations: Record<Lang, Dict> = {
   en: { phoneNotVerified:'Phone sign-in requires a verified number. SMS is not connected; use email sign-in.', rejectionReason:'Reason for rejection', pendingHint:'Your application was sent to the administration successfully. Sales tools unlock after approval.', applyPending:'Your application was sent to the administration successfully.' },
   fr: { phoneNotVerified:'La connexion par téléphone exige un numéro vérifié. Les SMS ne sont pas configurés ; utilisez votre e-mail.', rejectionReason:'Motif du refus', pendingHint:'Votre demande a bien été envoyée à l’administration. Les outils de vente seront accessibles après approbation.', applyPending:'Votre demande d’adhésion a bien été envoyée à l’administration.' },
   ar: { phoneNotVerified:'الدخول برقم الهاتف يتطلب تأكيده. خدمة SMS غير موصولة؛ استخدم البريد الإلكتروني.', rejectionReason:'سبب الرفض', pendingHint:'تم إرسال طلب انضمامك إلى الإدارة بنجاح. نراجع تفاصيل متجرك وستتوفر أدوات البيع بعد الموافقة.', applyPending:'تم إرسال طلب انضمامك إلى الإدارة بنجاح.' },
+};
+const paymentTranslations: Record<Lang, Dict> = {
+  en: { scanPaymentQr:'Scan shop payment QR', scanHint:'Scan the QR shown by the shop to prepare a payment. Nothing is charged until you confirm.', startScan:'Open camera scanner', scanning:'Looking for a shop QR…', scanAgain:'Scan another QR', scanError:'The camera could not start. Allow camera access and try again.', sessionLoading:'Validating shop QR…', sessionError:'This QR could not be validated. Ask the shop to display its CASH BACK payment QR.', sessionExpired:'This payment session has expired. Scan the shop QR again.', expiresIn:'Session expires in', enterPaymentAmount:'Amount to pay', paymentReview:'Review payment', paymentConfirm:'Confirm payment', paymentWorking:'Processing payment…', paymentSuccess:'Payment complete', paymentReference:'Payment reference', remainingBalance:'Remaining shop balance', closePayment:'Close payment', qrDownloadPng:'Download PNG', qrDownloadPdf:'Download vector PDF', qrPrint:'Print QR', qrExportError:'The QR could not be exported. Try again.', completedPayments:'QR payment history', reversePayment:'Reverse payment', reversalReason:'Reason for reversal', reversalConfirm:'Confirm reversal', reversalDone:'Payment reversed and recorded', noCompletedPayments:'No completed QR payments to review.', reasonRequired:'Enter a reason of at least 3 characters.', confirmReversePrompt:'This reversal will be recorded in the audit trail.', reversalPending:'Reversing…', reference:'Reference', paymentDate:'Date', paymentShop:'Shop', paymentAmount:'Amount', scannedShop:'Shop QR accepted', scanSecureNote:'The QR identifies the shop only. Your balance and payment amount stay private until confirmation.', reversedPayment:'Reversed', merchantWalletBalance:'Available merchant balance', merchantWalletDebt:'Reversal debt', merchantQrPayments:'QR payments received', customerName:'Customer', balanceChanged:'Your shop balance changed. Check it and enter the amount again.' },
+  fr: { scanPaymentQr:'Scanner le QR de paiement', scanHint:'Scannez le QR affiché par le commerce pour préparer le paiement. Rien n’est débité avant votre confirmation.', startScan:'Ouvrir le scanner', scanning:'Recherche du QR du commerce…', scanAgain:'Scanner un autre QR', scanError:'La caméra ne peut pas démarrer. Autorisez son accès puis réessayez.', sessionLoading:'Vérification du QR…', sessionError:'Ce QR n’a pas pu être vérifié. Demandez au commerce son QR CASH BACK.', sessionExpired:'Cette session a expiré. Scannez à nouveau le QR du commerce.', expiresIn:'La session expire dans', enterPaymentAmount:'Montant à payer', paymentReview:'Vérifier le paiement', paymentConfirm:'Confirmer le paiement', paymentWorking:'Paiement en cours…', paymentSuccess:'Paiement effectué', paymentReference:'Référence du paiement', remainingBalance:'Solde restant dans ce commerce', closePayment:'Fermer le paiement', qrDownloadPng:'Télécharger PNG', qrDownloadPdf:'Télécharger le PDF vectoriel', qrPrint:'Imprimer le QR', qrExportError:'Impossible d’exporter le QR. Réessayez.', completedPayments:'Historique des paiements QR', reversePayment:'Annuler le paiement', reversalReason:'Motif de l’annulation', reversalConfirm:'Confirmer l’annulation', reversalDone:'Paiement annulé et consigné', noCompletedPayments:'Aucun paiement QR effectué à examiner.', reasonRequired:'Saisissez un motif d’au moins 3 caractères.', confirmReversePrompt:'Cette annulation sera consignée dans le journal d’audit.', reversalPending:'Annulation…', reference:'Référence', paymentDate:'Date', paymentShop:'Commerce', paymentAmount:'Montant', scannedShop:'QR du commerce accepté', scanSecureNote:'Le QR identifie uniquement le commerce. Votre solde et le montant restent privés jusqu’à confirmation.', reversedPayment:'Annulé', merchantWalletBalance:'Solde commerçant disponible', merchantWalletDebt:'Dette après annulation', merchantQrPayments:'Paiements QR reçus', customerName:'Client', balanceChanged:'Le solde du commerce a changé. Vérifiez-le et saisissez à nouveau le montant.' },
+  ar: { scanPaymentQr:'امسح رمز دفع المتجر', scanHint:'امسح الرمز الذي يعرضه المتجر لإعداد الدفع. لن يُخصم شيء قبل تأكيدك.', startScan:'فتح الكاميرا للمسح', scanning:'جارٍ البحث عن رمز المتجر…', scanAgain:'مسح رمز آخر', scanError:'تعذر تشغيل الكاميرا. اسمح بالوصول إليها ثم حاول مجدداً.', sessionLoading:'جارٍ التحقق من رمز المتجر…', sessionError:'تعذر التحقق من هذا الرمز. اطلب من المتجر عرض رمز الدفع الخاص بـ CASH BACK.', sessionExpired:'انتهت صلاحية جلسة الدفع. امسح رمز المتجر مجدداً.', expiresIn:'تنتهي الجلسة خلال', enterPaymentAmount:'مبلغ الدفع', paymentReview:'مراجعة الدفع', paymentConfirm:'تأكيد الدفع', paymentWorking:'جارٍ تنفيذ الدفع…', paymentSuccess:'تم الدفع بنجاح', paymentReference:'مرجع الدفع', remainingBalance:'الرصيد المتبقي لدى المتجر', closePayment:'إغلاق الدفع', qrDownloadPng:'تنزيل PNG', qrDownloadPdf:'تنزيل PDF متجهي', qrPrint:'طباعة الرمز', qrExportError:'تعذر تصدير الرمز. حاول مجدداً.', completedPayments:'سجل مدفوعات QR', reversePayment:'عكس الدفع', reversalReason:'سبب عكس العملية', reversalConfirm:'تأكيد عكس العملية', reversalDone:'تم عكس الدفع وتسجيله', noCompletedPayments:'لا توجد مدفوعات QR مكتملة للمراجعة.', reasonRequired:'اكتب سبباً لا يقل عن 3 أحرف.', confirmReversePrompt:'سيُسجل هذا الإجراء في سجل التدقيق.', reversalPending:'جارٍ العكس…', reference:'المرجع', paymentDate:'التاريخ', paymentShop:'المتجر', paymentAmount:'المبلغ', scannedShop:'تم قبول رمز المتجر', scanSecureNote:'يعرّف الرمز المتجر فقط. يبقى رصيدك ومبلغ الدفع خاصين حتى التأكيد.', reversedPayment:'معكوسة', merchantWalletBalance:'رصيد التاجر المتاح', merchantWalletDebt:'مستحق بعد عكس العمليات', merchantQrPayments:'دفعات QR المستلمة', customerName:'الزبون', balanceChanged:'تغيّر رصيدك لدى المتجر. تحقّق منه وأدخل المبلغ مجدداً.' },
 };
 const wilayas = ['Adrar','Chlef','Laghouat','Oum El Bouaghi','Batna','Béjaïa','Biskra','Béchar','Blida','Bouira','Tamanrasset','Tébessa','Tlemcen','Tiaret','Tizi Ouzou','Alger','Djelfa','Jijel','Sétif','Saïda','Skikda','Sidi Bel Abbès','Annaba','Guelma','Constantine','Médéa','Mostaganem','M’Sila','Mascara','Ouargla','Oran','El Bayadh','Illizi','Bordj Bou Arréridj','Boumerdès','El Tarf','Tindouf','Tissemsilt','El Oued','Khenchela','Souk Ahras','Tipaza','Mila','Aïn Defla','Naâma','Aïn Témouchent','Ghardaïa','Relizane','Timimoun','Bordj Badji Mokhtar','Ouled Djellal','Béni Abbès','In Salah','In Guezzam','Touggourt','Djanet','El M’Ghair','El Meniaa'];
 const libyanCities = ['Tripoli','Benghazi','Misrata','Bayda','Zawiya','Zliten','Ajdabiya','Tobruk','Sabha','Sirte','Derna','Khoms','Gharyan','Tarhuna','Bani Walid','Jalu','Kufra','Ghadames','Murzuq','Nalut','Sabratha','Surman','Yefren','Ubari','Brak','Marj'];
@@ -199,13 +205,13 @@ function AppInner() {
   const receiptPhotoInputRef = useRef<HTMLInputElement>(null);
   const receiptCameraStreamRef = useRef<MediaStream|null>(null);
   const receiptCameraRequestRef = useRef(0);
-  const [dialog, setDialog] = useState<'redeem'|null>(null); const [receiptMerchantId, setReceiptMerchantId] = useState(''); const [receiptFile, setReceiptFile] = useState(''); const [invoice, setInvoice] = useState(''); const [purchaseAmount, setPurchaseAmount] = useState(''); const [purchaseDate, setPurchaseDate] = useState(new Date().toISOString().slice(0,10)); const [redeemAmount, setRedeemAmount] = useState('');
+  const [receiptMerchantId, setReceiptMerchantId] = useState(''); const [receiptFile, setReceiptFile] = useState(''); const [invoice, setInvoice] = useState(''); const [purchaseAmount, setPurchaseAmount] = useState(''); const [purchaseDate, setPurchaseDate] = useState(new Date().toISOString().slice(0,10));
   const [reason, setReason] = useState(''); const [rateValue, setRateValue] = useState('');
-   const t = (key: string) => homeNavTranslations[lang][key] || cameraTranslations[lang][key] || authStatusTranslations[lang][key] || featureTranslations[lang][key] || extraTranslations[lang][key] || dictionaries[lang][key] || (key.startsWith('cat_') ? key.slice(4) : key);
+   const t = (key: string) => paymentTranslations[lang][key] || homeNavTranslations[lang][key] || cameraTranslations[lang][key] || authStatusTranslations[lang][key] || featureTranslations[lang][key] || extraTranslations[lang][key] || dictionaries[lang][key] || (key.startsWith('cat_') ? key.slice(4) : key);
   const { data: session, isLoading, isError, error: queryError, refetch } = useGetCashbackSession({ query: { queryKey: getGetCashbackSessionQueryKey(), enabled: authReady, retry: false, refetchOnWindowFocus: false } });
   const sessionHttpStatus = getHttpStatus(queryError);
    const register = useRegisterCashbackProfile(); const submitReceipt = useSubmitCashbackReceipt(); const receiptPhotoUpload = useCreateCashbackReceiptPhotoUpload(); const cancelReceiptRequest = useCancelCashbackReceipt(); const decideReceipt = useDecideCashbackReceipt();
-  const decideMerchant = useDecideCashbackMerchant(); const redeem = useRedeemMerchantCashback(); const preferences = useUpdateCashbackPreferences(); const updateRate = useUpdateCashbackRate();
+   const decideMerchant = useDecideCashbackMerchant(); const redeem = useRedeemMerchantCashback(); const createPaymentSession = useCreateCashbackPaymentSession(); const reversePayment = useReverseCashbackPayment(); const preferences = useUpdateCashbackPreferences(); const updateRate = useUpdateCashbackRate();
    const rateMerchant = useRateCashbackMerchant(); const updateCategories = useUpdateCashbackCategories();
   const login = useLoginCashback(); const signOut = useLogoutCashback();
   const createPhotoUpload = useCreateCashbackProfilePhotoUpload();
@@ -475,24 +481,22 @@ function AppInner() {
       <button className="btn btn-primary" onClick={()=>void saveReceipt()} disabled={submitReceipt.isPending||receiptPhotoUpload.isPending||activeMerchants.length===0} data-testid="button-submit-receipt"><ReceiptText size={17}/>{submitReceipt.isPending||receiptPhotoUpload.isPending?t('loading'):t('submit')}</button>
     </div>
   </section>;
-  const redeemDialog = dialog==='redeem' && selectedMerchant ? <Dialog close={()=>setDialog(null)} closeLabel={t('close')} title={t('redeem')}>
-    <div style={{display:'grid',gap:14}}>
-      <p className="subtle" style={{margin:0}}>{selectedMerchant.name}</p>
-      <div style={{padding:16,borderRadius:14,background:'hsl(var(--muted))'}}><span className="subtle">{t('balance')}</span><strong style={{display:'block',fontSize:24}}>{formatMoney(selectedBalance,selectedMerchant.country)}</strong></div>
-      <Field label={t('redeemAmount')} value={redeemAmount} onChange={setRedeemAmount} type="number" min="0.01" step="0.01" testId="input-redeem-amount"/>
-      <button className="btn btn-primary" onClick={()=>void redeemAtMerchant()} disabled={redeem.isPending||selectedBalance<=0} data-testid="button-confirm-redeem">{t('confirmRedeem')}</button>
-    </div>
-  </Dialog> : null;
-  async function redeemAtMerchant() {
-    if (!selectedMerchant) return;
-    const balance = Number(profile?.role==='customer' ? state.customers?.find(c=>c.id===profile.eid)?.cbm?.[selectedMerchant.id] ?? 0 : 0);
-    if (!Number(redeemAmount) || Number(redeemAmount)>balance) { setError(t('incomplete')); return; }
-    try { await redeem.mutateAsync({ data:{ merchantId:selectedMerchant.id, amount:Number(redeemAmount) } }); invalidate(); setDialog(null); setRedeemAmount(''); setNotice(t('redeemDone')); }
-    catch { setError(t('genericError')); }
-  }
   async function decideClaim(claim: Claim, approved: boolean) {
     try { await decideReceipt.mutateAsync({ id:claim.id, data:{ approved, ...(reason ? {reason} : {}) } }); invalidate(); setReason(''); setNotice(t('success')); }
     catch { setError(t('genericError')); }
+  }
+  async function beginQrPayment(merchantId:string, qrValue:string) {
+    return createPaymentSession.mutateAsync({data:{merchantId,qrValue}});
+  }
+  async function finishQrPayment(sessionId:string, amount:number) {
+    const result=await redeem.mutateAsync({data:{sessionId,amount}});
+    await refreshSession();
+    return result;
+  }
+  async function reverseQrPayment(id:string, reversalReason:string) {
+    await reversePayment.mutateAsync({id,data:{reason:reversalReason}});
+    await refreshSession();
+    setNotice(t('reversalDone'));
   }
   async function decideShop(shop: Merchant, approved: boolean) {
     if (!approved && !reason.trim()) { setError(t('rejectionReasonRequired')); return; }
@@ -564,7 +568,7 @@ function AppInner() {
       setPhotoUploading(false);
     }
   }
-  const nav = (path: string) => { stopReceiptCamera(); setLocation(path); setDialog(null); clearMessages(); };
+  const nav = (path: string) => { stopReceiptCamera(); setLocation(path); clearMessages(); };
   const header = (account = true) => {
     if (customer && (location.startsWith('/profile') || location==='/notifications' || location==='/capture-receipt')) return null;
     if (customer && location === '/') return <header className="customer-home-header">
@@ -660,7 +664,7 @@ function AppInner() {
     const profileClaims=claims.filter(c=>c.cid===profile.eid).sort((a,b)=>timestampOf(b.created||b.date)-timestampOf(a.created||a.date));
     const initials=profile.name.split(/\s+/).filter(Boolean).slice(0,2).map(part=>part[0]).join('').toLocaleUpperCase();
     const customerTxns=txns.filter(x=>x.cid===profile.eid);
-    const customerPayments=(state.cbpays||[]).filter(payment=>payment.cid===profile.eid&&(payment.status==='done'||payment.status==='approved')).sort((a,b)=>Date.parse(b.at||'')-Date.parse(a.at||''));
+    const customerPayments=(state.cbpays||[]).filter(payment=>payment.cid===profile.eid&&(payment.status==='done'||payment.status==='approved'||payment.status==='reversed')).sort((a,b)=>timestampOf(b.at)-timestampOf(a.at));
     const rewardShopCount=activeMerchants.filter(shop=>Number(customerData?.cbm?.[shop.id]||0)>0).length;
     const photoUrl=`/api/cashback/profile/photo?v=${encodeURIComponent(String(profile.avatarUpdatedAt??''))}`;
     return shell(<section className="profile-page profile-refresh" style={{maxWidth:740,margin:'12px auto',display:'grid',gap:15}}>
@@ -728,15 +732,15 @@ function AppInner() {
   }
   if (customer && location === '/transactions') {
     const customerTxns=txns.filter(x=>x.cid===profile.eid);
-    const customerPayments=(state.cbpays||[]).filter(payment=>payment.cid===profile.eid&&(payment.status==='done'||payment.status==='approved'));
+    const customerPayments=(state.cbpays||[]).filter(payment=>payment.cid===profile.eid&&(payment.status==='done'||payment.status==='approved'||payment.status==='reversed'));
     const historyRows=[
-      ...customerPayments.map(payment=>({id:`payment-${payment.id}`,at:payment.at||'',kind:'used' as const,mid:payment.mid,value:Number(payment.amount)})),
+      ...customerPayments.map(payment=>({id:`payment-${payment.id}`,at:payment.at||'',kind:payment.status==='reversed'?'reversedPayment' as const:'used' as const,mid:payment.mid,value:Number(payment.amount)})),
       ...customerTxns.map(txn=>({id:`txn-${txn.id}`,at:txn.t||'',kind:'earned' as const,mid:txn.mid,value:Number(txn.cashback||0)})),
     ].sort((a,b)=>timestampOf(b.at)-timestampOf(a.at));
     return shell(<section className="history-page page-enter">
       <div className="profile-topbar" dir="ltr"><button className="profile-back" onClick={()=>nav('/profile')} aria-label={t('profile')} data-testid="button-transactions-back"><ArrowLeft size={20}/></button><h1 dir="auto">{t('transactions')}</h1><button className="profile-brand" onClick={()=>nav('/')} aria-label={t('home')} data-testid="link-transactions-brand"><img src="/cashback-logo-transparent.png" alt="CASH BACK"/></button></div>
       <div className="history-intro"><span className="history-eyebrow">{t('accountSection')}</span><p>{t('transactionHistoryIntro')}</p></div>
-      {isLoading?<div className="history-skeleton" aria-label={t('historyLoad')}><i/><i/><i/></div>:historyRows.length===0?<div className="surface profile-empty"><ArrowDownLeft size={24}/><span>{t('noTransactions')}</span></div>:<div className="history-list">{historyRows.map(row=>{const shop=merchants.find(m=>m.id===row.mid);return <div className="surface profile-transaction-row history-transaction" key={row.id} data-testid={`row-transaction-${row.id}`}><span><strong>{shop?.name||t('merchantId')}</strong><small>{t(row.kind)} · {row.at||'—'}</small></span><strong className={row.kind==='earned'?'profile-earned-value':''}>{row.kind==='earned'?'+':''}{formatMoney(row.value,shop?.country)}</strong></div>;})}</div>}
+      {isLoading?<div className="history-skeleton" aria-label={t('historyLoad')}><i/><i/><i/></div>:historyRows.length===0?<div className="surface profile-empty"><ArrowDownLeft size={24}/><span>{t('noTransactions')}</span></div>:<div className="history-list">{historyRows.map(row=>{const shop=merchants.find(m=>m.id===row.mid);const returned=row.kind==='reversedPayment';return <div className="surface profile-transaction-row history-transaction" key={row.id} data-testid={`row-transaction-${row.id}`}><span><strong>{shop?.name||t('merchantId')}</strong><small>{t(row.kind)} · {row.at||'—'}</small></span><strong className={row.kind==='earned'||returned?'profile-earned-value':''}>{row.kind==='earned'||returned?'+':row.kind==='used'?'−':''}{formatMoney(row.value,shop?.country)}</strong></div>;})}</div>}
     </section>);
   }
   if (customer && location === '/shops') return shell(<div className="shops-directory-page" style={{display:'grid',gap:18,maxWidth:980,margin:'8px auto'}}>
@@ -760,10 +764,10 @@ function AppInner() {
       </button>)}</div>}
     </section>
   </div>);
-  if (customer && location === '/wallet') return <>{shell(<CustomerWallet profile={profile} state={state} merchants={merchants} txns={txns} setSelected={(m)=>{setSelectedMerchant(m);nav(`/wallet/${m.id}`)}} onPay={(m)=>{setSelectedMerchant(m);setDialog('redeem');}} t={t} lang={lang} />)}{redeemDialog}</>;
+  if (customer && location === '/wallet') return shell(<CustomerWallet profile={profile} state={state} merchants={merchants} txns={txns} setSelected={(m)=>{setSelectedMerchant(m);nav(`/wallet/${m.id}`)}} t={t} lang={lang} />);
   if (customer && location.startsWith('/wallet/')) {
     const mid=location.split('/')[2]; const shop=merchants.find(m=>m.id===mid);
-    return <>{shell(shop?<WalletDetail shop={shop} profile={profile} state={state} txns={txns} t={t} openRedeem={()=>{setSelectedMerchant(shop);setDialog('redeem');}}/>:<Empty icon={<Wallet size={28}/>} title={t('walletTitle')} text={t('noShopsHint')}/>)}{redeemDialog}</>;
+    return shell(shop?<WalletDetail shop={shop} profile={profile} state={state} txns={txns} lang={lang} t={t} createSession={beginQrPayment} confirmPayment={finishQrPayment}/>:<Empty icon={<Wallet size={28}/>} title={t('walletTitle')} text={t('noShopsHint')}/>);
   }
   if (customer && selectedMerchant && location.startsWith('/shop/')) return shell(<ShopDetail shop={selectedMerchant} balance={selectedBalance} canRate={claims.some(claim=>claim.mid===selectedMerchant.id&&claim.cid===profile.eid&&claim.status==='approved')} ratingPending={rateMerchant.isPending} onRate={rating=>void rateShop(selectedMerchant,rating)} t={t} lang={lang} onBack={()=>nav('/')} onReceipt={()=>openReceiptPage(selectedMerchant.id)} onWallet={()=>nav(`/wallet/${selectedMerchant.id}`)} />);
   if (customer && location.startsWith('/shop')) return shell(<Empty icon={<Store size={28}/>} title={t('details')} text={t('noShopsHint')}/>);
@@ -773,9 +777,9 @@ function AppInner() {
     const status=profile.status || merchants.find(m=>m.id===profile.eid)?.status || 'pending';
     if (status==='pending' || status==='rejected') return shell(<div style={{maxWidth:670,margin:'32px auto'}}>{error&&noticeBox(error,true)}{notice&&noticeBox(notice)}<div className="surface" style={{padding:'clamp(24px,6vw,44px)',textAlign:'center'}}><div style={{width:74,height:74,borderRadius:24,margin:'0 auto 18px',display:'grid',placeItems:'center',background:status==='pending'?'hsl(var(--secondary) / .28)':'hsl(var(--destructive) / .12)',color:status==='pending'?'hsl(var(--primary))':'hsl(var(--destructive))'}}>{status==='pending'?<Clock3 size={34}/>:<ShieldCheck size={34}/>}</div><span className="status-pill">{statusLabel(status)}</span><h1 style={{fontSize:34,margin:'14px 0 8px'}}>{status==='pending'?t('statusPending'):t('statusRejected')}</h1><p className="subtle" style={{fontSize:16,lineHeight:1.7}}>{status==='pending'?t('pendingHint'):profile.rejectionReason||t('retry')}</p><button className="btn btn-outline" style={{marginTop:18}} onClick={()=>void logout()} data-testid="button-logout"><LogOut size={17}/>{t('signOut')}</button></div></div>);
     const shop=merchants.find(m=>m.id===profile.eid);
-    return shell(<MerchantDashboard shop={shop} state={state} claims={claims} t={t} notice={notice} error={error} />);
+    return shell(<MerchantDashboard shop={shop} state={state} claims={claims} t={t} lang={lang} notice={notice} error={error} onRefresh={()=>void refetch()} />);
   }
-  if (admin) return shell(<AdminDashboard merchants={merchants} claims={claims} state={state} t={t} lang={lang} reason={reason} setReason={setReason} decideShop={decideShop} decideClaim={decideClaim} rate={rateValue} setRate={setRateValue} saveRate={saveRate} saveCategories={saveCategories} notice={notice} error={error} />);
+  if (admin) return shell(<AdminDashboard merchants={merchants} claims={claims} state={state} t={t} lang={lang} reason={reason} setReason={setReason} decideShop={decideShop} decideClaim={decideClaim} rate={rateValue} setRate={setRateValue} saveRate={saveRate} saveCategories={saveCategories} reversePayment={reverseQrPayment} reversalPending={reversePayment.isPending} notice={notice} error={error} />);
   if (!customer) return shell(<Empty icon={<CircleHelp size={28}/>} title={t('noPermission')} text={t('retryLoad')}/>);
 
   const customerClaims=claims.filter(c=>c.cid===profile.eid);
@@ -818,7 +822,6 @@ function AppInner() {
         })}</div>}
       </section>
     </>)}
-    {redeemDialog}
   </>;
 }
 
@@ -858,19 +861,19 @@ function ClaimRow({claim,shop,t,onCancel}:{claim:Claim;shop?:Merchant;t:(s:strin
     <div style={{display:'flex',alignItems:'center',gap:8}}><span className="status-pill">{status}</span>{claim.status==='pending'&&onCancel&&<button className="btn btn-outline" onClick={onCancel} data-testid={`button-cancel-receipt-${claim.id}`}><X size={15}/>{t('cancelReceipt')}</button>}</div>
   </div>;
 }
-function CustomerWallet({profile,state,merchants,txns,setSelected,onPay,t,lang}:{profile:Session['profile'];state:Session['state'];merchants:Merchant[];txns:Txn[];setSelected:(m:Merchant)=>void;onPay:(m:Merchant)=>void;t:(s:string)=>string;lang:Lang}) {
+function CustomerWallet({profile,state,merchants,txns,setSelected,t,lang}:{profile:Session['profile'];state:Session['state'];merchants:Merchant[];txns:Txn[];setSelected:(m:Merchant)=>void;t:(s:string)=>string;lang:Lang}) {
   const cbm=state.customers?.find(c=>c.id===profile.eid)?.cbm||{};
   const list=merchants.filter(m=>m.status==='active');
   return <div className="customer-wallet-page">
     <PageTitle icon={<Wallet/>} title={t('myShopBalances')} eyebrow={t('walletHint')}/>
     {list.length===0?<div className="surface" style={{padding:30,textAlign:'center'}}><Wallet size={27} color="hsl(var(--primary))"/><h3>{t('noActivity')}</h3><p className="subtle">{t('noShopsHint')}</p></div>:<div className="customer-wallet-list">{list.map(shop=>{
       const entries=txns.filter(x=>x.cid===profile.eid&&x.mid===shop.id);
-      const payments=state.cbpays?.filter(x=>x.cid===profile.eid&&x.mid===shop.id&&(x.status==='done'||x.status==='approved'))||[];
+      const payments=state.cbpays?.filter(x=>x.cid===profile.eid&&x.mid===shop.id&&(x.status==='done'||x.status==='approved'||x.status==='reversed'))||[];
       const earned=entries.reduce((n,x)=>n+Number(x.cashback||0),0);
-      const used=payments.reduce((n,x)=>n+Number(x.amount||0),0);
+      const used=payments.filter(x=>x.status==='done'||x.status==='approved').reduce((n,x)=>n+Number(x.amount||0),0);
       const activity=[
         ...entries.map(x=>({id:`earn-${x.id}`,at:x.t||'',kind:'earned' as const,amount:Number(x.cashback||0)})),
-        ...payments.map(x=>({id:`use-${x.id}`,at:x.at||'',kind:'used' as const,amount:Number(x.amount||0)})),
+        ...payments.map(x=>({id:`use-${x.id}`,at:x.at||'',kind:x.status==='reversed'?'reversedPayment' as const:'used' as const,amount:Number(x.amount||0)})),
       ].sort((a,b)=>timestampOf(b.at)-timestampOf(a.at)).slice(0,2);
       const balance=Number(cbm[shop.id]||0);
       return <article key={shop.id} className="surface customer-wallet-card" data-testid={`card-wallet-${shop.id}`}>
@@ -879,23 +882,102 @@ function CustomerWallet({profile,state,merchants,txns,setSelected,onPay,t,lang}:
           <div className="customer-wallet-shop-copy"><span className="subtle">{shop.cat?t(`cat_${shop.cat}`):localizeCity(shop.city,lang)||t('merchantId')}</span><h2>{shop.name}</h2><div className="customer-wallet-totals"><span>{t('earned')}: {formatMoney(earned,shop.country)}</span><span>{t('used')}: {formatMoney(used,shop.country)}</span></div></div>
           <div className="customer-wallet-balance"><span className="subtle">{t('balance')}</span><strong>{formatMoney(balance,shop.country)}</strong></div>
         </div>
-        <div className="customer-wallet-activity"><strong>{t('shopHistory')}</strong>{activity.length===0?<span className="subtle">{t('noActivity')}</span>:activity.map(row=><div className="customer-wallet-activity-row" key={row.id}><span>{t(row.kind)} · {row.at||'—'}</span><strong className={row.kind==='earned'?'profile-earned-value':''}>{row.kind==='earned'?'+':'−'}{formatMoney(row.amount,shop.country)}</strong></div>)}</div>
-        <div className="customer-wallet-actions"><button className="btn btn-outline" onClick={()=>setSelected(shop)} data-testid={`button-wallet-history-${shop.id}`}><ReceiptText size={17}/>{t('viewShopHistory')}</button><button className="btn btn-primary" onClick={()=>onPay(shop)} disabled={balance<=0} data-testid={`button-wallet-pay-${shop.id}`}><Banknote size={17}/>{t('payAtShop')}</button></div>
+        <div className="customer-wallet-activity"><strong>{t('shopHistory')}</strong>{activity.length===0?<span className="subtle">{t('noActivity')}</span>:activity.map(row=><div className="customer-wallet-activity-row" key={row.id}><span>{t(row.kind)} · {row.at||'—'}</span><strong className={row.kind==='earned'||row.kind==='reversedPayment'?'profile-earned-value':''}>{row.kind==='earned'||row.kind==='reversedPayment'?'+':'−'}{formatMoney(row.amount,shop.country)}</strong></div>)}</div>
+        <div className="customer-wallet-actions"><button className="btn btn-outline" onClick={()=>setSelected(shop)} data-testid={`button-wallet-history-${shop.id}`}><ReceiptText size={17}/>{t('viewShopHistory')}</button><button className="btn btn-primary" onClick={()=>setSelected(shop)} disabled={balance<=0} data-testid={`button-wallet-pay-${shop.id}`}><ScanLine size={17}/>{t('payAtShop')}</button></div>
       </article>;
     })}</div>}
   </div>;
 }
-function WalletDetail({shop,profile,state,txns,t,openRedeem}:{shop:Merchant;profile:Session['profile'];state:Session['state'];txns:Txn[];t:(s:string)=>string;openRedeem:()=>void}) {
+function WalletDetail({shop,profile,state,txns,t,lang,createSession,confirmPayment}:{shop:Merchant;profile:Session['profile'];state:Session['state'];txns:Txn[];t:(s:string)=>string;lang:Lang;createSession:(merchantId:string,qrValue:string)=>Promise<any>;confirmPayment:(sessionId:string,amount:number)=>Promise<any>}) {
   const customer=state.customers?.find(c=>c.id===profile.eid);const balance=Number(customer?.cbm?.[shop.id]||0);
   const entries=txns.filter(x=>x.cid===profile.eid&&x.mid===shop.id);
-  const payments=state.cbpays?.filter(x=>x.cid===profile.eid&&x.mid===shop.id&&(x.status==='done'||x.status==='approved'))||[];
+  const payments=state.cbpays?.filter(x=>x.cid===profile.eid&&x.mid===shop.id&&(x.status==='done'||x.status==='approved'||x.status==='reversed'))||[];
   const earned=entries.reduce((a,x)=>a+Number(x.cashback||0),0);
-  const used=payments.reduce((a,x)=>a+Number(x.amount||0),0);
+  const used=payments.filter(x=>x.status==='done'||x.status==='approved').reduce((a,x)=>a+Number(x.amount||0),0);
   const activity=[
     ...entries.map(x=>({id:`earn-${x.id}`,at:x.t||'',kind:'earned' as const,amount:Number(x.cashback||0)})),
-    ...payments.map(x=>({id:`use-${x.id}`,at:x.at||'',kind:'used' as const,amount:Number(x.amount||0)})),
+    ...payments.map(x=>({id:`use-${x.id}`,at:x.at||'',kind:x.status==='reversed'?'reversedPayment' as const:'used' as const,amount:Number(x.amount||0),reference:x.reference})),
   ].sort((a,b)=>timestampOf(b.at)-timestampOf(a.at));
-  return <div className="customer-wallet-detail"><PageTitle icon={<Wallet/>} title={shop.name} eyebrow={t('walletHint')}/><section className="customer-wallet-detail-balance"><span>{t('balance')}</span><strong>{formatMoney(balance,shop.country)}</strong><div><span>{t('earned')}: {formatMoney(earned,shop.country)}</span><span>{t('used')}: {formatMoney(used,shop.country)}</span></div></section><button onClick={openRedeem} className="btn btn-primary" disabled={balance<=0} data-testid="button-redeem"><Banknote size={18}/>{t('payAtShop')} · {shop.name}</button><section><h2 style={{fontSize:22}}>{t('ledger')}</h2>{activity.length===0?<div className="surface" style={{padding:20}}><p className="subtle">{t('noActivity')}</p></div>:activity.map(row=><div className="surface" key={row.id} data-testid={`row-ledger-${row.id}`} style={{display:'flex',justifyContent:'space-between',padding:14,marginBottom:8}}><span><strong>{shop.name}</strong><small className="subtle" style={{display:'block'}}>{t(row.kind)} · {row.at||'—'}</small></span><strong className={row.kind==='earned'?'profile-earned-value':''}>{row.kind==='earned'?'+':'−'}{formatMoney(row.amount,shop.country)}</strong></div>)}</section></div>;
+  return <div className="customer-wallet-detail"><PageTitle icon={<Wallet/>} title={shop.name} eyebrow={t('walletHint')}/><section className="customer-wallet-detail-balance"><span>{t('balance')}</span><strong>{formatMoney(balance,shop.country)}</strong><div><span>{t('earned')}: {formatMoney(earned,shop.country)}</span><span>{t('used')}: {formatMoney(used,shop.country)}</span></div></section><QrPaymentFlow shop={shop} balance={balance} lang={lang} t={t} createSession={createSession} confirmPayment={confirmPayment}/><section><h2 style={{fontSize:22}}>{t('ledger')}</h2>{activity.length===0?<div className="surface" style={{padding:20}}><p className="subtle">{t('noActivity')}</p></div>:activity.map(row=><div className="surface" key={row.id} data-testid={`row-ledger-${row.id}`} style={{display:'flex',justifyContent:'space-between',padding:14,marginBottom:8}}><span><strong>{shop.name}</strong><small className="subtle" style={{display:'block'}}>{t(row.kind)} · {row.at||'—'}{'reference' in row&&row.reference?` · ${row.reference}`:''}</small></span><strong className={row.kind==='earned'||row.kind==='reversedPayment'?'profile-earned-value':''}>{row.kind==='earned'||row.kind==='reversedPayment'?'+':'−'}{formatMoney(row.amount,shop.country)}</strong></div>)}</section></div>;
+}
+
+function QrPaymentFlow({shop,balance,lang,t,createSession,confirmPayment}:{shop:Merchant;balance:number;lang:Lang;t:(key:string)=>string;createSession:(merchantId:string,qrValue:string)=>Promise<any>;confirmPayment:(sessionId:string,amount:number)=>Promise<any>}) {
+  const [open,setOpen]=useState(false);
+  return <><button type="button" onClick={()=>setOpen(true)} className="btn btn-primary qr-pay-trigger" disabled={balance<=0} data-testid="button-redeem"><ScanLine size={18}/>{t('payAtShop')} · {shop.name}</button>{open&&<PaymentDialog shop={shop} balance={balance} lang={lang} t={t} createSession={createSession} confirmPayment={confirmPayment} close={()=>setOpen(false)}/>}</>;
+}
+
+type PaymentSession = {sessionId:string;merchantId:string;merchantName:string;country?:string|null;balance:number;expiresAt:number};
+type PaymentResult = {id:string;reference:string;status:'done';amount:number;merchantId:string;remainingBalance:number;merchantBalance:number;at:number};
+function expiryMs(value:number) { return value < 1e12 ? value * 1000 : value; }
+function PaymentDialog({shop,balance,lang,t,createSession,confirmPayment,close}:{shop:Merchant;balance:number;lang:Lang;t:(key:string)=>string;createSession:(merchantId:string,qrValue:string)=>Promise<PaymentSession>;confirmPayment:(sessionId:string,amount:number)=>Promise<PaymentResult>;close:()=>void}) {
+  const [scanning,setScanning]=useState(false);
+  const [busy,setBusy]=useState(false);
+  const [error,setError]=useState('');
+  const [session,setSession]=useState<PaymentSession|null>(null);
+  const [amount,setAmount]=useState('');
+  const [result,setResult]=useState<PaymentResult|null>(null);
+  const [now,setNow]=useState(Date.now());
+  const videoRef=useRef<HTMLVideoElement>(null);
+  const scanTextRef=useRef<(text:string)=>void>(()=>undefined);
+  const tRef=useRef(t);
+  tRef.current=t;
+  const expiresAt=session?expiryMs(session.expiresAt):0;
+  const expired=!!session&&!result&&now>=expiresAt;
+  useEffect(()=>{const timer=window.setInterval(()=>setNow(Date.now()),1000);return()=>window.clearInterval(timer);},[]);
+  useEffect(()=>{
+    if(!scanning)return;
+    let alive=true;
+    let controls:{stop:()=>void}|undefined;
+    const video=videoRef.current;
+    if(!video){setError(tRef.current('scanError'));setScanning(false);return;}
+    void import('@zxing/browser').then(({BrowserQRCodeReader})=>{
+      if(!alive)return;
+      const reader=new BrowserQRCodeReader();
+      return reader.decodeFromConstraints({audio:false,video:{facingMode:{ideal:'environment'}}},video,(decoded,_decodeError,control)=>{
+        if(decoded&&alive){
+          alive=false;
+          control.stop();
+          setScanning(false);
+          scanTextRef.current(decoded.getText());
+        }
+      });
+    }).then(value=>{if(value){controls=value;if(!alive)value.stop();}}).catch(()=>{if(alive){setError(tRef.current('scanError'));setScanning(false);}});
+    return ()=>{alive=false;controls?.stop();const stream=video.srcObject as MediaStream|null;stream?.getTracks().forEach(track=>track.stop());video.srcObject=null;};
+  },[scanning]);
+  scanTextRef.current=(exactText:string)=>{
+    setBusy(true);setError('');setSession(null);setResult(null);
+    void createSession(shop.id,exactText).then(created=>{
+      if(created.merchantId!==shop.id)throw new Error('QR_MERCHANT_MISMATCH');
+      setSession(created);setAmount('');setNow(Date.now());
+    }).catch(()=>setError(t('sessionError'))).finally(()=>setBusy(false));
+  };
+  const startScan=()=>{setError('');setSession(null);setResult(null);setScanning(true);};
+  const submit=async()=>{
+    if(!session||expired)return;
+    const value=Number(amount);
+    if(!Number.isFinite(value)||value<=0||value>session.balance)return;
+    setBusy(true);setError('');
+    try{const payment=await confirmPayment(session.sessionId,value);setResult(payment);setSession(null);}
+    catch(caught){const code=(caught as {data?:{error?:string}})?.data?.error;if(code==='PAYMENT_SESSION_EXPIRED')setSession(null);setError(code==='PAYMENT_SESSION_EXPIRED'?t('sessionExpired'):code==='INSUFFICIENT_MERCHANT_BALANCE'?t('balanceChanged'):t('genericError'));}
+    finally{setBusy(false);}
+  };
+  const remainingSeconds=Math.max(0,Math.ceil((expiresAt-now)/1000));
+  const amountRemaining=Math.max(0,(session?.balance??0)-Number(amount||0));
+  const formattedCountdown=`${String(Math.floor(remainingSeconds/60)).padStart(2,'0')}:${String(remainingSeconds%60).padStart(2,'0')}`;
+  return <div className="dialog-backdrop qr-payment-backdrop" role="presentation" onMouseDown={event=>{if(event.target===event.currentTarget)close();}}>
+    <section className="dialog-panel qr-payment-dialog" role="dialog" aria-modal="true" aria-labelledby="qr-payment-title" dir={lang==='ar'?'rtl':'ltr'}>
+      <header className="qr-dialog-header"><div><span className="qr-eyebrow">{t('wallet')}</span><h2 id="qr-payment-title">{t('scanPaymentQr')}</h2></div><button type="button" className="qr-close" onClick={close} aria-label={t('close')}><X size={20}/></button></header>
+      {result?<div className="qr-success-state" role="status"><span className="qr-success-mark"><Check size={27}/></span><h3>{t('paymentSuccess')}</h3><p>{shop.name} · {formatMoney(result.amount,shop.country)}</p><div className="qr-result-row"><span>{t('paymentReference')}</span><strong dir="ltr">{result.reference}</strong></div><div className="qr-result-row"><span>{t('remainingBalance')}</span><strong>{formatMoney(result.remainingBalance,shop.country)}</strong></div><button type="button" className="btn btn-primary" onClick={close}>{t('closePayment')}</button></div>:
+      <div className="qr-payment-body">
+        {!session&&!busy&&<><p className="subtle qr-scan-hint">{t('scanHint')}</p><div className={`qr-camera-frame ${scanning?'is-scanning':''}`}>{scanning?<><video ref={videoRef} muted playsInline aria-label={t('scanning')}/><span className="qr-scan-corner qr-corner-one"/><span className="qr-scan-corner qr-corner-two"/><span className="qr-scan-line"/></>:<div className="qr-camera-empty"><ScanLine size={34}/><span>{t('scanSecureNote')}</span></div>}</div><button type="button" className="btn btn-primary qr-scan-button" onClick={startScan} disabled={scanning}><ScanLine size={18}/>{scanning?t('scanning'):t('startScan')}</button></>}
+        {busy&&!session&&<div className="qr-inline-loading" role="status"><span className="qr-loading-bar"/><strong>{t('sessionLoading')}</strong></div>}
+        {session&&!expired&&<div className="qr-confirm-card"><div className="qr-accepted"><BadgeCheck size={20}/><strong>{t('scannedShop')}</strong></div><h3>{session.merchantName}</h3><div className="qr-session-balance"><span>{t('balance')}</span><strong>{formatMoney(session.balance,session.country||shop.country)}</strong></div><p className="qr-expiry">{t('expiresIn')} <strong dir="ltr">{formattedCountdown}</strong></p><label className="qr-amount-field"><span>{t('enterPaymentAmount')}</span><input className="field" inputMode="decimal" type="number" min="0.01" step="0.01" max={session.balance} value={amount} onChange={event=>setAmount(event.target.value)} placeholder="0.00" data-testid="input-qr-payment-amount"/></label><div className="qr-session-balance"><span>{t('remainingBalance')}</span><strong>{formatMoney(amountRemaining,session.country||shop.country)}</strong></div><p className="qr-review-caption">{t('paymentReview')} · {shop.name}</p><button type="button" className="btn btn-primary qr-confirm-button" onClick={()=>void submit()} disabled={busy||!amount||Number(amount)<=0||Number(amount)>session.balance} data-testid="button-confirm-qr-payment">{busy?t('paymentWorking'):t('paymentConfirm')}</button></div>}
+        {expired&&<div className="qr-expired" role="alert"><Clock3 size={24}/><strong>{t('sessionExpired')}</strong><button type="button" className="btn btn-outline" onClick={startScan}>{t('scanAgain')}</button></div>}
+        {error&&<div className="qr-error" role="alert">{error}</div>}
+        {!scanning&&!session&&!busy&&<p className="qr-privacy-note">{t('scanSecureNote')}</p>}
+      </div>}
+    </section>
+  </div>;
 }
 function ShopDetail({shop,balance,canRate,ratingPending,onRate,t,onBack,onReceipt,onWallet,lang}:{shop:Merchant;balance:number;canRate:boolean;ratingPending:boolean;onRate:(rating:number)=>void;t:(s:string)=>string;onBack:()=>void;onReceipt:()=>void;onWallet:()=>void;lang:Lang}) {
   return <div style={{maxWidth:820,margin:'10px auto',display:'grid',gap:18}}>
@@ -933,12 +1015,128 @@ function ShopDetail({shop,balance,canRate,ratingPending,onRate,t,onBack,onReceip
     </div>
   </div>;
 }
-function MerchantDashboard({shop,state,claims,t,notice,error}:{shop?:Merchant;state:Session['state'];claims:Claim[];t:(s:string)=>string;notice:string;error:string}) {
-  const ownClaims=claims.filter(c=>c.mid===shop?.id);const open=ownClaims.filter(c=>c.status==='pending');
-  return <div style={{maxWidth:900,margin:'18px auto',display:'grid',gap:20}}>{error&&<div role="alert" className="surface" style={{padding:12,color:'hsl(var(--destructive))'}}>{error}</div>}{notice&&<div role="status" className="surface" style={{padding:12}}>{notice}</div>}<PageTitle icon={<Store/>} title={shop?.name||t('merchantDashboard')} eyebrow={t('merchantActive')}/><div className="surface" style={{padding:20,display:'flex',alignItems:'start',gap:14}}><BadgeCheck color="hsl(var(--primary))"/><div><strong>{t('merchantActive')}</strong><p className="subtle" style={{margin:'4px 0'}}>{t('salesOnly')}</p></div></div><div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(170px,1fr))',gap:12}}><Metric label={t('customers')} value={String(state.customers?.length||0)} icon={<UserRound/>}/><Metric label={t('sales')} value={String(ownClaims.filter(c=>c.status==='approved').length)} icon={<ReceiptText/>}/><Metric label={t('receiptQueue')} value={String(open.length)} icon={<Clock3/>}/></div><section className="surface" style={{padding:20}}><strong>{t('rate')}</strong><strong style={{display:'block',fontSize:30,color:'hsl(var(--primary))'}}>{shop?.cashbackRate??0}%</strong>{shop?.publicId&&<div style={{marginTop:14,display:'grid',gridTemplateColumns:'auto 1fr',alignItems:'center',gap:14}}><QRCodeSVG value={shop.qrValue||`cashback://merchant/${shop.publicId}`} size={156} bgColor="#ffffff" fgColor="#140b05" level="M"/><div><strong>{t('qrCode')}</strong><div className="subtle" style={{marginTop:6}}>{t('merchantId')}: {shop.publicId}</div></div></div>}</section><h2 style={{marginBottom:0}}>{t('receiptQueue')}</h2>{open.length===0?<div className="surface" style={{padding:20}}>{t('noPending')}</div>:open.map(c=><ClaimRow key={c.id} claim={c} shop={shop} t={t}/>)}</div>;
+function MerchantDashboard({shop,state,claims,t,lang,notice,error,onRefresh}:{shop?:Merchant;state:Session['state'];claims:Claim[];t:(s:string)=>string;lang:Lang;notice:string;error:string;onRefresh:()=>void}) {
+  const ownClaims=claims.filter(c=>c.mid===shop?.id);
+  const open=ownClaims.filter(c=>c.status==='pending');
+  const payments=(state.cbpays||[]).filter(payment=>payment.mid===shop?.id&&payment.method==='qr');
+  const completedPayments=payments.filter(payment=>payment.status==='done');
+  const received=completedPayments.reduce((sum,payment)=>sum+Number(payment.amount||0),0);
+  const recentPayments=payments.slice().sort((a,b)=>timestampOf(b.at)-timestampOf(a.at)).slice(0,8);
+  const refreshRef=useRef(onRefresh);
+  refreshRef.current=onRefresh;
+  useEffect(()=>{
+    if(!shop?.id)return;
+    const timer=window.setInterval(()=>refreshRef.current(),5000);
+    return ()=>window.clearInterval(timer);
+  },[shop?.id]);
+  return <div style={{maxWidth:900,margin:'18px auto',display:'grid',gap:20}}>
+    {error&&<div role="alert" className="surface" style={{padding:12,color:'hsl(var(--destructive))'}}>{error}</div>}
+    {notice&&<div role="status" className="surface" style={{padding:12}}>{notice}</div>}
+    <PageTitle icon={<Store/>} title={shop?.name||t('merchantDashboard')} eyebrow={t('merchantActive')}/>
+    <div className="surface" style={{padding:20,display:'flex',alignItems:'start',gap:14}}><BadgeCheck color="hsl(var(--primary))"/><div><strong>{t('merchantActive')}</strong><p className="subtle" style={{margin:'4px 0'}}>{t('salesOnly')}</p></div></div>
+    <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:12}}>
+      <Metric label={t('customers')} value={String(state.customers?.length||0)} icon={<UserRound/>}/>
+      <Metric label={t('sales')} value={String(ownClaims.filter(c=>c.status==='approved').length)} icon={<ReceiptText/>}/>
+      <Metric label={t('receiptQueue')} value={String(open.length)} icon={<Clock3/>}/>
+      <Metric label={t('merchantQrPayments')} value={formatMoney(received,shop?.country)} icon={<Banknote/>}/>
+      <Metric label={t('merchantWalletBalance')} value={formatMoney(Number(shop?.payoutBalance||0),shop?.country)} icon={<Wallet/>}/>
+      {Number(shop?.payoutDebt||0)>0&&<Metric label={t('merchantWalletDebt')} value={formatMoney(Number(shop?.payoutDebt),shop?.country)} icon={<RotateCcw/>}/>}
+    </div>
+    <section className="surface merchant-qr-card" style={{padding:20}}>
+      <div className="merchant-qr-info">
+        <span className="qr-eyebrow">{t('merchantActive')}</span><strong>{t('qrCode')}</strong>
+        <div className="subtle">{t('merchantId')}: {shop?.publicId||'—'}</div>
+        <div className="merchant-qr-controls">
+          <button className="btn btn-outline" type="button" onClick={()=>void downloadMerchantQr('png',t,shop?.name||'',shop?.publicId||'')} disabled={!shop?.qrValue}><Download size={16}/>{t('qrDownloadPng')}</button>
+          <button className="btn btn-outline" type="button" onClick={()=>void downloadMerchantQr('pdf',t,shop?.name||'',shop?.publicId||'')} disabled={!shop?.qrValue}><FileDown size={16}/>{t('qrDownloadPdf')}</button>
+          <button className="btn btn-outline" type="button" onClick={()=>printMerchantQr(t,shop?.name||'',shop?.publicId||'')} disabled={!shop?.qrValue}><Printer size={16}/>{t('qrPrint')}</button>
+        </div>
+      </div>
+      {shop?.publicId&&shop.qrValue?<div className="merchant-qr-sheet" id="merchant-payment-qr" data-testid="merchant-payment-qr"><QRCodeSVG value={shop.qrValue} size={220} bgColor="#ffffff" fgColor="#140b05" level="M" includeMargin aria-label={t('qrCode')}/><strong className="merchant-qr-name">{shop.name}</strong><span dir="ltr">{shop.publicId}</span></div>:<p className="subtle">{t('qrExportError')}</p>}
+    </section>
+    <section className="surface payment-audit-section">
+      <div className="payment-audit-heading"><div><span className="qr-eyebrow">{t('merchantDashboard')}</span><h2>{t('merchantQrPayments')}</h2></div><span className="payment-audit-count">{payments.length}</span></div>
+      {recentPayments.length===0?<div className="payment-audit-empty"><Banknote size={22}/><span>{t('noActivity')}</span></div>:<div className="payment-audit-list">{recentPayments.map(payment=>{
+        const customer=state.customers?.find(item=>item.id===payment.cid);
+        const reversed=payment.status==='reversed';
+        return <article className="payment-audit-row" key={payment.id} data-testid={`merchant-payment-${payment.id}`}>
+          <div className="payment-audit-main"><div className="payment-audit-mark"><Banknote size={18}/></div><div className="payment-audit-copy"><strong>{customer?.name||payment.cid}</strong><small>{new Date(timestampOf(payment.at)).toLocaleString(lang==='ar'?'ar-DZ':lang==='fr'?'fr-FR':'en')}</small><code dir="ltr">{payment.reference||payment.id}</code></div><div className="payment-audit-amount"><small>{reversed?t('reversedPayment'):t('paymentSuccess')}</small><strong className={reversed?'':'profile-earned-value'}>{reversed?'−':'+'}{formatMoney(payment.amount,shop?.country)}</strong></div></div>
+          {reversed&&payment.reversalReason&&<small className="subtle">{t('reversalReason')}: {payment.reversalReason}</small>}
+        </article>;
+      })}</div>}
+    </section>
+    <h2 style={{marginBottom:0}}>{t('receiptQueue')}</h2>
+    {open.length===0?<div className="surface" style={{padding:20}}>{t('noPending')}</div>:open.map(c=><ClaimRow key={c.id} claim={c} shop={shop} t={t}/>)}
+  </div>;
+}
+function readMerchantQrSvg() { return document.querySelector<SVGSVGElement>('#merchant-payment-qr svg'); }
+async function downloadMerchantQr(kind:'png'|'pdf',t:(key:string)=>string,shopName:string,shopId:string):Promise<void> {
+  try {
+    const svg=readMerchantQrSvg();
+    if(!svg)throw new Error('QR_NOT_FOUND');
+    const markup=new XMLSerializer().serializeToString(svg);
+    if(kind==='pdf') {
+      const [{jsPDF}]=await Promise.all([import('jspdf'),import('svg2pdf.js')]);
+      const pdf=new jsPDF({orientation:'portrait',unit:'pt',format:'a4'});
+      const svgElement=new DOMParser().parseFromString(markup,'image/svg+xml').documentElement as unknown as SVGSVGElement;
+      const size=260;
+      const vectorPdf=pdf as typeof pdf & {svg:(element:SVGSVGElement,options:{x:number;y:number;width:number;height:number})=>Promise<unknown>};
+      await vectorPdf.svg(svgElement,{x:(595.28-size)/2,y:90,width:size,height:size});
+      await document.fonts?.load('700 64px Changa',shopName);
+      const nameCanvas=document.createElement('canvas');
+      nameCanvas.width=2000;nameCanvas.height=180;
+      const nameContext=nameCanvas.getContext('2d');
+      if(!nameContext)throw new Error('PDF_TEXT_RENDER_FAILED');
+      nameContext.clearRect(0,0,nameCanvas.width,nameCanvas.height);
+      nameContext.fillStyle='#241307';
+      nameContext.font='700 64px Changa, sans-serif';
+      nameContext.textAlign='center';
+      nameContext.textBaseline='middle';
+      nameContext.direction='rtl';
+      nameContext.fillText(shopName,nameCanvas.width/2,nameCanvas.height/2,1900);
+      pdf.addImage(nameCanvas.toDataURL('image/png'),'PNG',60,365,475,43);
+      pdf.setFontSize(12);
+      pdf.text(`${t('merchantId')}: ${shopId}`,595.28/2,430,{align:'center'});
+      pdf.save('cashback-shop-qr.pdf');
+      return;
+    }
+    const blob=new Blob([markup],{type:'image/svg+xml;charset=utf-8'});
+    const url=URL.createObjectURL(blob);
+    const image=new Image();
+    image.onload=()=>{const canvas=document.createElement('canvas');canvas.width=1200;canvas.height=1200;const context=canvas.getContext('2d');if(!context){URL.revokeObjectURL(url);alert(t('qrExportError'));return;}context.fillStyle='#ffffff';context.fillRect(0,0,canvas.width,canvas.height);context.drawImage(image,0,0,canvas.width,canvas.height);URL.revokeObjectURL(url);canvas.toBlob(png=>{if(!png){alert(t('qrExportError'));return;}const downloadUrl=URL.createObjectURL(png);const link=document.createElement('a');link.href=downloadUrl;link.download='cashback-shop-qr.png';link.click();window.setTimeout(()=>URL.revokeObjectURL(downloadUrl),1000);},'image/png');};
+    image.onerror=()=>{URL.revokeObjectURL(url);alert(t('qrExportError'));};image.src=url;
+  } catch { alert(t('qrExportError')); }
+}
+function printMerchantQr(t:(key:string)=>string,shopName:string,shopId:string) {
+  const svg=readMerchantQrSvg();
+  if(!svg){alert(t('qrExportError'));return;}
+  const popup=window.open('','_blank','width=520,height=640');
+  if(!popup){alert(t('qrExportError'));return;}
+  popup.document.open();
+  popup.document.write('<!doctype html><html><head><meta charset="utf-8"><title>CASH BACK</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Changa:wght@400;700&display=swap"><style>body{font-family:Changa,sans-serif;display:grid;place-items:center;min-height:95vh;color:#28190f}.sheet{text-align:center}.sheet svg{width:300px;height:300px}.id{font:14px monospace;margin-top:18px}</style></head><body></body></html>');
+  popup.document.close();
+  const sheet=popup.document.createElement('main');
+  sheet.className='sheet';
+  sheet.append(svg.cloneNode(true));
+  const name=popup.document.createElement('h1');
+  name.textContent=shopName;
+  name.style.fontSize='22px';
+  const id=popup.document.createElement('div');
+  id.className='id';
+  id.textContent=`${t('merchantId')}: ${shopId}`;
+  sheet.append(name);
+  sheet.append(id);
+  popup.document.body.append(sheet);
+  const closeAfterPrint=()=>{popup.close();};
+  popup.addEventListener('afterprint',closeAfterPrint,{once:true});
+  let printed=false;
+  const printNow=()=>{if(!printed&&!popup.closed){printed=true;popup.focus();popup.print();}};
+  void popup.document.fonts?.ready.then(printNow);
+  window.setTimeout(printNow,1500);
+  window.setTimeout(()=>{if(!popup.closed)popup.close();},20000);
 }
 function Metric({label,value,icon}:{label:string;value:string;icon:ReactNode}) { return <div className="surface" style={{padding:17}}><div style={{color:'hsl(var(--primary))'}}>{icon}</div><strong style={{fontSize:27,display:'block'}}>{value}</strong><span className="subtle">{label}</span></div>; }
-function AdminDashboard({merchants,claims,state,t,lang,reason,setReason,decideShop,decideClaim,rate,setRate,saveRate,saveCategories,notice,error}:{merchants:Merchant[];claims:Claim[];state:Session['state'];t:(s:string)=>string;lang:Lang;reason:string;setReason:(s:string)=>void;decideShop:(m:Merchant,a:boolean)=>void;decideClaim:(c:Claim,a:boolean)=>void;rate:string;setRate:(s:string)=>void;saveRate:()=>void;saveCategories:(categories:string[])=>void;notice:string;error:string}) {
+function AdminDashboard({merchants,claims,state,t,lang,reason,setReason,decideShop,decideClaim,rate,setRate,saveRate,saveCategories,reversePayment,reversalPending,notice,error}:{merchants:Merchant[];claims:Claim[];state:Session['state'];t:(s:string)=>string;lang:Lang;reason:string;setReason:(s:string)=>void;decideShop:(m:Merchant,a:boolean)=>void;decideClaim:(c:Claim,a:boolean)=>void;rate:string;setRate:(s:string)=>void;saveRate:()=>void;saveCategories:(categories:string[])=>void;reversePayment:(id:string,reason:string)=>Promise<void>;reversalPending:boolean;notice:string;error:string}) {
   const configuredCategories=state.categories||[...browseCategories];
   const [selectedCategories,setSelectedCategories]=useState<string[]>(configuredCategories);
   useEffect(()=>setSelectedCategories(configuredCategories),[configuredCategories.join('|')]);
@@ -958,6 +1156,7 @@ function AdminDashboard({merchants,claims,state,t,lang,reason,setReason,decideSh
       <Metric label={t('receiptQueue')} value={String(newClaims.length)} icon={<ReceiptText/>}/>
       <Metric label={t('customers')} value={String(state.customers?.length||0)} icon={<UserRound/>}/>
     </div>
+     <PaymentReversalList payments={state.cbpays||[]} merchants={merchants} customers={state.customers||[]} lang={lang} t={t} reversePayment={reversePayment} pending={reversalPending}/>
     <section className="surface" style={{padding:18}}>
       <strong>{t('adminSettings')} · {t('rate')}</strong>
       <div style={{display:'flex',gap:9,marginTop:10}}>
@@ -1027,6 +1226,31 @@ function AdminDashboard({merchants,claims,state,t,lang,reason,setReason,decideSh
       })}
     </ReviewList>
   </div>;
+}
+function PaymentReversalList({payments,merchants,customers,lang,t,reversePayment,pending}:{payments:NonNullable<Session['state']['cbpays']>;merchants:Merchant[];customers:NonNullable<Session['state']['customers']>;lang:Lang;t:(key:string)=>string;reversePayment:(id:string,reason:string)=>Promise<void>;pending:boolean}) {
+  const [editingId,setEditingId]=useState('');
+  const [reason,setReason]=useState('');
+  const [error,setError]=useState('');
+  const history=payments.filter(payment=>payment.method==='qr'&&(payment.status==='done'||payment.status==='approved'||payment.status==='reversed')).slice().sort((a,b)=>timestampOf(b.at)-timestampOf(a.at));
+  const confirm=async(payment:{id:string})=>{
+    if(reason.trim().length<3){setError(t('reasonRequired'));return;}
+    if(!window.confirm(t('confirmReversePrompt')))return;
+    setError('');
+    try{await reversePayment(payment.id,reason.trim());setEditingId('');setReason('');}
+    catch{setError(t('genericError'));}
+  };
+  return <section className="surface payment-audit-section">
+    <div className="payment-audit-heading"><div><span className="qr-eyebrow">{t('adminDashboard')}</span><h2>{t('completedPayments')}</h2></div><span className="payment-audit-count">{history.length}</span></div>
+    {history.length===0?<div className="payment-audit-empty"><RotateCcw size={22}/><span>{t('noCompletedPayments')}</span></div>:<div className="payment-audit-list">{history.map(payment=>{
+      const merchant=merchants.find(item=>item.id===payment.mid);
+      const customer=customers.find(item=>item.id===payment.cid);
+      return <article className="payment-audit-row" key={payment.id} data-testid={`payment-audit-${payment.id}`}>
+        <div className="payment-audit-main"><div className="payment-audit-mark"><Banknote size={18}/></div><div className="payment-audit-copy"><strong>{merchant?.name||t('merchantId')}</strong><small>{customer?.name||payment.cid} · {payment.at?new Date(timestampOf(payment.at)).toLocaleString(lang==='ar'?'ar-DZ':lang==='fr'?'fr-FR':'en'): '—'}</small><code dir="ltr">{payment.reference||payment.id}</code></div><div className="payment-audit-amount"><small>{t('paymentAmount')}</small><strong>{formatMoney(payment.amount,merchant?.country)}</strong></div></div>
+        {payment.status==='reversed'&&<small className="subtle">{t('reversedPayment')}{payment.reversalReason?` · ${payment.reversalReason}`:''}</small>}
+        {payment.status==='done'&& (editingId===payment.id?<div className="payment-reversal-form"><label><span>{t('reversalReason')}</span><textarea className="field" rows={2} value={reason} onChange={event=>setReason(event.target.value)} maxLength={300} data-testid={`input-reversal-reason-${payment.id}`}/></label><small className="subtle">{t('confirmReversePrompt')}</small>{error&&<small role="alert" className="payment-inline-error">{error}</small>}<div className="payment-reversal-actions"><button type="button" className="btn btn-outline" onClick={()=>{setEditingId('');setReason('');setError('');}}>{t('close')}</button><button type="button" className="btn btn-primary payment-reverse-button" disabled={pending||reason.trim().length<3} onClick={()=>void confirm(payment)} data-testid={`button-confirm-reversal-${payment.id}`}><RotateCcw size={16}/>{pending?t('reversalPending'):t('reversalConfirm')}</button></div></div>:<button type="button" className="btn btn-outline payment-reverse-open" onClick={()=>{setEditingId(payment.id);setReason('');setError('');}} data-testid={`button-reverse-payment-${payment.id}`}><RotateCcw size={16}/>{t('reversePayment')}</button>)}
+      </article>;
+    })}</div>}
+  </section>;
 }
 function ReviewList({title,empty,children}:{title:string;empty:string;children:ReactNode}) { return <section style={{display:'grid',gap:12}}><h2 style={{margin:0}}>{title}</h2>{empty?<div className="surface" style={{padding:22,textAlign:'center'}}><FileCheck2 size={26} color="hsl(var(--primary))"/><p className="subtle">{empty}</p></div>:children}</section>; }
 function Dialog({title,children,close,closeLabel}:{title:string;children:ReactNode;close:()=>void;closeLabel:string}) { return <div className="dialog-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}><section className="dialog-panel" role="dialog" aria-modal="true" aria-label={title}><header style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}><h2 style={{margin:0,fontSize:23}}>{title}</h2><button onClick={close} className="btn btn-outline" style={{padding:8,minHeight:38}} aria-label={closeLabel} data-testid="button-close-dialog"><X size={17}/></button></header>{children}</section></div>; }

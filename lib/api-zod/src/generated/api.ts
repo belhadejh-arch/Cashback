@@ -244,8 +244,34 @@ export const RateCashbackMerchantResponse = zod.record(zod.string(), zod.unknown
 
 
 /**
- * @summary Spend cashback at its issuing merchant only
+ * @summary Create a short-lived customer session after validating a merchant QR
  */
+export const createCashbackPaymentSessionBodyMerchantIdMax = 80;
+
+export const createCashbackPaymentSessionBodyQrValueMax = 240;
+
+
+
+export const CreateCashbackPaymentSessionBody = zod.object({
+  "merchantId": zod.string().min(1).max(createCashbackPaymentSessionBodyMerchantIdMax),
+  "qrValue": zod.string().min(1).max(createCashbackPaymentSessionBodyQrValueMax)
+})
+
+export const CreateCashbackPaymentSessionResponse = zod.object({
+  "sessionId": zod.string(),
+  "merchantId": zod.string(),
+  "merchantName": zod.string(),
+  "country": zod.string().nullish(),
+  "balance": zod.number(),
+  "expiresAt": zod.number().int()
+})
+
+
+/**
+ * @summary Confirm a one-time QR payment using merchant-scoped cashback
+ */
+export const redeemMerchantCashbackBodySessionIdMin = 16;
+export const redeemMerchantCashbackBodySessionIdMax = 80;
 
 export const redeemMerchantCashbackBodyAmountExclusiveMin = 0;
 export const redeemMerchantCashbackBodyAmountMax = 100000000;
@@ -253,11 +279,43 @@ export const redeemMerchantCashbackBodyAmountMax = 100000000;
 
 
 export const RedeemMerchantCashbackBody = zod.object({
-  "merchantId": zod.string().min(1),
+  "sessionId": zod.string().min(redeemMerchantCashbackBodySessionIdMin).max(redeemMerchantCashbackBodySessionIdMax),
   "amount": zod.number().gt(redeemMerchantCashbackBodyAmountExclusiveMin).max(redeemMerchantCashbackBodyAmountMax)
 })
 
-export const RedeemMerchantCashbackResponse = zod.record(zod.string(), zod.unknown())
+export const RedeemMerchantCashbackResponse = zod.object({
+  "id": zod.string(),
+  "reference": zod.string(),
+  "status": zod.enum(['done']),
+  "amount": zod.number(),
+  "merchantId": zod.string(),
+  "remainingBalance": zod.number(),
+  "merchantBalance": zod.number(),
+  "at": zod.number().int()
+})
+
+
+/**
+ * @summary Reverse a completed QR payment as an administrator
+ */
+export const reverseCashbackPaymentPathIdMax = 80;
+
+
+
+export const ReverseCashbackPaymentParams = zod.object({
+  "id": zod.coerce.string().min(1).max(reverseCashbackPaymentPathIdMax)
+})
+
+export const reverseCashbackPaymentBodyReasonMin = 3;
+export const reverseCashbackPaymentBodyReasonMax = 300;
+
+
+
+export const ReverseCashbackPaymentBody = zod.object({
+  "reason": zod.string().min(reverseCashbackPaymentBodyReasonMin).max(reverseCashbackPaymentBodyReasonMax)
+})
+
+export const ReverseCashbackPaymentResponse = zod.record(zod.string(), zod.unknown())
 
 
 /**

@@ -25,6 +25,10 @@ import type {
   CashbackLogin,
   CashbackMerchantDecision,
   CashbackMerchantRating,
+  CashbackPaymentResult,
+  CashbackPaymentReversal,
+  CashbackPaymentSession,
+  CashbackPaymentSessionInput,
   CashbackPreferences,
   CashbackProfile,
   CashbackRateUpdate,
@@ -1069,18 +1073,18 @@ export const useRateCashbackMerchant = <TError = ErrorType<unknown>,
       return useMutation(getRateCashbackMerchantMutationOptions(options));
     }
 
-export const getRedeemMerchantCashbackUrl = () => {
+export const getCreateCashbackPaymentSessionUrl = () => {
 
 
 
 
-  return `/api/cashback/wallet/redemptions`
+  return `/api/cashback/wallet/payment-sessions`
 }
 
 /**
- * @summary Spend cashback at its issuing merchant only
+ * @summary Create a short-lived customer session after validating a merchant QR
  */
-export const redeemMerchantCashback = async (cashbackRedemption: CashbackRedemption, options?: Parameters<typeof customFetch>[1]): Promise<ActionResult> => {
+export const createCashbackPaymentSession = async (cashbackPaymentSessionInput: CashbackPaymentSessionInput, options?: Parameters<typeof customFetch>[1]): Promise<CashbackPaymentSession> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -1096,7 +1100,95 @@ export const redeemMerchantCashback = async (cashbackRedemption: CashbackRedempt
     }
     return headers;
   };
-return customFetch<ActionResult>(getRedeemMerchantCashbackUrl(),
+return customFetch<CashbackPaymentSession>(getCreateCashbackPaymentSessionUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(cashbackPaymentSessionInput)
+  }
+);}
+
+
+
+
+
+export const getCreateCashbackPaymentSessionMutationKey = () => ['createCashbackPaymentSession'] as const;
+
+export const getCreateCashbackPaymentSessionMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCashbackPaymentSession>>, TError,CreateCashbackPaymentSessionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createCashbackPaymentSession>>, TError,CreateCashbackPaymentSessionMutationVariables, TContext> => {
+
+const mutationKey = getCreateCashbackPaymentSessionMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createCashbackPaymentSession>>, CreateCashbackPaymentSessionMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createCashbackPaymentSession(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateCashbackPaymentSessionMutationResult = NonNullable<Awaited<ReturnType<typeof createCashbackPaymentSession>>>
+    export type CreateCashbackPaymentSessionMutationBody = BodyType<CashbackPaymentSessionInput>
+    export type CreateCashbackPaymentSessionMutationError = ErrorType<unknown>
+    export type CreateCashbackPaymentSessionMutationVariables = {data: BodyType<CashbackPaymentSessionInput>}
+
+    /**
+ * @summary Create a short-lived customer session after validating a merchant QR
+ */
+export const useCreateCashbackPaymentSession = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCashbackPaymentSession>>, TError,CreateCashbackPaymentSessionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createCashbackPaymentSession>>,
+        TError,
+        CreateCashbackPaymentSessionMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateCashbackPaymentSessionMutationOptions(options));
+    }
+
+export const getRedeemMerchantCashbackUrl = () => {
+
+
+
+
+  return `/api/cashback/wallet/redemptions`
+}
+
+/**
+ * @summary Confirm a one-time QR payment using merchant-scoped cashback
+ */
+export const redeemMerchantCashback = async (cashbackRedemption: CashbackRedemption, options?: Parameters<typeof customFetch>[1]): Promise<CashbackPaymentResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<CashbackPaymentResult>(getRedeemMerchantCashbackUrl(),
   {
     ...options,
     method: 'POST',
@@ -1144,7 +1236,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type RedeemMerchantCashbackMutationVariables = {data: BodyType<CashbackRedemption>}
 
     /**
- * @summary Spend cashback at its issuing merchant only
+ * @summary Confirm a one-time QR payment using merchant-scoped cashback
  */
 export const useRedeemMerchantCashback = <TError = ErrorType<unknown>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof redeemMerchantCashback>>, TError,RedeemMerchantCashbackMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
@@ -1155,6 +1247,95 @@ export const useRedeemMerchantCashback = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getRedeemMerchantCashbackMutationOptions(options));
+    }
+
+export const getReverseCashbackPaymentUrl = (id: string,) => {
+
+
+
+
+  return `/api/cashback/wallet/payments/${id}/reversal`
+}
+
+/**
+ * @summary Reverse a completed QR payment as an administrator
+ */
+export const reverseCashbackPayment = async (id: string,
+    cashbackPaymentReversal: CashbackPaymentReversal, options?: Parameters<typeof customFetch>[1]): Promise<ActionResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ActionResult>(getReverseCashbackPaymentUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(cashbackPaymentReversal)
+  }
+);}
+
+
+
+
+
+export const getReverseCashbackPaymentMutationKey = () => ['reverseCashbackPayment'] as const;
+
+export const getReverseCashbackPaymentMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reverseCashbackPayment>>, TError,ReverseCashbackPaymentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reverseCashbackPayment>>, TError,ReverseCashbackPaymentMutationVariables, TContext> => {
+
+const mutationKey = getReverseCashbackPaymentMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reverseCashbackPayment>>, ReverseCashbackPaymentMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  reverseCashbackPayment(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReverseCashbackPaymentMutationResult = NonNullable<Awaited<ReturnType<typeof reverseCashbackPayment>>>
+    export type ReverseCashbackPaymentMutationBody = BodyType<CashbackPaymentReversal>
+    export type ReverseCashbackPaymentMutationError = ErrorType<unknown>
+    export type ReverseCashbackPaymentMutationVariables = {id: string;data: BodyType<CashbackPaymentReversal>}
+
+    /**
+ * @summary Reverse a completed QR payment as an administrator
+ */
+export const useReverseCashbackPayment = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reverseCashbackPayment>>, TError,ReverseCashbackPaymentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof reverseCashbackPayment>>,
+        TError,
+        ReverseCashbackPaymentMutationVariables,
+        TContext
+      > => {
+      return useMutation(getReverseCashbackPaymentMutationOptions(options));
     }
 
 export const getUpdateCashbackPreferencesUrl = () => {

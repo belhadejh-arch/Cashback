@@ -7,8 +7,11 @@
  */
 
 export interface CashbackRedemption {
-  /** @minLength 1 */
-  merchantId: string;
+  /**
+     * @minLength 16
+     * @maxLength 80
+     */
+  sessionId: string;
   /**
      * @maximum 100000000
      * @exclusiveMinimum 0

@@ -17,6 +17,9 @@ import {
   RateCashbackMerchantBody,
   CreateCashbackReceiptPhotoUploadBody,
   CreateCashbackReceiptPhotoUploadResponse,
+  CreateCashbackPaymentSessionBody,
+  ReverseCashbackPaymentBody,
+  ReverseCashbackPaymentParams,
 } from "@workspace/api-zod";
 import {
   authenticateRequest,
@@ -83,6 +86,7 @@ const MERCHANT_APPLICATION_CATEGORIES = new Set([
   "cafes",
   "restaurants",
 ]);
+const QR_PAYMENT_SESSION_TTL_MS = 3 * 60 * 1000;
 
 function respondError(res: Response, error: unknown): void {
   if (error instanceof CashbackError) {
@@ -799,7 +803,17 @@ router.patch("/cashback/merchants/:id/decision", async (req, res) => {
       if (merchant.status !== "pending") throw new CashbackError(409, "MERCHANT_ALREADY_REVIEWED");
       if (parsed.data.approved) {
         merchant.status = "active";
-        merchant.publicId ??= `CB-${randomUUID().replaceAll("-", "").slice(0, 10).toUpperCase()}`;
+        const existingIds = new Set(
+          (state.merchants ?? [])
+            .filter((entry: any) => entry.id !== merchant.id)
+            .map((entry: any) => entry.publicId)
+            .filter((publicId: unknown): publicId is string => typeof publicId === "string"),
+        );
+        if (!merchant.publicId || existingIds.has(merchant.publicId)) {
+          do {
+            merchant.publicId = `CB-${randomUUID().replaceAll("-", "").slice(0, 16).toUpperCase()}`;
+          } while (existingIds.has(merchant.publicId));
+        }
         merchant.qrValue = `cashback://merchant/${merchant.publicId}`;
         merchant.activatedAt = Date.now();
         addNote(state, merchant.id, "تمت الموافقة على طلب انضمام متجرك، يمكنك الآن استخدام لوحة التاجر");
@@ -876,15 +890,61 @@ router.post("/cashback/wallet/redemptions", async (req, res) => {
       throw new CashbackError(400, "INVALID_AMOUNT");
     }
     const result = await mutateState((state) => {
+      const paymentSessions = (state.paymentSessions ??= []);
+      const paymentSession = paymentSessions.find(
+        (entry: any) => entry.id === parsed.data.sessionId,
+      );
+      if (
+        !paymentSession ||
+        paymentSession.customerId !== profile.eid ||
+        paymentSession.customerUid !== profile.uid
+      ) {
+        throw new CashbackError(404, "PAYMENT_SESSION_NOT_FOUND");
+      }
+      if (paymentSession.status === "completed") {
+        const previous = (state.cbpays ?? []).find(
+          (entry: any) => entry.id === paymentSession.paymentId,
+        );
+        if (
+          previous &&
+          previous.status === "done" &&
+          Number(previous.amount) === amount
+        ) {
+          return {
+            result: {
+              id: previous.id,
+              reference: previous.reference,
+              status: "done",
+              amount: previous.amount,
+              merchantId: previous.mid,
+              remainingBalance: previous.remainingBalance,
+              merchantBalance: previous.merchantBalance,
+              at: previous.at,
+            },
+          };
+        }
+        throw new CashbackError(409, "PAYMENT_SESSION_ALREADY_USED");
+      }
+      if (
+        paymentSession.status !== "pending" ||
+        Number(paymentSession.expiresAt) <= Date.now()
+      ) {
+        throw new CashbackError(410, "PAYMENT_SESSION_EXPIRED");
+      }
       const customer = (state.customers ?? []).find(
         (entry: any) => entry.id === profile.eid,
       );
       const merchant = (state.merchants ?? []).find(
-        (entry: any) => entry.id === parsed.data.merchantId,
+        (entry: any) => entry.id === paymentSession.merchantId,
       );
       if (!customer) throw new CashbackError(403, "PROFILE_INCOMPLETE");
-      if (!merchant || merchant.status !== "active") {
-        throw new CashbackError(400, "MERCHANT_UNAVAILABLE");
+      if (
+        !merchant ||
+        merchant.status !== "active" ||
+        merchant.publicId !== paymentSession.publicId ||
+        merchant.qrValue !== paymentSession.qrValue
+      ) {
+        throw new CashbackError(400, "QR_MERCHANT_UNAVAILABLE");
       }
       customer.cbm ??= {};
       const available = Math.round(Number(customer.cbm[merchant.id] ?? 0) * 100) / 100;
@@ -892,22 +952,210 @@ router.post("/cashback/wallet/redemptions", async (req, res) => {
       customer.cbm[merchant.id] = Math.round((available - amount) * 100) / 100;
       if (customer.cbm[merchant.id] <= 0) delete customer.cbm[merchant.id];
       state.cbpays ??= [];
+      const at = Date.now();
+      const id = `pay_${randomUUID().replaceAll("-", "").slice(0, 18)}`;
+      let reference = "";
+      do {
+        reference = `CBP-${randomUUID().replaceAll("-", "").slice(0, 16).toUpperCase()}`;
+      } while (state.cbpays.some((entry: any) => entry.reference === reference));
+      const previousDebt = Math.max(0, Number(merchant.payoutDebt ?? 0));
+      const debtSettled = Math.min(previousDebt, amount);
+      merchant.payoutDebt = Math.round((previousDebt - debtSettled) * 100) / 100;
+      merchant.payoutBalance = Math.round(
+        (Number(merchant.payoutBalance ?? 0) + amount - debtSettled) * 100,
+      ) / 100;
       const payment = {
-        id: `redeem_${randomUUID().replaceAll("-", "").slice(0, 18)}`,
+        id,
+        reference,
         cid: customer.id,
         mid: merchant.id,
+        customerUid: profile.uid,
+        merchantUid: merchant.profileUid,
         amount,
         status: "done",
-        at: Date.now(),
-        done: Date.now(),
+        method: "qr",
+        sessionId: paymentSession.id,
+        at,
+        done: at,
+        remainingBalance: Number(customer.cbm[merchant.id] ?? 0),
+        merchantBalance: Number(merchant.payoutBalance ?? 0),
       };
       state.cbpays.unshift(payment);
-      merchant.cbIn = Math.round((Number(merchant.cbIn ?? 0) + amount) * 100) / 100;
-      addNote(state, merchant.id, `استُخدمت مكافأة بقيمة ${amount} لدى متجرك`);
-      addNote(state, customer.id, `تم استخدام ${amount} من رصيد ${merchant.name}`);
-      return { result: { id: payment.id, status: "done", amount, merchantId: merchant.id } };
+      paymentSession.status = "completed";
+      paymentSession.completedAt = at;
+      paymentSession.paymentId = id;
+      paymentSession.amount = amount;
+      state.audit ??= [];
+      state.audit.unshift({
+        id: `audit_${randomUUID().replaceAll("-", "").slice(0, 18)}`,
+        action: "qr_payment_completed",
+        reference,
+        paymentId: id,
+        sessionId: paymentSession.id,
+        customerId: customer.id,
+        merchantId: merchant.id,
+        amount,
+        at,
+      });
+      const currencyLabel = merchant.country === "Libya" ? "د.ل" : "دج";
+      addNote(state, merchant.id, `تم استلام دفعة كاش باك ${amount} ${currencyLabel}، المرجع ${reference}`);
+      addNote(state, customer.id, `تم دفع ${amount} من رصيد ${merchant.name}، المرجع ${reference}`);
+      return {
+        result: {
+          id,
+          reference,
+          status: "done",
+          amount,
+          merchantId: merchant.id,
+          remainingBalance: Number(customer.cbm[merchant.id] ?? 0),
+          merchantBalance: Number(merchant.payoutBalance ?? 0),
+          at,
+        },
+      };
     });
     res.status(201).json(result);
+  } catch (error) {
+    respondError(res, error);
+  }
+});
+
+router.post("/cashback/wallet/payment-sessions", async (req, res) => {
+  const profile = (req as AuthenticatedRequest).cashbackProfile;
+  try {
+    unauthorizedRole(profile, "customer");
+    const parsed = CreateCashbackPaymentSessionBody.safeParse(req.body);
+    if (!parsed.success) throw new CashbackError(400, "INVALID_REQUEST");
+    const result = await mutateState((state) => {
+      const merchant = (state.merchants ?? []).find(
+        (entry: any) => entry.id === parsed.data.merchantId,
+      );
+      if (
+        !merchant ||
+        merchant.status !== "active" ||
+        !merchant.publicId ||
+        !merchant.qrValue ||
+        parsed.data.qrValue !== merchant.qrValue
+      ) {
+        throw new CashbackError(400, "QR_INVALID_OR_WRONG_MERCHANT");
+      }
+      const customer = (state.customers ?? []).find(
+        (entry: any) => entry.id === profile.eid,
+      );
+      if (!customer) throw new CashbackError(403, "PROFILE_INCOMPLETE");
+      const balance = Math.round(
+        Number(customer.cbm?.[merchant.id] ?? 0) * 100,
+      ) / 100;
+      if (!(balance > 0)) {
+        throw new CashbackError(400, "INSUFFICIENT_MERCHANT_BALANCE");
+      }
+      const now = Date.now();
+      const paymentSessions = (state.paymentSessions ??= []);
+      state.paymentSessions = paymentSessions.filter(
+        (entry: any) =>
+          Number(entry.expiresAt) > now ||
+          (entry.status !== "pending" &&
+            Number(entry.createdAt) > now - 24 * 60 * 60 * 1000),
+      );
+      const session = {
+        id: randomUUID().replaceAll("-", ""),
+        customerId: profile.eid,
+        customerUid: profile.uid,
+        merchantId: merchant.id,
+        publicId: merchant.publicId,
+        qrValue: merchant.qrValue,
+        status: "pending",
+        createdAt: now,
+        expiresAt: now + QR_PAYMENT_SESSION_TTL_MS,
+      };
+      state.paymentSessions.unshift(session);
+      state.paymentSessions.length = Math.min(state.paymentSessions.length, 5000);
+      return {
+        result: {
+          sessionId: session.id,
+          merchantId: merchant.id,
+          merchantName: merchant.name,
+          country: merchant.country ?? null,
+          balance,
+          expiresAt: session.expiresAt,
+        },
+      };
+    });
+    res.status(201).json(result);
+  } catch (error) {
+    respondError(res, error);
+  }
+});
+
+router.post("/cashback/wallet/payments/:id/reversal", async (req, res) => {
+  const profile = (req as unknown as AuthenticatedRequest).cashbackProfile;
+  try {
+    requireAdmin(profile);
+    const params = ReverseCashbackPaymentParams.safeParse(req.params);
+    const parsed = ReverseCashbackPaymentBody.safeParse(req.body);
+    if (!params.success || !parsed.success) {
+      throw new CashbackError(400, "INVALID_REQUEST");
+    }
+    const paymentId = params.data.id;
+    const reason = fieldString(parsed.data.reason);
+    await mutateState((state) => {
+      const payment = (state.cbpays ?? []).find(
+        (entry: any) => entry.id === paymentId,
+      );
+      if (!payment) throw new CashbackError(404, "PAYMENT_NOT_FOUND");
+      if (payment.status !== "done" || payment.method !== "qr") {
+        throw new CashbackError(409, "PAYMENT_NOT_REVERSIBLE");
+      }
+      const customer = (state.customers ?? []).find(
+        (entry: any) => entry.id === payment.cid,
+      );
+      const merchant = (state.merchants ?? []).find(
+        (entry: any) => entry.id === payment.mid,
+      );
+      if (!customer || !merchant) {
+        throw new CashbackError(409, "PAYMENT_PARTY_NOT_FOUND");
+      }
+      const amount = Math.round(Number(payment.amount) * 100) / 100;
+      customer.cbm ??= {};
+      customer.cbm[merchant.id] = Math.round(
+        (Number(customer.cbm[merchant.id] ?? 0) + amount) * 100,
+      ) / 100;
+      const available = Math.max(0, Number(merchant.payoutBalance ?? 0));
+      const recovered = Math.min(available, amount);
+      const debtAdded = Math.round((amount - recovered) * 100) / 100;
+      merchant.payoutBalance = Math.round((available - recovered) * 100) / 100;
+      merchant.payoutDebt = Math.round(
+        (Number(merchant.payoutDebt ?? 0) + debtAdded) * 100,
+      ) / 100;
+      payment.status = "reversed";
+      payment.reversedAt = Date.now();
+      payment.reversedBy = profile.uid;
+      payment.reversalReason = reason;
+      const session = (state.paymentSessions ?? []).find(
+        (entry: any) => entry.id === payment.sessionId,
+      );
+      if (session) {
+        session.status = "reversed";
+        session.reversedAt = payment.reversedAt;
+      }
+      state.audit ??= [];
+      state.audit.unshift({
+        id: `audit_${randomUUID().replaceAll("-", "").slice(0, 18)}`,
+        action: "qr_payment_reversed",
+        reference: payment.reference,
+        paymentId: payment.id,
+        customerId: customer.id,
+        merchantId: merchant.id,
+        amount,
+        reason,
+        adminUid: profile.uid,
+        at: payment.reversedAt,
+        merchantDebtAdded: debtAdded,
+      });
+      addNote(state, customer.id, `تم إلغاء العملية ${payment.reference} وإعادة المبلغ إلى رصيد المتجر`);
+      addNote(state, merchant.id, `تم عكس العملية ${payment.reference} من قبل الإدارة`);
+      return { result: { ok: true } };
+    });
+    res.json({ ok: true });
   } catch (error) {
     respondError(res, error);
   }

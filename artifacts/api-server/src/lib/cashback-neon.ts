@@ -45,6 +45,7 @@ const emptyState = (): CashbackState => ({
   ratings: [],
   txns: [],
   cbpays: [],
+  paymentSessions: [],
   notes: [],
   audit: [],
 });
@@ -54,7 +55,7 @@ function normalizeState(state: CashbackState): CashbackState {
   state.settings.cashback ??= 4;
   state.settings.platformCommission ??= 2;
   state.settings.claimHours ??= 720;
-  for (const key of ["merchants", "customers", "claims", "ratings", "txns", "cbpays", "notes", "audit"]) {
+  for (const key of ["merchants", "customers", "claims", "ratings", "txns", "cbpays", "paymentSessions", "notes", "audit"]) {
     if (!Array.isArray(state[key])) state[key] = [];
   }
   state.categories ??= ["restaurants", "cafes", "clothing", "electronics", "malls", "groceries", "perfume", "gifts", "shops"];
@@ -63,6 +64,7 @@ function normalizeState(state: CashbackState): CashbackState {
     merchant.cat ??= "shops";
     merchant.topupBalance = Number(merchant.topupBalance ?? 0);
     merchant.payoutBalance = Number(merchant.payoutBalance ?? 0);
+    merchant.payoutDebt = Number(merchant.payoutDebt ?? 0);
     merchant.pendingWithdrawals = Number(merchant.pendingWithdrawals ?? 0);
   });
   state.customers.forEach((customer: any) => {

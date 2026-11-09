@@ -1083,3 +1083,89 @@ html body,
 html body * {
   font-family:'Changa',sans-serif!important;
 }
+
+/* QR wallet flow — ember glass, with a quiet focus on the live payment state. */
+.qr-payment-backdrop { z-index:80; padding:14px; place-items:center; }
+.qr-payment-dialog { width:min(100%,560px); padding:clamp(18px,4vw,28px); border-color:hsl(27 70% 43% / .32); background:radial-gradient(ellipse at 95% 0%,hsl(25 72% 29% / .2),transparent 43%),linear-gradient(155deg,hsl(23 19% 13%),hsl(22 18% 9%) 72%); }
+.qr-dialog-header { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:18px; }
+.qr-dialog-header h2 { margin:3px 0 0; font-size:clamp(21px,5vw,28px); line-height:1.25; }
+.qr-eyebrow { color:hsl(38 74% 67%); font-size:11px; font-weight:700; letter-spacing:.045em; }
+.qr-close { flex:0 0 auto; width:40px; height:40px; display:grid; place-items:center; border:1px solid hsl(var(--border)); border-radius:50%; color:hsl(var(--foreground)); background:hsl(var(--background) / .55); cursor:pointer; }
+.qr-payment-body { display:grid; gap:14px; }
+.qr-scan-hint { margin:0; line-height:1.65; }
+.qr-camera-frame { position:relative; min-height:235px; overflow:hidden; display:grid; place-items:center; border:1px solid hsl(var(--primary) / .22); border-radius:20px; background:radial-gradient(ellipse at center,hsl(25 37% 16%),hsl(22 21% 8%) 74%); }
+.qr-camera-frame video { width:100%; max-height:48dvh; min-height:235px; object-fit:cover; }
+.qr-camera-empty { display:grid; justify-items:center; gap:13px; max-width:280px; padding:24px; color:hsl(var(--primary)); text-align:center; }
+.qr-camera-empty span { color:hsl(var(--muted-foreground)); font-size:13px; line-height:1.6; }
+.qr-camera-frame.is-scanning { border-color:hsl(var(--primary) / .7); }
+.qr-scan-corner { position:absolute; z-index:2; width:27px; height:27px; border-color:hsl(39 92% 65%); border-style:solid; pointer-events:none; }
+.qr-corner-one { inset:16px 16px auto auto; border-width:2px 2px 0 0; }
+.qr-corner-two { inset:auto auto 16px 16px; border-width:0 0 2px 2px; }
+.qr-scan-line { position:absolute; z-index:2; left:8%; right:8%; top:50%; height:2px; background:hsl(31 96% 57% / .86); box-shadow:0 0 22px hsl(27 95% 54% / .52); animation:qrScanLine 2.2s ease-in-out infinite alternate; pointer-events:none; }
+@keyframes qrScanLine { from { transform:translateY(-72px); opacity:.55; } to { transform:translateY(72px); opacity:1; } }
+.qr-scan-button,.qr-confirm-button { width:100%; }
+.qr-privacy-note { margin:0; color:hsl(var(--muted-foreground)); font-size:12px; line-height:1.6; text-align:center; }
+.qr-inline-loading { display:grid; justify-items:center; gap:14px; padding:32px 15px; }
+.qr-loading-bar { width:64px; height:4px; border-radius:99px; background:linear-gradient(90deg,hsl(var(--primary)),hsl(var(--secondary))); animation:qrLoad 1.1s ease-in-out infinite alternate; }
+@keyframes qrLoad { from { transform:scaleX(.42); opacity:.55; } to { transform:scaleX(1); opacity:1; } }
+.qr-confirm-card { display:grid; gap:13px; }
+.qr-accepted { display:flex; align-items:center; gap:8px; color:hsl(38 78% 69%); }
+.qr-confirm-card h3 { margin:0; font-size:25px; }
+.qr-session-balance { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:13px 15px; border:1px solid hsl(var(--primary) / .22); border-radius:15px; background:hsl(var(--primary) / .065); }
+.qr-session-balance span { color:hsl(var(--muted-foreground)); }
+.qr-session-balance strong { color:hsl(39 82% 70%); font-size:20px; }
+.qr-expiry { margin:0; text-align:center; color:hsl(var(--muted-foreground)); font-size:12px; }
+.qr-expiry strong { color:hsl(var(--foreground)); margin-inline-start:6px; }
+.qr-amount-field { display:grid; gap:6px; font-weight:700; }
+.qr-amount-field .field { min-height:54px; font-size:22px; font-family:var(--app-font-mono); }
+.qr-review-caption { margin:-5px 0 0; font-size:12px; color:hsl(var(--muted-foreground)); }
+.qr-expired { display:grid; justify-items:center; gap:13px; padding:18px; color:hsl(var(--primary)); text-align:center; }
+.qr-error { padding:11px 13px; border:1px solid hsl(var(--destructive) / .32); border-radius:13px; background:hsl(var(--destructive) / .08); color:hsl(var(--destructive)); font-size:13px; line-height:1.5; }
+.qr-success-state { display:grid; justify-items:center; gap:12px; text-align:center; }
+.qr-success-mark { width:58px; height:58px; display:grid; place-items:center; border-radius:50%; color:hsl(22 26% 10%); background:linear-gradient(145deg,hsl(38 88% 65%),hsl(25 93% 51%)); box-shadow:0 0 0 9px hsl(var(--primary) / .1); }
+.qr-success-state h3 { margin:5px 0 0; font-size:26px; }
+.qr-success-state > p { margin:0 0 7px; color:hsl(var(--muted-foreground)); }
+.qr-result-row { width:100%; display:flex; align-items:center; justify-content:space-between; gap:10px; padding:13px 14px; border:1px solid hsl(var(--border)); border-radius:13px; background:hsl(var(--background) / .55); text-align:start; }
+.qr-result-row span { color:hsl(var(--muted-foreground)); }
+.qr-result-row strong { overflow-wrap:anywhere; }
+.qr-success-state .btn { width:100%; margin-top:5px; }
+.merchant-qr-card { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:24px; overflow:hidden; position:relative; background:radial-gradient(ellipse at 0% 100%,hsl(var(--primary) / .11),transparent 58%),linear-gradient(130deg,hsl(var(--card)),hsl(23 20% 10%)); }
+.merchant-qr-info { display:grid; justify-items:start; gap:7px; }
+.merchant-qr-info > strong { font-size:23px; }
+.merchant-qr-controls { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+.merchant-qr-controls .btn { min-height:40px; padding:8px 11px; font-size:12px; }
+.merchant-qr-sheet { display:grid; justify-items:center; gap:8px; padding:13px; border:1px solid hsl(42 40% 70% / .32); border-radius:18px; background:#fff; color:#291b12; box-shadow:0 12px 32px hsl(0 0% 0% / .23); }
+.merchant-qr-sheet svg { display:block; width:min(220px,34vw); height:auto; }
+.merchant-qr-sheet span { color:#39291e; font:11px/1.3 monospace; }
+.payment-audit-section { display:grid; gap:14px; padding:clamp(15px,3vw,22px); }
+.payment-audit-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.payment-audit-heading h2 { margin:2px 0 0; font-size:21px; }
+.payment-audit-count { display:grid; place-items:center; min-width:34px; height:34px; padding:0 8px; border:1px solid hsl(var(--primary) / .28); border-radius:50%; background:hsl(var(--primary) / .1); color:hsl(var(--primary)); font-weight:800; }
+.payment-audit-list { display:grid; gap:9px; }
+.payment-audit-row { display:grid; gap:11px; padding:14px; border:1px solid hsl(var(--border) / .8); border-radius:16px; background:linear-gradient(120deg,hsl(var(--background) / .7),hsl(var(--card))); }
+.payment-audit-main { display:flex; align-items:center; gap:11px; min-width:0; }
+.payment-audit-mark { flex:0 0 auto; display:grid; place-items:center; width:38px; height:38px; border-radius:12px; background:hsl(var(--primary) / .12); color:hsl(var(--primary)); }
+.payment-audit-copy { display:grid; gap:2px; min-width:0; flex:1; }
+.payment-audit-copy small,.payment-audit-amount small { color:hsl(var(--muted-foreground)); font-size:11px; }
+.payment-audit-copy code { width:fit-content; max-width:100%; overflow:hidden; color:hsl(39 70% 70%); text-overflow:ellipsis; font-size:10px; }
+.payment-audit-amount { display:grid; text-align:end; white-space:nowrap; }
+.payment-reverse-open { justify-self:start; min-height:38px; padding:7px 12px; color:hsl(var(--destructive)); }
+.payment-reversal-form { display:grid; gap:9px; padding-top:10px; border-top:1px solid hsl(var(--border)); }
+.payment-reversal-form label { display:grid; gap:5px; font-size:13px; font-weight:700; }
+.payment-reversal-form textarea { resize:vertical; min-height:68px; }
+.payment-reversal-actions { display:flex; justify-content:flex-end; flex-wrap:wrap; gap:8px; }
+.payment-reversal-actions .btn { min-height:39px; }
+.payment-reverse-button { background:linear-gradient(112deg,hsl(var(--destructive)),hsl(8 72% 47%)); color:hsl(var(--destructive-foreground)); }
+.payment-inline-error { color:hsl(var(--destructive)); }
+.payment-audit-empty { display:flex; align-items:center; gap:10px; padding:18px; border:1px dashed hsl(var(--border)); border-radius:14px; color:hsl(var(--muted-foreground)); }
+@media(max-width:620px) {
+  .qr-payment-backdrop { padding:0; align-items:end; }
+  .qr-payment-dialog { width:100%; max-height:94dvh; border-radius:24px 24px 0 0; padding:20px 18px calc(22px + env(safe-area-inset-bottom)); }
+  .qr-camera-frame,.qr-camera-frame video { min-height:210px; }
+  .merchant-qr-card { grid-template-columns:1fr; justify-items:center; text-align:center; }
+  .merchant-qr-info { justify-items:center; }
+  .merchant-qr-controls { justify-content:center; }
+  .merchant-qr-sheet svg { width:min(220px,62vw); }
+  .payment-audit-main { align-items:flex-start; flex-wrap:wrap; }
+  .payment-audit-amount { margin-inline-start:auto; }
+}
