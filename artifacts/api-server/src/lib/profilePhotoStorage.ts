@@ -74,6 +74,20 @@ export async function createReceiptPhotoUpload(
   };
 }
 
+export async function createMerchantAssetUpload(
+  uid: string,
+  merchantId: string,
+  asset: "logo" | "cover" | "topup-proof",
+  uploadId: string,
+): Promise<{ uploadURL: string; objectPath: string }> {
+  const fullPath = `${bucketPrefix()}/merchant-assets/${merchantId}/${asset}/${uid}/${uploadId}`;
+  const { bucketName, objectName } = parseStoragePath(fullPath);
+  return {
+    uploadURL: await signUpload(bucketName, objectName),
+    objectPath: `/objects/${objectName}`,
+  };
+}
+
 export async function getProfilePhotoFile(objectPath: string): Promise<File> {
   if (!objectPath.startsWith("/objects/")) throw new Error("Invalid object path");
   const { bucketName, objectName } = parseStoragePath(

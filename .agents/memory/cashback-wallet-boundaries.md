@@ -14,3 +14,9 @@ QR is the customer's primary way to spend cashback. A QR payment must be bound s
 **Why:** The user requires QR-based in-store payment, explicit amount confirmation, protection from replay, atomic transfer, and administrator-controlled reversals with an audit trail.
 
 **How to apply:** Never trust merchant IDs or QR payloads supplied by the client without resolving them against the active merchant record. Consume the session and write both sides of the ledger in one Neon transaction; store a unique reference and preserve reversal history.
+
+Merchant top-up funds, QR proceeds, customer rewards, platform fees, and reserved withdrawals are distinct balances. Only available QR proceeds may fund a merchant withdrawal; a pending request reserves that amount until paid or rejected.
+
+**Why:** The user requires separate merchant financial accounts and prohibits treating top-ups, customer rewards, or unsettled amounts as withdrawable proceeds.
+
+**How to apply:** Keep ledger balances distinct in the backend and dashboard. Reserve withdrawals atomically from QR proceeds, release them on rejection, and do not include top-up balance in the withdrawal limit.

@@ -1,0 +1,592 @@
+import { randomUUID } from "node:crypto";
+import { Router, type IRouter, type NextFunction, type Response } from "express";
+import {
+  CreateCashbackMerchantAssetUploadBody,
+  CreateCashbackMerchantAssetUploadResponse,
+  UpdateCashbackMerchantStoreBody,
+  CreateCashbackMerchantStoreChangeRequestBody,
+  DecideCashbackMerchantStoreChangeParams,
+  DecideCashbackMerchantStoreChangeBody,
+  CreateCashbackMerchantTopupBody,
+  DecideCashbackMerchantTopupParams,
+  DecideCashbackMerchantTopupBody,
+  CreateCashbackMerchantWithdrawalBody,
+  UpdateCashbackMerchantWithdrawalParams,
+  UpdateCashbackMerchantWithdrawalBody,
+  UpdateCashbackPaymentMethodsBody,
+} from "@workspace/api-zod";
+import {
+  CashbackError,
+  authenticateRequest,
+  commit,
+  decodeCashbackFields,
+  documentWrite,
+  getDocument,
+  getState,
+  mutateCashbackState,
+  requireAdmin,
+  stateWrite,
+  unauthorizedRole,
+  type AuthenticatedRequest,
+  type CashbackState,
+} from "../lib/cashback-neon";
+import {
+  createMerchantAssetUpload,
+  readPrivateImage,
+} from "../lib/profilePhotoStorage";
+
+const router: IRouter = Router();
+const allowedCategories = new Set([
+  "restaurants", "cafes", "clothing", "electronics", "malls",
+  "groceries", "perfume", "gifts", "shops", "other",
+]);
+
+async function authenticateMerchantRoutes(req: any, res: Response, next: NextFunction) {
+  try {
+    (req as AuthenticatedRequest).cashbackProfile = await authenticateRequest(req);
+    next();
+  } catch (error) {
+    respondError(res, error);
+  }
+}
+
+router.use("/cashback/merchant", authenticateMerchantRoutes);
+router.use("/cashback/admin", authenticateMerchantRoutes);
+router.use("/cashback/settings/payment-methods", authenticateMerchantRoutes);
+
+function respondError(res: Response, error: unknown): void {
+  if (error instanceof CashbackError) {
+    res.status(error.status).json({ error: error.code });
+    return;
+  }
+  if (error instanceof Error && "issues" in error) {
+    res.status(400).json({ error: "INVALID_REQUEST" });
+    return;
+  }
+  res.status(500).json({ error: "INTERNAL_ERROR" });
+}
+
+function fieldString(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function getParamId(req: any): string {
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  if (typeof raw !== "string" || !/^[\w-]{1,100}$/.test(raw)) {
+    throw new CashbackError(400, "INVALID_ID");
+  }
+  return raw;
+}
+
+function addNote(state: CashbackState, to: string, text: string): void {
+  state.notes ??= [];
+  state.notes.unshift({ id: randomUUID(), to, text, t: Date.now(), read: false });
+  state.notes.length = Math.min(state.notes.length, 300);
+}
+
+function roundMoney(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+async function verifyMerchantUpload(
+  uid: string,
+  merchantId: string,
+  asset: "logo" | "cover" | "topup-proof",
+  uploadId: string,
+  objectPath: string,
+) {
+  const uploadDoc = await getDocument(`merchant_asset_uploads/${uploadId}`);
+  const upload = decodeCashbackFields(uploadDoc);
+  if (
+    !uploadDoc ||
+    upload.ownerUid !== uid ||
+    upload.merchantId !== merchantId ||
+    upload.asset !== asset ||
+    upload.objectPath !== objectPath ||
+    upload.finalizedAt ||
+    Number(upload.expiresAt ?? 0) <= Date.now()
+  ) {
+    throw new CashbackError(400, "MERCHANT_ASSET_UPLOAD_EXPIRED");
+  }
+  let image: Awaited<ReturnType<typeof readPrivateImage>>;
+  try {
+    image = await readPrivateImage(objectPath);
+  } catch {
+    throw new CashbackError(400, "INVALID_MERCHANT_ASSET");
+  }
+  if (
+    image.contentType !== upload.contentType ||
+    image.size > Number(upload.declaredSize)
+  ) {
+    throw new CashbackError(400, "INVALID_MERCHANT_ASSET");
+  }
+  const photoId = `merchant_${asset.replaceAll("-", "_")}_${randomUUID().replaceAll("-", "")}`;
+  const finalize = documentWrite(
+    "merchant_asset_uploads",
+    uploadId,
+    { ...upload, finalizedAt: Date.now() },
+    true,
+  );
+  finalize.currentDocument = { updateTime: uploadDoc.updateTime };
+  const photo = documentWrite("photos", photoId, {
+    ownerUid: uid,
+    merchantId,
+    kind: `merchant-${asset}`,
+    objectPath,
+    contentType: image.contentType,
+    size: image.size,
+    createdAt: Date.now(),
+  }, false);
+  return { photoId, writes: [finalize, photo] };
+}
+
+router.post("/cashback/merchant/assets/upload-url", async (req, res) => {
+  const profile = (req as AuthenticatedRequest).cashbackProfile;
+  try {
+    unauthorizedRole(profile, "merchant");
+    const parsed = CreateCashbackMerchantAssetUploadBody.safeParse(req.body);
+    if (!parsed.success) throw new CashbackError(400, "INVALID_REQUEST");
+    const { state } = await getState();
+    const merchant = (state.merchants ?? []).find((entry: any) => entry.id === profile.eid);
+    if (!merchant || merchant.status !== "active") throw new CashbackError(403, "MERCHANT_NOT_ACTIVE");
+    const uploadId = `merchant_asset_${randomUUID().replaceAll("-", "")}`;
+    const upload = await createMerchantAssetUpload(profile.uid, profile.eid, parsed.data.asset, uploadId);
+    const createdAt = Date.now();
+    const stored = await commit([
+      documentWrite("merchant_asset_uploads", uploadId, {
+        ownerUid: profile.uid,
+        merchantId: profile.eid,
+        asset: parsed.data.asset,
+        objectPath: upload.objectPath,
+        contentType: parsed.data.contentType,
+        declaredSize: parsed.data.size,
+        createdAt,
+        expiresAt: createdAt + 10 * 60 * 1000,
+      }, false),
+    ]);
+    if (!stored) throw new CashbackError(409, "UPLOAD_ALREADY_EXISTS");
+    res.status(201).json(CreateCashbackMerchantAssetUploadResponse.parse({
+      uploadURL: upload.uploadURL,
+      objectPath: upload.objectPath,
+      uploadId,
+    }));
+  } catch (error) {
+    respondError(res, error);
+  }
+});
+
+router.patch("/cashback/merchant/store", async (req, res) => {
+  const profile = (req as AuthenticatedRequest).cashbackProfile;
+  try {
+    unauthorizedRole(profile, "merchant");
+    const parsed = UpdateCashbackMerchantStoreBody.safeParse(req.body);
+    if (!parsed.success) throw new CashbackError(400, "INVALID_REQUEST");
+    const input = parsed.data;
+    const editableKeys = [
+      "name", "phone", "description", "address", "mapsUrl", "lat", "lng",
+      "openingHours", "logoUploadId", "logoObjectPath", "coverUploadId", "coverObjectPath",
+    ] as const;
+    if (!editableKeys.some((key) => input[key] !== undefined)) {
+      throw new CashbackError(400, "EMPTY_STORE_UPDATE");
+    }
+    const { state } = await getState();
+    const current = (state.merchants ?? []).find((entry: any) => entry.id === profile.eid);
+    if (!current || current.status !== "active") throw new CashbackError(403, "MERCHANT_NOT_ACTIVE");
+    const writes: any[] = [];
+    let logo: Awaited<ReturnType<typeof verifyMerchantUpload>> | undefined;
+    let cover: Awaited<ReturnType<typeof verifyMerchantUpload>> | undefined;
+    if (input.logoUploadId || input.logoObjectPath) {
+      if (!input.logoUploadId || !input.logoObjectPath) throw new CashbackError(400, "INVALID_MERCHANT_ASSET");
+      logo = await verifyMerchantUpload(profile.uid, profile.eid, "logo", input.logoUploadId, input.logoObjectPath);
+      writes.push(...logo.writes);
+    }
+    if (input.coverUploadId || input.coverObjectPath) {
+      if (!input.coverUploadId || !input.coverObjectPath) throw new CashbackError(400, "INVALID_MERCHANT_ASSET");
+      cover = await verifyMerchantUpload(profile.uid, profile.eid, "cover", input.coverUploadId, input.coverObjectPath);
+      writes.push(...cover.writes);
+    }
+    const phone = input.phone === undefined ? undefined : fieldString(input.phone) || null;
+    if (phone && (phone.length < 7 || phone.length > 18)) throw new CashbackError(400, "INVALID_PHONE");
+    if (input.mapsUrl !== undefined && input.mapsUrl.trim() &&
+      !/^https?:\/\/|^-?\d{1,2}\.\d+,\s*-?\d{1,3}\.\d+$/.test(input.mapsUrl.trim())) {
+      throw new CashbackError(400, "INVALID_LOCATION");
+    }
+    if ((input.lat === null) !== (input.lng === null) ||
+      (input.lat !== undefined && input.lng === undefined) ||
+      (input.lng !== undefined && input.lat === undefined)) {
+      throw new CashbackError(400, "COORDINATES_MUST_MATCH");
+    }
+    await mutateCashbackState((state) => {
+      const merchant = (state.merchants ?? []).find((entry: any) => entry.id === profile.eid);
+      if (!merchant || merchant.status !== "active") throw new CashbackError(403, "MERCHANT_NOT_ACTIVE");
+      if (phone) {
+        const duplicate = [...(state.customers ?? []), ...(state.merchants ?? [])].some(
+          (entry: any) => entry.id !== merchant.id && String(entry.phone ?? "").replace(/\D/g, "") === phone.replace(/\D/g, ""),
+        );
+        if (duplicate) throw new CashbackError(409, "PHONE_ALREADY_REGISTERED");
+      }
+      if (input.name !== undefined) merchant.name = fieldString(input.name);
+      if (input.phone !== undefined) merchant.phone = phone;
+      if (input.description !== undefined) merchant.description = input.description.trim();
+      if (input.address !== undefined) merchant.address = input.address.trim();
+      if (input.mapsUrl !== undefined) merchant.mapsUrl = input.mapsUrl.trim();
+      if (input.lat !== undefined) merchant.lat = input.lat;
+      if (input.lng !== undefined) merchant.lng = input.lng;
+      if (input.openingHours !== undefined) merchant.openingHours = input.openingHours.trim();
+      if (logo) merchant.logoId = logo.photoId;
+      if (cover) merchant.coverId = cover.photoId;
+      merchant.updatedAt = Date.now();
+      return { result: { ok: true, merchantId: merchant.id }, extraWrites: writes };
+    });
+    res.json({ ok: true, merchantId: profile.eid });
+  } catch (error) {
+    respondError(res, error);
+  }
+});
+
+router.post("/cashback/merchant/store-change-requests", async (req, res) => {
+  const profile = (req as AuthenticatedRequest).cashbackProfile;
+  try {
+    unauthorizedRole(profile, "merchant");
+    const parsed = CreateCashbackMerchantStoreChangeRequestBody.safeParse(req.body);
+    if (!parsed.success) throw new CashbackError(400, "INVALID_REQUEST");
+    const changes = Object.fromEntries(
+      Object.entries(parsed.data).filter(([, value]) => value !== undefined),
+    );
+    if (!Object.keys(changes).length) throw new CashbackError(400, "EMPTY_CHANGE_REQUEST");
+    if (parsed.data.category && !allowedCategories.has(parsed.data.category)) {
+      throw new CashbackError(400, "INVALID_CATEGORY");
+    }
+    const requestId = `mchg_${randomUUID().replaceAll("-", "").slice(0, 20)}`;
+    await mutateCashbackState((state) => {
+      const merchant = (state.merchants ?? []).find((entry: any) => entry.id === profile.eid);
+      if (!merchant || merchant.status !== "active") throw new CashbackError(403, "MERCHANT_NOT_ACTIVE");
+      state.merchantStoreChangeRequests ??= [];
+      if (state.merchantStoreChangeRequests.some((entry: any) =>
+        entry.merchantId === profile.eid && entry.status === "pending")) {
+        throw new CashbackError(409, "CHANGE_REQUEST_ALREADY_PENDING");
+      }
+      const request = {
+        id: requestId,
+        merchantId: profile.eid,
+        merchantUid: profile.uid,
+        ...changes,
+        changes,
+        status: "pending",
+        createdAt: Date.now(),
+      };
+      state.merchantStoreChangeRequests.unshift(request);
+      addNote(state, profile.eid, "تم إرسال تعديلات بيانات المتجر الحساسة إلى الإدارة للموافقة");
+      addNote(state, "admin", `طلب المتجر ${merchant.name} الموافقة على تعديل بيانات حساسة`);
+      return { result: { id: requestId, status: request.status } };
+    });
+    res.status(201).json({ id: requestId, status: "pending" });
+  } catch (error) {
+    respondError(res, error);
+  }
+});
+
+router.patch("/cashback/admin/store-change-requests/:id/decision", async (req, res) => {
+  const profile = (req as unknown as AuthenticatedRequest).cashbackProfile;
+  try {
+    requireAdmin(profile);
+    const params = DecideCashbackMerchantStoreChangeParams.safeParse(req.params);
+    const parsed = DecideCashbackMerchantStoreChangeBody.safeParse(req.body);
+    if (!params.success || !parsed.success) throw new CashbackError(400, "INVALID_REQUEST");
+    const reason = fieldString(parsed.data.reason);
+    if (!parsed.data.approved && !reason) throw new CashbackError(400, "REJECTION_REASON_REQUIRED");
+    await mutateCashbackState((state) => {
+      const request = (state.merchantStoreChangeRequests ?? []).find((entry: any) => entry.id === params.data.id);
+      if (!request) throw new CashbackError(404, "CHANGE_REQUEST_NOT_FOUND");
+      if (request.status !== "pending") throw new CashbackError(409, "CHANGE_REQUEST_ALREADY_REVIEWED");
+      const merchant = (state.merchants ?? []).find((entry: any) => entry.id === request.merchantId);
+      if (!merchant) throw new CashbackError(409, "MERCHANT_NOT_FOUND");
+      request.status = parsed.data.approved ? "approved" : "rejected";
+      request.reviewedAt = Date.now();
+      request.reviewedBy = profile.uid;
+      request.reason = reason || undefined;
+      if (parsed.data.approved) {
+        if (request.changes.country) merchant.country = request.changes.country;
+        if (request.changes.category) merchant.cat = request.changes.category;
+        merchant.legalData = {
+          ...(merchant.legalData ?? {}),
+          ...Object.fromEntries(Object.entries(request.changes).filter(
+            ([key]) => ["legalName", "registrationNumber", "taxNumber"].includes(key),
+          )),
+        };
+      }
+      state.audit ??= [];
+      state.audit.unshift({
+        id: `audit_${randomUUID().replaceAll("-", "").slice(0, 18)}`,
+        action: parsed.data.approved ? "merchant_store_change_approved" : "merchant_store_change_rejected",
+        requestId: request.id,
+        merchantId: merchant.id,
+        adminUid: profile.uid,
+        at: Date.now(),
+        reason: reason || undefined,
+      });
+      addNote(state, merchant.id, parsed.data.approved
+        ? "وافقت الإدارة على تعديل بيانات المتجر الحساسة"
+        : `رفضت الإدارة تعديل بيانات المتجر الحساسة: ${reason}`);
+      return { result: { id: request.id, status: request.status } };
+    });
+    res.json({ ok: true });
+  } catch (error) {
+    respondError(res, error);
+  }
+});
+
+router.post("/cashback/merchant/topups", async (req, res) => {
+  const profile = (req as AuthenticatedRequest).cashbackProfile;
+  try {
+    unauthorizedRole(profile, "merchant");
+    const parsed = CreateCashbackMerchantTopupBody.safeParse(req.body);
+    if (!parsed.success) throw new CashbackError(400, "INVALID_REQUEST");
+    const { state } = await getState();
+    const merchant = (state.merchants ?? []).find((entry: any) => entry.id === profile.eid);
+    if (!merchant || merchant.status !== "active") throw new CashbackError(403, "MERCHANT_NOT_ACTIVE");
+    const minimum = merchant.country === "Libya" ? 10 : 1000;
+    const amount = roundMoney(parsed.data.amount);
+    if (amount < minimum) throw new CashbackError(400, "TOPUP_BELOW_MINIMUM");
+    const method = (state.settings?.paymentMethods ?? []).find(
+      (entry: any) => entry.id === parsed.data.paymentMethodId &&
+        entry.country === merchant.country && entry.active === true,
+    );
+    if (!method) throw new CashbackError(400, "PAYMENT_METHOD_UNAVAILABLE");
+    const proof = await verifyMerchantUpload(
+      profile.uid, profile.eid, "topup-proof", parsed.data.uploadId, parsed.data.objectPath,
+    );
+    const requestId = `top_${randomUUID().replaceAll("-", "").slice(0, 20)}`;
+    const reference = `TOP-${randomUUID().replaceAll("-", "").slice(0, 14).toUpperCase()}`;
+    await mutateCashbackState((state) => {
+      state.merchantTopups ??= [];
+      const request = {
+        id: requestId,
+        reference,
+        merchantId: profile.eid,
+        merchantUid: profile.uid,
+        country: merchant.country,
+        amount,
+        currency: merchant.country === "Libya" ? "LYD" : "DZD",
+        paymentMethodId: method.id,
+        paymentMethodName: method.name,
+        payerReference: fieldString(parsed.data.payerReference),
+        proofId: proof.photoId,
+        proofObjectPath: parsed.data.objectPath,
+        status: "pending",
+        createdAt: Date.now(),
+      };
+      state.merchantTopups.unshift(request);
+      addNote(state, "admin", `طلب ${merchant.name} شحن رصيد بمبلغ ${amount} ${request.currency}`);
+      addNote(state, profile.eid, "تم إرسال طلب شحن الرصيد إلى الإدارة للمراجعة");
+      return {
+        result: { id: requestId, reference, status: "pending" },
+        extraWrites: proof.writes,
+      };
+    });
+    res.status(201).json({ id: requestId, reference, status: "pending" });
+  } catch (error) {
+    respondError(res, error);
+  }
+});
+
+router.patch("/cashback/admin/topups/:id/decision", async (req, res) => {
+  const profile = (req as unknown as AuthenticatedRequest).cashbackProfile;
+  try {
+    requireAdmin(profile);
+    const params = DecideCashbackMerchantTopupParams.safeParse(req.params);
+    const parsed = DecideCashbackMerchantTopupBody.safeParse(req.body);
+    if (!params.success || !parsed.success) throw new CashbackError(400, "INVALID_REQUEST");
+    const reason = fieldString(parsed.data.reason);
+    if (!parsed.data.approved && !reason) throw new CashbackError(400, "REJECTION_REASON_REQUIRED");
+    await mutateCashbackState((state) => {
+      const request = (state.merchantTopups ?? []).find((entry: any) => entry.id === params.data.id);
+      if (!request) throw new CashbackError(404, "TOPUP_NOT_FOUND");
+      if (request.status !== "pending") throw new CashbackError(409, "TOPUP_ALREADY_REVIEWED");
+      const merchant = (state.merchants ?? []).find((entry: any) => entry.id === request.merchantId);
+      if (!merchant) throw new CashbackError(409, "MERCHANT_NOT_FOUND");
+      request.status = parsed.data.approved ? "approved" : "rejected";
+      request.reason = reason || undefined;
+      request.reviewedAt = Date.now();
+      request.reviewedBy = profile.uid;
+      if (parsed.data.approved) {
+        merchant.topupBalance = roundMoney(Number(merchant.topupBalance ?? 0) + Number(request.amount));
+      }
+      addNote(state, merchant.id, parsed.data.approved
+        ? `تم اعتماد شحن رصيدك بمبلغ ${request.amount} ${request.currency}`
+        : `تم رفض طلب شحن الرصيد: ${reason}`);
+      state.audit ??= [];
+      state.audit.unshift({
+        id: `audit_${randomUUID().replaceAll("-", "").slice(0, 18)}`,
+        action: parsed.data.approved ? "merchant_topup_approved" : "merchant_topup_rejected",
+        requestId: request.id,
+        merchantId: merchant.id,
+        amount: request.amount,
+        adminUid: profile.uid,
+        at: Date.now(),
+        reason: reason || undefined,
+      });
+      return { result: { id: request.id, status: request.status } };
+    });
+    res.json({ ok: true });
+  } catch (error) {
+    respondError(res, error);
+  }
+});
+
+router.post("/cashback/merchant/withdrawals", async (req, res) => {
+  const profile = (req as AuthenticatedRequest).cashbackProfile;
+  try {
+    unauthorizedRole(profile, "merchant");
+    const parsed = CreateCashbackMerchantWithdrawalBody.safeParse(req.body);
+    if (!parsed.success) throw new CashbackError(400, "INVALID_REQUEST");
+    const amount = roundMoney(parsed.data.amount);
+    const requestId = `wd_${randomUUID().replaceAll("-", "").slice(0, 20)}`;
+    const reference = `WD-${randomUUID().replaceAll("-", "").slice(0, 14).toUpperCase()}`;
+    await mutateCashbackState((state) => {
+      const merchant = (state.merchants ?? []).find((entry: any) => entry.id === profile.eid);
+      if (!merchant || merchant.status !== "active") throw new CashbackError(403, "MERCHANT_NOT_ACTIVE");
+      if (amount > Number(merchant.payoutBalance ?? 0)) {
+        throw new CashbackError(400, "WITHDRAWAL_EXCEEDS_AVAILABLE");
+      }
+      merchant.payoutBalance = roundMoney(Number(merchant.payoutBalance ?? 0) - amount);
+      merchant.reservedWithdrawalBalance = roundMoney(Number(merchant.reservedWithdrawalBalance ?? 0) + amount);
+      state.merchantWithdrawals ??= [];
+      const request = {
+        id: requestId,
+        reference,
+        merchantId: merchant.id,
+        merchantUid: profile.uid,
+        country: merchant.country,
+        currency: merchant.country === "Libya" ? "LYD" : "DZD",
+        amount,
+        method: fieldString(parsed.data.method),
+        accountDetails: fieldString(parsed.data.accountDetails),
+        status: "pending",
+        createdAt: Date.now(),
+      };
+      state.merchantWithdrawals.unshift(request);
+      addNote(state, merchant.id, "تم إرسال طلب السحب إلى الإدارة للمراجعة");
+      addNote(state, "admin", `طلب ${merchant.name} سحب ${amount} ${request.currency}`);
+      return { result: { id: requestId, reference, status: "pending" } };
+    });
+    res.status(201).json({ id: requestId, reference, status: "pending" });
+  } catch (error) {
+    respondError(res, error);
+  }
+});
+
+router.patch("/cashback/admin/withdrawals/:id/update", async (req, res) => {
+  const profile = (req as unknown as AuthenticatedRequest).cashbackProfile;
+  try {
+    requireAdmin(profile);
+    const params = UpdateCashbackMerchantWithdrawalParams.safeParse(req.params);
+    const parsed = UpdateCashbackMerchantWithdrawalBody.safeParse(req.body);
+    if (!params.success || !parsed.success) throw new CashbackError(400, "INVALID_REQUEST");
+    const reason = fieldString(parsed.data.reason);
+    const transferReference = fieldString(parsed.data.transferReference);
+    if (parsed.data.status === "rejected" && !reason) throw new CashbackError(400, "REJECTION_REASON_REQUIRED");
+    if (parsed.data.status === "paid" && !transferReference) throw new CashbackError(400, "TRANSFER_REFERENCE_REQUIRED");
+    await mutateCashbackState((state) => {
+      const request = (state.merchantWithdrawals ?? []).find((entry: any) => entry.id === params.data.id);
+      if (!request) throw new CashbackError(404, "WITHDRAWAL_NOT_FOUND");
+      const transitions: Record<string, string[]> = {
+        pending: ["approved", "rejected"],
+        approved: ["transferring", "rejected"],
+        transferring: ["paid", "rejected"],
+      };
+      if (!transitions[request.status]?.includes(parsed.data.status)) {
+        throw new CashbackError(409, "INVALID_WITHDRAWAL_TRANSITION");
+      }
+      const merchant = (state.merchants ?? []).find((entry: any) => entry.id === request.merchantId);
+      if (!merchant) throw new CashbackError(409, "MERCHANT_NOT_FOUND");
+      if (parsed.data.status === "rejected") {
+        merchant.reservedWithdrawalBalance = roundMoney(
+          Math.max(0, Number(merchant.reservedWithdrawalBalance ?? 0) - Number(request.amount)),
+        );
+        merchant.payoutBalance = roundMoney(Number(merchant.payoutBalance ?? 0) + Number(request.amount));
+      }
+      if (parsed.data.status === "paid") {
+        merchant.reservedWithdrawalBalance = roundMoney(
+          Math.max(0, Number(merchant.reservedWithdrawalBalance ?? 0) - Number(request.amount)),
+        );
+        request.transferReference = transferReference;
+        request.paidAt = Date.now();
+      }
+      request.status = parsed.data.status;
+      request.reason = reason || undefined;
+      request.updatedAt = Date.now();
+      request.reviewedBy = profile.uid;
+      addNote(state, merchant.id, parsed.data.status === "rejected"
+        ? `تم رفض طلب السحب: ${reason}`
+        : parsed.data.status === "paid"
+          ? `تم تنفيذ طلب السحب، المرجع ${transferReference}`
+          : `تم تحديث حالة طلب السحب إلى ${parsed.data.status}`);
+      state.audit ??= [];
+      state.audit.unshift({
+        id: `audit_${randomUUID().replaceAll("-", "").slice(0, 18)}`,
+        action: `merchant_withdrawal_${parsed.data.status}`,
+        requestId: request.id,
+        merchantId: merchant.id,
+        amount: request.amount,
+        transferReference: transferReference || undefined,
+        adminUid: profile.uid,
+        at: Date.now(),
+        reason: reason || undefined,
+      });
+      return { result: { id: request.id, status: request.status } };
+    });
+    res.json({ ok: true });
+  } catch (error) {
+    respondError(res, error);
+  }
+});
+
+router.patch("/cashback/settings/payment-methods", async (req, res) => {
+  const profile = (req as AuthenticatedRequest).cashbackProfile;
+  try {
+    requireAdmin(profile);
+    const parsed = UpdateCashbackPaymentMethodsBody.safeParse(req.body);
+    if (!parsed.success) throw new CashbackError(400, "INVALID_REQUEST");
+    const ids = parsed.data.methods.map((method) => method.id.trim());
+    if (new Set(ids).size !== ids.length) throw new CashbackError(400, "DUPLICATE_PAYMENT_METHOD_ID");
+    await mutateCashbackState((state) => {
+      state.settings ??= {};
+      state.settings.paymentMethods = parsed.data.methods.map((method) => ({
+        ...method,
+        id: method.id.trim(),
+        name: method.name.trim(),
+        beneficiary: method.beneficiary.trim(),
+        account: method.account.trim(),
+        phone: method.phone?.trim() ?? "",
+        instructions: method.instructions.trim(),
+      }));
+      return { result: { ok: true, count: state.settings.paymentMethods.length } };
+    });
+    res.json({ ok: true, count: parsed.data.methods.length });
+  } catch (error) {
+    respondError(res, error);
+  }
+});
+
+router.post("/cashback/merchant/notifications/read-all", async (req, res) => {
+  const profile = (req as AuthenticatedRequest).cashbackProfile;
+  try {
+    unauthorizedRole(profile, "merchant");
+    const result = await mutateCashbackState((state) => {
+      let updated = 0;
+      for (const note of state.notes ?? []) {
+        if (note.to === profile.eid && !note.read) {
+          note.read = true;
+          updated += 1;
+        }
+      }
+      return { result: { ok: true, updated } };
+    });
+    res.json(result);
+  } catch (error) {
+    respondError(res, error);
+  }
+});
+
+export default router;

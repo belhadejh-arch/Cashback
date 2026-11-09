@@ -21,14 +21,16 @@ import {
 import type { ReactNode } from 'react';
 import { Route, Switch, Router as WouterRouter } from 'wouter';
 import NotFound from '@/pages/not-found';
+import { MerchantWorkspace } from '@/components/merchant-workspace/MerchantWorkspace';
+import { MerchantAdminPanel } from '@/components/merchant-workspace/MerchantAdminPanel';
 
 type Lang = 'en' | 'fr' | 'ar';
 type Theme = 'dark' | 'light';
-type Merchant = { id: string; name: string; cat?: string; status?: string; country?: string; city?: string; address?: string; mapsUrl?: string; lat?: number; lng?: number; cashbackRate?: number; logoId?: string; publicId?: string; qrValue?: string; description?: string; rating?: number; ratingCount?: number; userRating?: number; payoutBalance?: number; payoutDebt?: number };
+type Merchant = { id: string; name: string; cat?: string; status?: string; country?: string; city?: string; address?: string; mapsUrl?: string; lat?: number; lng?: number; cashbackRate?: number; logoId?: string; coverId?: string; publicId?: string; qrValue?: string; description?: string; phone?: string; openingHours?: string; legalData?: Record<string, string>; rating?: number; ratingCount?: number; userRating?: number; payoutBalance?: number; payoutDebt?: number; topupBalance?: number; reservedWithdrawalBalance?: number };
 type Claim = { id: string; mid: string; cid: string; invoiceNumber?: string; date?: string; amount: number; photoId?: string; status: string; created?: string; cashback?: number; reason?: string; submitIp?: string; submittedByUid?: string; possibleDuplicate?: boolean };
 type Txn = { id: string; t?: string; mid: string; cid: string; amount: number; cashback?: number; method?: string };
 type CashbackNote = { id: string; to?: string; text: string; t?: number; read?: boolean };
-type Session = { profile: { uid: string; role: string; eid: string; name: string; phone?: string; email?: string; avatarUpdatedAt?: number; preferences?: { language?: Lang; theme?: Theme }; status?: string; rejectionReason?: string }; state: { settings?: { cashback?: number; claimHours?: number }; categories?: string[]; merchants?: Merchant[]; customers?: { id: string; name: string; phone?: string; cbm?: Record<string, number> }[]; claims?: Claim[]; txns?: Txn[]; cbpays?: { id: string; cid: string; mid: string; amount: number; status: string; at?: string|number; reference?: string; method?: string; reversalReason?: string }[]; notes?: CashbackNote[] } };
+type Session = { profile: { uid: string; role: string; eid: string; name: string; phone?: string; email?: string; avatarUpdatedAt?: number; preferences?: { language?: Lang; theme?: Theme }; status?: string; rejectionReason?: string }; state: { settings?: { cashback?: number; claimHours?: number; paymentMethods?: Record<string, unknown>[] }; categories?: string[]; merchants?: Merchant[]; customers?: { id: string; name: string; phone?: string; cbm?: Record<string, number> }[]; claims?: Claim[]; txns?: Txn[]; cbpays?: { id: string; cid: string; mid: string; amount: number; status: string; at?: string|number; reference?: string; method?: string; reversalReason?: string }[]; merchantTopups?: Record<string, unknown>[]; merchantWithdrawals?: Record<string, unknown>[]; merchantStoreChangeRequests?: Record<string, unknown>[]; notes?: CashbackNote[] } };
 type Dict = Record<string, string>;
 const dictionaries: Record<Lang, Dict> = {
   en: {
@@ -600,7 +602,7 @@ function AppInner() {
     setPurchaseDate(new Date().toISOString().slice(0,10));
     nav('/capture-receipt');
   };
-  const shell = (content: ReactNode, showBottomNav = true) => <div className="app-shell grain" dir={isRtl?'rtl':'ltr'}>{header()}<main className="page-enter" style={{ maxWidth:1120, margin:'0 auto', padding:showBottomNav?'12px 18px 90px':'12px 18px 24px' }}>{content}</main>{customer&&showBottomNav&&<BottomNav path={location} nav={nav} t={t} onReceipt={openReceiptPage}/ >}</div>;
+  const shell = (content: ReactNode, showBottomNav = true, showHeader = true) => <div className="app-shell grain" dir={isRtl?'rtl':'ltr'}>{showHeader&&header()}<main className="page-enter" style={{ maxWidth:1120, margin:'0 auto', padding:showBottomNav?'12px 18px 90px':'12px 18px 24px' }}>{content}</main>{customer&&showBottomNav&&<BottomNav path={location} nav={nav} t={t} onReceipt={openReceiptPage}/ >}</div>;
   const Empty = ({ icon, title, text }: { icon: ReactNode; title: string; text: string }) => <div className="surface" style={{ padding:'38px 24px', textAlign:'center' }}><div style={{ color:'hsl(var(--primary))', marginBottom:10 }}>{icon}</div><h3 style={{ margin:'0 0 6px', fontSize:20 }}>{title}</h3><p className="subtle" style={{ maxWidth:440, margin:'0 auto', lineHeight:1.65 }}>{text}</p></div>;
   const noticeBox = (text:string, isError=false) => <div role={isError?'alert':'status'} data-testid={isError?'status-error':'status-success'} style={{ background:isError?'hsl(var(--destructive) / .12)':'hsl(var(--primary) / .12)', color:isError?'hsl(var(--destructive))':'hsl(var(--foreground))', padding:'12px 15px', borderRadius:12, marginBottom:14, fontWeight:600 }}>{text}</div>;
   const statusLabel = (s:string) => s==='approved'?t('approved'):s==='rejected'?t('rejected'):s==='cancelled'?t('cancelled'):t('pending');
@@ -777,9 +779,36 @@ function AppInner() {
     const status=profile.status || merchants.find(m=>m.id===profile.eid)?.status || 'pending';
     if (status==='pending' || status==='rejected') return shell(<div style={{maxWidth:670,margin:'32px auto'}}>{error&&noticeBox(error,true)}{notice&&noticeBox(notice)}<div className="surface" style={{padding:'clamp(24px,6vw,44px)',textAlign:'center'}}><div style={{width:74,height:74,borderRadius:24,margin:'0 auto 18px',display:'grid',placeItems:'center',background:status==='pending'?'hsl(var(--secondary) / .28)':'hsl(var(--destructive) / .12)',color:status==='pending'?'hsl(var(--primary))':'hsl(var(--destructive))'}}>{status==='pending'?<Clock3 size={34}/>:<ShieldCheck size={34}/>}</div><span className="status-pill">{statusLabel(status)}</span><h1 style={{fontSize:34,margin:'14px 0 8px'}}>{status==='pending'?t('statusPending'):t('statusRejected')}</h1><p className="subtle" style={{fontSize:16,lineHeight:1.7}}>{status==='pending'?t('pendingHint'):profile.rejectionReason||t('retry')}</p><button className="btn btn-outline" style={{marginTop:18}} onClick={()=>void logout()} data-testid="button-logout"><LogOut size={17}/>{t('signOut')}</button></div></div>);
     const shop=merchants.find(m=>m.id===profile.eid);
-    return shell(<MerchantDashboard shop={shop} state={state} claims={claims} t={t} lang={lang} notice={notice} error={error} onRefresh={()=>void refetch()} />);
+    if (!shop) return shell(<Empty icon={<Store size={28}/>} title={t('loadError')} text={t('retryLoad')}/>,false);
+    const merchantPath=location.startsWith('/merchant')?location:'/merchant';
+    const qrPanel=<div className="merchant-qr-panel">
+      <div className="merchant-qr-info">
+        <span className="qr-eyebrow">{t('merchantActive')}</span><strong>{t('qrCode')}</strong>
+        <div className="subtle">{t('merchantId')}: {shop.publicId||'—'}</div>
+        <div className="merchant-qr-controls">
+          <button className="btn btn-outline" type="button" onClick={()=>void downloadMerchantQr('png',t,shop.name,shop.publicId||'')} disabled={!shop.qrValue}><Download size={16}/>{t('qrDownloadPng')}</button>
+          <button className="btn btn-outline" type="button" onClick={()=>void downloadMerchantQr('pdf',t,shop.name,shop.publicId||'')} disabled={!shop.qrValue}><FileDown size={16}/>{t('qrDownloadPdf')}</button>
+          <button className="btn btn-outline" type="button" onClick={()=>printMerchantQr(t,shop.name,shop.publicId||'')} disabled={!shop.qrValue}><Printer size={16}/>{t('qrPrint')}</button>
+        </div>
+      </div>
+      {shop.publicId&&shop.qrValue
+        ? <div className="merchant-qr-sheet" id="merchant-payment-qr" data-testid="merchant-payment-qr"><QRCodeSVG value={shop.qrValue} size={220} bgColor="#ffffff" fgColor="#140b05" level="M" includeMargin aria-label={t('qrCode')}/><strong className="merchant-qr-name">{shop.name}</strong><span dir="ltr">{shop.publicId}</span></div>
+        : <p className="subtle">{t('qrExportError')}</p>}
+    </div>;
+    return shell(<MerchantWorkspace
+      shop={shop}
+      state={state}
+      currentPath={merchantPath}
+      lang={lang}
+      theme={theme}
+      onNavigate={nav}
+      onLanguageChange={(nextLang)=>void changePreference(nextLang,theme)}
+      onThemeChange={(nextTheme)=>void changePreference(lang,nextTheme)}
+      qrPanel={qrPanel}
+      onRefresh={()=>void refetch()}
+    />,false,false);
   }
-  if (admin) return shell(<AdminDashboard merchants={merchants} claims={claims} state={state} t={t} lang={lang} reason={reason} setReason={setReason} decideShop={decideShop} decideClaim={decideClaim} rate={rateValue} setRate={setRateValue} saveRate={saveRate} saveCategories={saveCategories} reversePayment={reverseQrPayment} reversalPending={reversePayment.isPending} notice={notice} error={error} />);
+  if (admin) return shell(<AdminDashboard merchants={merchants} claims={claims} state={state} t={t} lang={lang} reason={reason} setReason={setReason} decideShop={decideShop} decideClaim={decideClaim} rate={rateValue} setRate={setRateValue} saveRate={saveRate} saveCategories={saveCategories} reversePayment={reverseQrPayment} reversalPending={reversePayment.isPending} notice={notice} error={error} onRefresh={()=>void refetch()} />);
   if (!customer) return shell(<Empty icon={<CircleHelp size={28}/>} title={t('noPermission')} text={t('retryLoad')}/>);
 
   const customerClaims=claims.filter(c=>c.cid===profile.eid);
@@ -1136,7 +1165,7 @@ function printMerchantQr(t:(key:string)=>string,shopName:string,shopId:string) {
   window.setTimeout(()=>{if(!popup.closed)popup.close();},20000);
 }
 function Metric({label,value,icon}:{label:string;value:string;icon:ReactNode}) { return <div className="surface" style={{padding:17}}><div style={{color:'hsl(var(--primary))'}}>{icon}</div><strong style={{fontSize:27,display:'block'}}>{value}</strong><span className="subtle">{label}</span></div>; }
-function AdminDashboard({merchants,claims,state,t,lang,reason,setReason,decideShop,decideClaim,rate,setRate,saveRate,saveCategories,reversePayment,reversalPending,notice,error}:{merchants:Merchant[];claims:Claim[];state:Session['state'];t:(s:string)=>string;lang:Lang;reason:string;setReason:(s:string)=>void;decideShop:(m:Merchant,a:boolean)=>void;decideClaim:(c:Claim,a:boolean)=>void;rate:string;setRate:(s:string)=>void;saveRate:()=>void;saveCategories:(categories:string[])=>void;reversePayment:(id:string,reason:string)=>Promise<void>;reversalPending:boolean;notice:string;error:string}) {
+function AdminDashboard({merchants,claims,state,t,lang,reason,setReason,decideShop,decideClaim,rate,setRate,saveRate,saveCategories,reversePayment,reversalPending,notice,error,onRefresh}:{merchants:Merchant[];claims:Claim[];state:Session['state'];t:(s:string)=>string;lang:Lang;reason:string;setReason:(s:string)=>void;decideShop:(m:Merchant,a:boolean)=>void;decideClaim:(c:Claim,a:boolean)=>void;rate:string;setRate:(s:string)=>void;saveRate:()=>void;saveCategories:(categories:string[])=>void;reversePayment:(id:string,reason:string)=>Promise<void>;reversalPending:boolean;notice:string;error:string;onRefresh:()=>void}) {
   const configuredCategories=state.categories||[...browseCategories];
   const [selectedCategories,setSelectedCategories]=useState<string[]>(configuredCategories);
   useEffect(()=>setSelectedCategories(configuredCategories),[configuredCategories.join('|')]);
@@ -1156,6 +1185,7 @@ function AdminDashboard({merchants,claims,state,t,lang,reason,setReason,decideSh
       <Metric label={t('receiptQueue')} value={String(newClaims.length)} icon={<ReceiptText/>}/>
       <Metric label={t('customers')} value={String(state.customers?.length||0)} icon={<UserRound/>}/>
     </div>
+    <MerchantAdminPanel state={state} merchants={merchants} lang={lang} onRefresh={onRefresh}/>
      <PaymentReversalList payments={state.cbpays||[]} merchants={merchants} customers={state.customers||[]} lang={lang} t={t} reversePayment={reversePayment} pending={reversalPending}/>
     <section className="surface" style={{padding:18}}>
       <strong>{t('adminSettings')} · {t('rate')}</strong>

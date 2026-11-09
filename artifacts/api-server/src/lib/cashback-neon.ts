@@ -37,7 +37,7 @@ export class CashbackError extends Error {
 }
 
 const emptyState = (): CashbackState => ({
-  settings: { cashback: 4, platformCommission: 2, claimHours: 720 },
+  settings: { cashback: 4, platformCommission: 2, claimHours: 720, paymentMethods: [] },
   categories: ["restaurants", "cafes", "clothing", "electronics", "malls", "groceries", "perfume", "gifts", "shops"],
   merchants: [],
   customers: [],
@@ -55,7 +55,8 @@ function normalizeState(state: CashbackState): CashbackState {
   state.settings.cashback ??= 4;
   state.settings.platformCommission ??= 2;
   state.settings.claimHours ??= 720;
-  for (const key of ["merchants", "customers", "claims", "ratings", "txns", "cbpays", "paymentSessions", "notes", "audit"]) {
+  state.settings.paymentMethods ??= [];
+  for (const key of ["merchants", "customers", "claims", "ratings", "txns", "cbpays", "paymentSessions", "notes", "audit", "merchantTopups", "merchantWithdrawals", "merchantStoreChangeRequests"]) {
     if (!Array.isArray(state[key])) state[key] = [];
   }
   state.categories ??= ["restaurants", "cafes", "clothing", "electronics", "malls", "groceries", "perfume", "gifts", "shops"];
@@ -65,7 +66,7 @@ function normalizeState(state: CashbackState): CashbackState {
     merchant.topupBalance = Number(merchant.topupBalance ?? 0);
     merchant.payoutBalance = Number(merchant.payoutBalance ?? 0);
     merchant.payoutDebt = Number(merchant.payoutDebt ?? 0);
-    merchant.pendingWithdrawals = Number(merchant.pendingWithdrawals ?? 0);
+    merchant.reservedWithdrawalBalance = Number(merchant.reservedWithdrawalBalance ?? 0);
   });
   state.customers.forEach((customer: any) => {
     customer.wallet = Number(customer.wallet ?? 0);
@@ -257,6 +258,24 @@ export async function commit(writes: any[]): Promise<boolean> {
   } finally {
     client.release();
   }
+}
+
+export async function mutateCashbackState<T>(
+  mutate: (state: CashbackState) => { result: T; extraWrites?: any[] },
+): Promise<T> {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const current = await getState();
+    const { result, extraWrites = [] } = mutate(current.state);
+    if (
+      await commit([
+        stateWrite(current.state, current.updateTime, current.revision),
+        ...extraWrites,
+      ])
+    ) {
+      return result;
+    }
+  }
+  throw new CashbackError(409, "WRITE_CONFLICT");
 }
 
 export async function createSession(uid: string): Promise<string> {

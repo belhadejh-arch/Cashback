@@ -230,6 +230,195 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ActionResult"
+  /cashback/merchant/assets/upload-url:
+    post:
+      operationId: createCashbackMerchantAssetUpload
+      tags: [cashback]
+      summary: Create an owner-bound merchant image upload
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CashbackMerchantAssetUploadInput"
+      responses:
+        "201":
+          description: Upload URL created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CashbackMerchantAssetUpload"
+  /cashback/merchant/store:
+    patch:
+      operationId: updateCashbackMerchantStore
+      tags: [cashback]
+      summary: Update editable merchant store information
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CashbackMerchantStoreUpdate"
+      responses:
+        "200":
+          description: Store information updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActionResult"
+  /cashback/merchant/store-change-requests:
+    post:
+      operationId: createCashbackMerchantStoreChangeRequest
+      tags: [cashback]
+      summary: Request approval for sensitive store changes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CashbackMerchantSensitiveChangeInput"
+      responses:
+        "201":
+          description: Sensitive changes submitted for review
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActionResult"
+  /cashback/admin/store-change-requests/{id}/decision:
+    patch:
+      operationId: decideCashbackMerchantStoreChange
+      tags: [cashback]
+      summary: Approve or reject sensitive merchant changes
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 100 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CashbackMerchantSensitiveChangeDecision"
+      responses:
+        "200":
+          description: Change request reviewed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActionResult"
+  /cashback/merchant/topups:
+    post:
+      operationId: createCashbackMerchantTopup
+      tags: [cashback]
+      summary: Submit a merchant balance top-up request
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CashbackMerchantTopupInput"
+      responses:
+        "201":
+          description: Top-up request submitted for review
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActionResult"
+  /cashback/admin/topups/{id}/decision:
+    patch:
+      operationId: decideCashbackMerchantTopup
+      tags: [cashback]
+      summary: Approve or reject a merchant top-up
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 100 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CashbackMerchantTopupDecision"
+      responses:
+        "200":
+          description: Top-up reviewed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActionResult"
+  /cashback/merchant/withdrawals:
+    post:
+      operationId: createCashbackMerchantWithdrawal
+      tags: [cashback]
+      summary: Request withdrawal of merchant QR payment proceeds
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CashbackMerchantWithdrawalInput"
+      responses:
+        "201":
+          description: Withdrawal request submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActionResult"
+  /cashback/admin/withdrawals/{id}/update:
+    patch:
+      operationId: updateCashbackMerchantWithdrawal
+      tags: [cashback]
+      summary: Update merchant withdrawal processing status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 100 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CashbackMerchantWithdrawalUpdate"
+      responses:
+        "200":
+          description: Withdrawal updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActionResult"
+  /cashback/settings/payment-methods:
+    patch:
+      operationId: updateCashbackPaymentMethods
+      tags: [cashback]
+      summary: Configure merchant top-up payment instructions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CashbackPaymentMethodsUpdate"
+      responses:
+        "200":
+          description: Payment methods saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActionResult"
+  /cashback/merchant/notifications/read-all:
+    post:
+      operationId: markCashbackMerchantNotificationsRead
+      tags: [cashback]
+      summary: Mark all merchant notifications as read
+      responses:
+        "200":
+          description: Notifications marked as read
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActionResult"
   /cashback/wallet/payment-sessions:
     post:
       operationId: createCashbackPaymentSession
@@ -501,6 +690,98 @@ components:
       required: [rating]
       properties:
         rating: { type: integer, minimum: 1, maximum: 5 }
+    CashbackMerchantAssetUploadInput:
+      type: object
+      required: [asset, contentType, size]
+      properties:
+        asset: { type: string, enum: [logo, cover, topup-proof] }
+        contentType: { type: string, enum: [image/jpeg, image/png, image/webp] }
+        size: { type: integer, minimum: 1, maximum: 5242880 }
+    CashbackMerchantAssetUpload:
+      type: object
+      required: [uploadURL, objectPath, uploadId]
+      properties:
+        uploadURL: { type: string, format: uri }
+        objectPath: { type: string }
+        uploadId: { type: string }
+    CashbackMerchantStoreUpdate:
+      type: object
+      properties:
+        name: { type: string, minLength: 2, maxLength: 100 }
+        phone: { type: ["string", "null"], maxLength: 20 }
+        description: { type: string, maxLength: 2000 }
+        address: { type: string, maxLength: 300 }
+        mapsUrl: { type: string, maxLength: 500 }
+        lat: { type: ["number", "null"], minimum: -90, maximum: 90 }
+        lng: { type: ["number", "null"], minimum: -180, maximum: 180 }
+        openingHours: { type: string, maxLength: 500 }
+        logoUploadId: { type: string, maxLength: 100 }
+        logoObjectPath: { type: string, maxLength: 500 }
+        coverUploadId: { type: string, maxLength: 100 }
+        coverObjectPath: { type: string, maxLength: 500 }
+    CashbackMerchantSensitiveChangeInput:
+      type: object
+      properties:
+        country: { type: string, enum: [Algeria, Libya] }
+        category: { type: string, enum: [restaurants, cafes, clothing, electronics, malls, groceries, perfume, gifts, shops, other] }
+        legalName: { type: string, maxLength: 160 }
+        registrationNumber: { type: string, maxLength: 100 }
+        taxNumber: { type: string, maxLength: 100 }
+    CashbackMerchantSensitiveChangeDecision:
+      type: object
+      required: [approved]
+      properties:
+        approved: { type: boolean }
+        reason: { type: ["string", "null"], maxLength: 300 }
+    CashbackMerchantTopupInput:
+      type: object
+      required: [amount, paymentMethodId, uploadId, objectPath]
+      properties:
+        amount: { type: number, exclusiveMinimum: 0, maximum: 100000000 }
+        paymentMethodId: { type: string, minLength: 1, maxLength: 100 }
+        payerReference: { type: string, maxLength: 120 }
+        uploadId: { type: string, minLength: 1, maxLength: 100 }
+        objectPath: { type: string, minLength: 1, maxLength: 500 }
+    CashbackMerchantTopupDecision:
+      type: object
+      required: [approved]
+      properties:
+        approved: { type: boolean }
+        reason: { type: ["string", "null"], maxLength: 300 }
+    CashbackMerchantWithdrawalInput:
+      type: object
+      required: [amount, method, accountDetails]
+      properties:
+        amount: { type: number, exclusiveMinimum: 0, maximum: 100000000 }
+        method: { type: string, minLength: 1, maxLength: 80 }
+        accountDetails: { type: string, minLength: 3, maxLength: 300 }
+    CashbackMerchantWithdrawalUpdate:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string, enum: [approved, transferring, paid, rejected] }
+        reason: { type: ["string", "null"], maxLength: 300 }
+        transferReference: { type: string, maxLength: 120 }
+    CashbackPaymentMethod:
+      type: object
+      required: [id, country, name, beneficiary, account, instructions, active]
+      properties:
+        id: { type: string, minLength: 1, maxLength: 100 }
+        country: { type: string, enum: [Algeria, Libya] }
+        name: { type: string, minLength: 1, maxLength: 100 }
+        beneficiary: { type: string, minLength: 1, maxLength: 160 }
+        account: { type: string, minLength: 1, maxLength: 160 }
+        phone: { type: string, maxLength: 30 }
+        instructions: { type: string, minLength: 1, maxLength: 1000 }
+        active: { type: boolean }
+    CashbackPaymentMethodsUpdate:
+      type: object
+      required: [methods]
+      properties:
+        methods:
+          type: array
+          maxItems: 30
+          items: { $ref: "#/components/schemas/CashbackPaymentMethod" }
     CashbackCategoriesUpdate:
       type: object
       required: [categories]

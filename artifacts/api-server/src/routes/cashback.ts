@@ -32,12 +32,12 @@ import {
   getDocument,
   getState,
   hashPassword,
+  mutateCashbackState,
   phoneLookupId,
   requireAdmin,
   revokeSession,
   savePreferences,
   sessionCookieName,
-  stateWrite,
   unauthorizedRole,
   verifyNeonConnection,
   verifyPassword,
@@ -163,23 +163,7 @@ function addNote(state: CashbackState, to: string, text: string): void {
   state.notes.length = Math.min(state.notes.length, 300);
 }
 
-async function mutateState<T>(
-  mutate: (state: CashbackState) => { result: T; extraWrites?: any[] },
-): Promise<T> {
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    const current = await getState();
-    const { result, extraWrites = [] } = mutate(current.state);
-    if (
-      await commit([
-        stateWrite(current.state, current.updateTime, current.revision),
-        ...extraWrites,
-      ])
-    ) {
-      return result;
-    }
-  }
-  throw new CashbackError(409, "WRITE_CONFLICT");
-}
+const mutateState = mutateCashbackState;
 
 function activeCustomerCategories(value: unknown): string[] {
   const configured = Array.isArray(value)
@@ -200,6 +184,9 @@ function projectState(
   const txns = Array.isArray(state.txns) ? state.txns : [];
   const cbpays = Array.isArray(state.cbpays) ? state.cbpays : [];
   const notes = Array.isArray(state.notes) ? state.notes : [];
+  const merchantTopups = Array.isArray(state.merchantTopups) ? state.merchantTopups : [];
+  const merchantWithdrawals = Array.isArray(state.merchantWithdrawals) ? state.merchantWithdrawals : [];
+  const merchantStoreChangeRequests = Array.isArray(state.merchantStoreChangeRequests) ? state.merchantStoreChangeRequests : [];
   const ratings = Array.isArray(state.ratings) ? state.ratings : [];
   const settings = {
     cashback: Number(state.settings?.cashback ?? 4),
@@ -233,6 +220,7 @@ function projectState(
           lng: merchant.lng,
           cashbackRate: merchant.cashbackRate,
           logoId: merchant.logoId,
+          coverId: merchant.coverId,
           publicId: merchant.publicId,
           description: merchant.description,
           rating: merchantRatings.length
@@ -259,9 +247,16 @@ function projectState(
 
   const merchant = merchants.find((entry: any) => entry.id === profile.eid);
   const ownClaims = claims.filter((claim: any) => claim.mid === profile.eid);
-  const customerIds = new Set(ownClaims.map((claim: any) => claim.cid));
+  const ownPayments = cbpays.filter((payment: any) => payment.mid === profile.eid);
+  const customerIds = new Set([
+    ...ownClaims.map((claim: any) => claim.cid),
+    ...ownPayments.map((payment: any) => payment.cid),
+  ]);
   return {
-    settings,
+    settings: {
+      ...settings,
+      paymentMethods: (state.settings?.paymentMethods ?? []).filter((method: any) => method.active),
+    },
     merchants: merchant ? [merchant] : [],
     customers: customers
       .filter((customer: any) => customerIds.has(customer.id))
@@ -272,7 +267,10 @@ function projectState(
       })),
     claims: ownClaims,
     txns: txns.filter((transaction: any) => transaction.mid === profile.eid),
-    cbpays: cbpays.filter((payment: any) => payment.mid === profile.eid),
+    cbpays: ownPayments,
+    merchantTopups: merchantTopups.filter((entry: any) => entry.merchantId === profile.eid),
+    merchantWithdrawals: merchantWithdrawals.filter((entry: any) => entry.merchantId === profile.eid),
+    merchantStoreChangeRequests: merchantStoreChangeRequests.filter((entry: any) => entry.merchantId === profile.eid),
     notes: notes.filter((note: any) => note.to === profile.eid),
   };
 }
@@ -1335,6 +1333,10 @@ router.get("/cashback/media/:id", async (req, res) => {
       (profile.role === "customer" &&
         (state.merchants ?? []).some(
           (merchant: any) => merchant.logoId === id && merchant.status === "active",
+        )) ||
+      (profile.role === "customer" &&
+        (state.merchants ?? []).some(
+          (merchant: any) => merchant.coverId === id && merchant.status === "active",
         )) ||
       (profile.role === "customer" &&
         (state.claims ?? []).some(

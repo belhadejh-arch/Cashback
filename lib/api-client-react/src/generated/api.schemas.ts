@@ -173,6 +173,243 @@ export interface CashbackMerchantRating {
   rating: number;
 }
 
+export type CashbackMerchantAssetUploadInputAsset = typeof CashbackMerchantAssetUploadInputAsset[keyof typeof CashbackMerchantAssetUploadInputAsset];
+
+
+export const CashbackMerchantAssetUploadInputAsset = {
+  logo: 'logo',
+  cover: 'cover',
+  'topup-proof': 'topup-proof',
+} as const;
+
+export type CashbackMerchantAssetUploadInputContentType = typeof CashbackMerchantAssetUploadInputContentType[keyof typeof CashbackMerchantAssetUploadInputContentType];
+
+
+export const CashbackMerchantAssetUploadInputContentType = {
+  'image/jpeg': 'image/jpeg',
+  'image/png': 'image/png',
+  'image/webp': 'image/webp',
+} as const;
+
+export interface CashbackMerchantAssetUploadInput {
+  asset: CashbackMerchantAssetUploadInputAsset;
+  contentType: CashbackMerchantAssetUploadInputContentType;
+  /**
+     * @minimum 1
+     * @maximum 5242880
+     */
+  size: number;
+}
+
+export interface CashbackMerchantAssetUpload {
+  uploadURL: string;
+  objectPath: string;
+  uploadId: string;
+}
+
+export interface CashbackMerchantStoreUpdate {
+  /**
+     * @minLength 2
+     * @maxLength 100
+     */
+  name?: string;
+  /**
+     * @maxLength 20
+     * @nullable
+     */
+  phone?: string | null;
+  /** @maxLength 2000 */
+  description?: string;
+  /** @maxLength 300 */
+  address?: string;
+  /** @maxLength 500 */
+  mapsUrl?: string;
+  /**
+     * @minimum -90
+     * @maximum 90
+     * @nullable
+     */
+  lat?: number | null;
+  /**
+     * @minimum -180
+     * @maximum 180
+     * @nullable
+     */
+  lng?: number | null;
+  /** @maxLength 500 */
+  openingHours?: string;
+  /** @maxLength 100 */
+  logoUploadId?: string;
+  /** @maxLength 500 */
+  logoObjectPath?: string;
+  /** @maxLength 100 */
+  coverUploadId?: string;
+  /** @maxLength 500 */
+  coverObjectPath?: string;
+}
+
+export type CashbackMerchantSensitiveChangeInputCountry = typeof CashbackMerchantSensitiveChangeInputCountry[keyof typeof CashbackMerchantSensitiveChangeInputCountry];
+
+
+export const CashbackMerchantSensitiveChangeInputCountry = {
+  Algeria: 'Algeria',
+  Libya: 'Libya',
+} as const;
+
+export type CashbackMerchantSensitiveChangeInputCategory = typeof CashbackMerchantSensitiveChangeInputCategory[keyof typeof CashbackMerchantSensitiveChangeInputCategory];
+
+
+export const CashbackMerchantSensitiveChangeInputCategory = {
+  restaurants: 'restaurants',
+  cafes: 'cafes',
+  clothing: 'clothing',
+  electronics: 'electronics',
+  malls: 'malls',
+  groceries: 'groceries',
+  perfume: 'perfume',
+  gifts: 'gifts',
+  shops: 'shops',
+  other: 'other',
+} as const;
+
+export interface CashbackMerchantSensitiveChangeInput {
+  country?: CashbackMerchantSensitiveChangeInputCountry;
+  category?: CashbackMerchantSensitiveChangeInputCategory;
+  /** @maxLength 160 */
+  legalName?: string;
+  /** @maxLength 100 */
+  registrationNumber?: string;
+  /** @maxLength 100 */
+  taxNumber?: string;
+}
+
+export interface CashbackMerchantSensitiveChangeDecision {
+  approved: boolean;
+  /**
+     * @maxLength 300
+     * @nullable
+     */
+  reason?: string | null;
+}
+
+export interface CashbackMerchantTopupInput {
+  /**
+     * @maximum 100000000
+     * @exclusiveMinimum 0
+     */
+  amount: number;
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  paymentMethodId: string;
+  /** @maxLength 120 */
+  payerReference?: string;
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  uploadId: string;
+  /**
+     * @minLength 1
+     * @maxLength 500
+     */
+  objectPath: string;
+}
+
+export interface CashbackMerchantTopupDecision {
+  approved: boolean;
+  /**
+     * @maxLength 300
+     * @nullable
+     */
+  reason?: string | null;
+}
+
+export interface CashbackMerchantWithdrawalInput {
+  /**
+     * @maximum 100000000
+     * @exclusiveMinimum 0
+     */
+  amount: number;
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  method: string;
+  /**
+     * @minLength 3
+     * @maxLength 300
+     */
+  accountDetails: string;
+}
+
+export type CashbackMerchantWithdrawalUpdateStatus = typeof CashbackMerchantWithdrawalUpdateStatus[keyof typeof CashbackMerchantWithdrawalUpdateStatus];
+
+
+export const CashbackMerchantWithdrawalUpdateStatus = {
+  approved: 'approved',
+  transferring: 'transferring',
+  paid: 'paid',
+  rejected: 'rejected',
+} as const;
+
+export interface CashbackMerchantWithdrawalUpdate {
+  status: CashbackMerchantWithdrawalUpdateStatus;
+  /**
+     * @maxLength 300
+     * @nullable
+     */
+  reason?: string | null;
+  /** @maxLength 120 */
+  transferReference?: string;
+}
+
+export type CashbackPaymentMethodCountry = typeof CashbackPaymentMethodCountry[keyof typeof CashbackPaymentMethodCountry];
+
+
+export const CashbackPaymentMethodCountry = {
+  Algeria: 'Algeria',
+  Libya: 'Libya',
+} as const;
+
+export interface CashbackPaymentMethod {
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  id: string;
+  country: CashbackPaymentMethodCountry;
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  name: string;
+  /**
+     * @minLength 1
+     * @maxLength 160
+     */
+  beneficiary: string;
+  /**
+     * @minLength 1
+     * @maxLength 160
+     */
+  account: string;
+  /** @maxLength 30 */
+  phone?: string;
+  /**
+     * @minLength 1
+     * @maxLength 1000
+     */
+  instructions: string;
+  active: boolean;
+}
+
+export interface CashbackPaymentMethodsUpdate {
+  /** @maxItems 30 */
+  methods: CashbackPaymentMethod[];
+}
+
 export type CashbackCategoriesUpdateCategoriesItem = typeof CashbackCategoriesUpdateCategoriesItem[keyof typeof CashbackCategoriesUpdateCategoriesItem];
 
 

@@ -244,6 +244,260 @@ export const RateCashbackMerchantResponse = zod.record(zod.string(), zod.unknown
 
 
 /**
+ * @summary Create an owner-bound merchant image upload
+ */
+export const createCashbackMerchantAssetUploadBodySizeMax = 5242880;
+
+
+
+export const CreateCashbackMerchantAssetUploadBody = zod.object({
+  "asset": zod.enum(['logo', 'cover', 'topup-proof']),
+  "contentType": zod.enum(['image/jpeg', 'image/png', 'image/webp']),
+  "size": zod.number().int().min(1).max(createCashbackMerchantAssetUploadBodySizeMax)
+})
+
+export const CreateCashbackMerchantAssetUploadResponse = zod.object({
+  "uploadURL": zod.string().url(),
+  "objectPath": zod.string(),
+  "uploadId": zod.string()
+})
+
+
+/**
+ * @summary Update editable merchant store information
+ */
+export const updateCashbackMerchantStoreBodyNameMin = 2;
+export const updateCashbackMerchantStoreBodyNameMax = 100;
+
+export const updateCashbackMerchantStoreBodyPhoneMax = 20;
+
+export const updateCashbackMerchantStoreBodyDescriptionMax = 2000;
+
+export const updateCashbackMerchantStoreBodyAddressMax = 300;
+
+export const updateCashbackMerchantStoreBodyMapsUrlMax = 500;
+
+export const updateCashbackMerchantStoreBodyLatMin = -90;
+export const updateCashbackMerchantStoreBodyLatMax = 90;
+
+export const updateCashbackMerchantStoreBodyLngMin = -180;
+export const updateCashbackMerchantStoreBodyLngMax = 180;
+
+export const updateCashbackMerchantStoreBodyOpeningHoursMax = 500;
+
+export const updateCashbackMerchantStoreBodyLogoUploadIdMax = 100;
+
+export const updateCashbackMerchantStoreBodyLogoObjectPathMax = 500;
+
+export const updateCashbackMerchantStoreBodyCoverUploadIdMax = 100;
+
+export const updateCashbackMerchantStoreBodyCoverObjectPathMax = 500;
+
+
+
+export const UpdateCashbackMerchantStoreBody = zod.object({
+  "name": zod.string().min(updateCashbackMerchantStoreBodyNameMin).max(updateCashbackMerchantStoreBodyNameMax).optional(),
+  "phone": zod.string().max(updateCashbackMerchantStoreBodyPhoneMax).nullish(),
+  "description": zod.string().max(updateCashbackMerchantStoreBodyDescriptionMax).optional(),
+  "address": zod.string().max(updateCashbackMerchantStoreBodyAddressMax).optional(),
+  "mapsUrl": zod.string().max(updateCashbackMerchantStoreBodyMapsUrlMax).optional(),
+  "lat": zod.number().min(updateCashbackMerchantStoreBodyLatMin).max(updateCashbackMerchantStoreBodyLatMax).nullish(),
+  "lng": zod.number().min(updateCashbackMerchantStoreBodyLngMin).max(updateCashbackMerchantStoreBodyLngMax).nullish(),
+  "openingHours": zod.string().max(updateCashbackMerchantStoreBodyOpeningHoursMax).optional(),
+  "logoUploadId": zod.string().max(updateCashbackMerchantStoreBodyLogoUploadIdMax).optional(),
+  "logoObjectPath": zod.string().max(updateCashbackMerchantStoreBodyLogoObjectPathMax).optional(),
+  "coverUploadId": zod.string().max(updateCashbackMerchantStoreBodyCoverUploadIdMax).optional(),
+  "coverObjectPath": zod.string().max(updateCashbackMerchantStoreBodyCoverObjectPathMax).optional()
+})
+
+export const UpdateCashbackMerchantStoreResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
+ * @summary Request approval for sensitive store changes
+ */
+export const createCashbackMerchantStoreChangeRequestBodyLegalNameMax = 160;
+
+export const createCashbackMerchantStoreChangeRequestBodyRegistrationNumberMax = 100;
+
+export const createCashbackMerchantStoreChangeRequestBodyTaxNumberMax = 100;
+
+
+
+export const CreateCashbackMerchantStoreChangeRequestBody = zod.object({
+  "country": zod.enum(['Algeria', 'Libya']).optional(),
+  "category": zod.enum(['restaurants', 'cafes', 'clothing', 'electronics', 'malls', 'groceries', 'perfume', 'gifts', 'shops', 'other']).optional(),
+  "legalName": zod.string().max(createCashbackMerchantStoreChangeRequestBodyLegalNameMax).optional(),
+  "registrationNumber": zod.string().max(createCashbackMerchantStoreChangeRequestBodyRegistrationNumberMax).optional(),
+  "taxNumber": zod.string().max(createCashbackMerchantStoreChangeRequestBodyTaxNumberMax).optional()
+})
+
+export const CreateCashbackMerchantStoreChangeRequestResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
+ * @summary Approve or reject sensitive merchant changes
+ */
+export const decideCashbackMerchantStoreChangePathIdMax = 100;
+
+
+
+export const DecideCashbackMerchantStoreChangeParams = zod.object({
+  "id": zod.coerce.string().min(1).max(decideCashbackMerchantStoreChangePathIdMax)
+})
+
+export const decideCashbackMerchantStoreChangeBodyReasonMax = 300;
+
+
+
+export const DecideCashbackMerchantStoreChangeBody = zod.object({
+  "approved": zod.boolean(),
+  "reason": zod.string().max(decideCashbackMerchantStoreChangeBodyReasonMax).nullish()
+})
+
+export const DecideCashbackMerchantStoreChangeResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
+ * @summary Submit a merchant balance top-up request
+ */
+export const createCashbackMerchantTopupBodyAmountExclusiveMin = 0;
+export const createCashbackMerchantTopupBodyAmountMax = 100000000;
+
+export const createCashbackMerchantTopupBodyPaymentMethodIdMax = 100;
+
+export const createCashbackMerchantTopupBodyPayerReferenceMax = 120;
+
+export const createCashbackMerchantTopupBodyUploadIdMax = 100;
+
+export const createCashbackMerchantTopupBodyObjectPathMax = 500;
+
+
+
+export const CreateCashbackMerchantTopupBody = zod.object({
+  "amount": zod.number().gt(createCashbackMerchantTopupBodyAmountExclusiveMin).max(createCashbackMerchantTopupBodyAmountMax),
+  "paymentMethodId": zod.string().min(1).max(createCashbackMerchantTopupBodyPaymentMethodIdMax),
+  "payerReference": zod.string().max(createCashbackMerchantTopupBodyPayerReferenceMax).optional(),
+  "uploadId": zod.string().min(1).max(createCashbackMerchantTopupBodyUploadIdMax),
+  "objectPath": zod.string().min(1).max(createCashbackMerchantTopupBodyObjectPathMax)
+})
+
+export const CreateCashbackMerchantTopupResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
+ * @summary Approve or reject a merchant top-up
+ */
+export const decideCashbackMerchantTopupPathIdMax = 100;
+
+
+
+export const DecideCashbackMerchantTopupParams = zod.object({
+  "id": zod.coerce.string().min(1).max(decideCashbackMerchantTopupPathIdMax)
+})
+
+export const decideCashbackMerchantTopupBodyReasonMax = 300;
+
+
+
+export const DecideCashbackMerchantTopupBody = zod.object({
+  "approved": zod.boolean(),
+  "reason": zod.string().max(decideCashbackMerchantTopupBodyReasonMax).nullish()
+})
+
+export const DecideCashbackMerchantTopupResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
+ * @summary Request withdrawal of merchant QR payment proceeds
+ */
+export const createCashbackMerchantWithdrawalBodyAmountExclusiveMin = 0;
+export const createCashbackMerchantWithdrawalBodyAmountMax = 100000000;
+
+export const createCashbackMerchantWithdrawalBodyMethodMax = 80;
+
+export const createCashbackMerchantWithdrawalBodyAccountDetailsMin = 3;
+export const createCashbackMerchantWithdrawalBodyAccountDetailsMax = 300;
+
+
+
+export const CreateCashbackMerchantWithdrawalBody = zod.object({
+  "amount": zod.number().gt(createCashbackMerchantWithdrawalBodyAmountExclusiveMin).max(createCashbackMerchantWithdrawalBodyAmountMax),
+  "method": zod.string().min(1).max(createCashbackMerchantWithdrawalBodyMethodMax),
+  "accountDetails": zod.string().min(createCashbackMerchantWithdrawalBodyAccountDetailsMin).max(createCashbackMerchantWithdrawalBodyAccountDetailsMax)
+})
+
+export const CreateCashbackMerchantWithdrawalResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
+ * @summary Update merchant withdrawal processing status
+ */
+export const updateCashbackMerchantWithdrawalPathIdMax = 100;
+
+
+
+export const UpdateCashbackMerchantWithdrawalParams = zod.object({
+  "id": zod.coerce.string().min(1).max(updateCashbackMerchantWithdrawalPathIdMax)
+})
+
+export const updateCashbackMerchantWithdrawalBodyReasonMax = 300;
+
+export const updateCashbackMerchantWithdrawalBodyTransferReferenceMax = 120;
+
+
+
+export const UpdateCashbackMerchantWithdrawalBody = zod.object({
+  "status": zod.enum(['approved', 'transferring', 'paid', 'rejected']),
+  "reason": zod.string().max(updateCashbackMerchantWithdrawalBodyReasonMax).nullish(),
+  "transferReference": zod.string().max(updateCashbackMerchantWithdrawalBodyTransferReferenceMax).optional()
+})
+
+export const UpdateCashbackMerchantWithdrawalResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
+ * @summary Configure merchant top-up payment instructions
+ */
+export const updateCashbackPaymentMethodsBodyMethodsItemIdMax = 100;
+
+export const updateCashbackPaymentMethodsBodyMethodsItemNameMax = 100;
+
+export const updateCashbackPaymentMethodsBodyMethodsItemBeneficiaryMax = 160;
+
+export const updateCashbackPaymentMethodsBodyMethodsItemAccountMax = 160;
+
+export const updateCashbackPaymentMethodsBodyMethodsItemPhoneMax = 30;
+
+export const updateCashbackPaymentMethodsBodyMethodsItemInstructionsMax = 1000;
+
+export const updateCashbackPaymentMethodsBodyMethodsMax = 30;
+
+
+
+export const UpdateCashbackPaymentMethodsBody = zod.object({
+  "methods": zod.array(zod.object({
+  "id": zod.string().min(1).max(updateCashbackPaymentMethodsBodyMethodsItemIdMax),
+  "country": zod.enum(['Algeria', 'Libya']),
+  "name": zod.string().min(1).max(updateCashbackPaymentMethodsBodyMethodsItemNameMax),
+  "beneficiary": zod.string().min(1).max(updateCashbackPaymentMethodsBodyMethodsItemBeneficiaryMax),
+  "account": zod.string().min(1).max(updateCashbackPaymentMethodsBodyMethodsItemAccountMax),
+  "phone": zod.string().max(updateCashbackPaymentMethodsBodyMethodsItemPhoneMax).optional(),
+  "instructions": zod.string().min(1).max(updateCashbackPaymentMethodsBodyMethodsItemInstructionsMax),
+  "active": zod.boolean()
+})).max(updateCashbackPaymentMethodsBodyMethodsMax)
+})
+
+export const UpdateCashbackPaymentMethodsResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
+ * @summary Mark all merchant notifications as read
+ */
+export const MarkCashbackMerchantNotificationsReadResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
  * @summary Create a short-lived customer session after validating a merchant QR
  */
 export const createCashbackPaymentSessionBodyMerchantIdMax = 80;

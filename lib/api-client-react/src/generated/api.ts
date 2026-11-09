@@ -23,8 +23,18 @@ import type {
   ActionResult,
   CashbackCategoriesUpdate,
   CashbackLogin,
+  CashbackMerchantAssetUpload,
+  CashbackMerchantAssetUploadInput,
   CashbackMerchantDecision,
   CashbackMerchantRating,
+  CashbackMerchantSensitiveChangeDecision,
+  CashbackMerchantSensitiveChangeInput,
+  CashbackMerchantStoreUpdate,
+  CashbackMerchantTopupDecision,
+  CashbackMerchantTopupInput,
+  CashbackMerchantWithdrawalInput,
+  CashbackMerchantWithdrawalUpdate,
+  CashbackPaymentMethodsUpdate,
   CashbackPaymentResult,
   CashbackPaymentReversal,
   CashbackPaymentSession,
@@ -1071,6 +1081,875 @@ export const useRateCashbackMerchant = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getRateCashbackMerchantMutationOptions(options));
+    }
+
+export const getCreateCashbackMerchantAssetUploadUrl = () => {
+
+
+
+
+  return `/api/cashback/merchant/assets/upload-url`
+}
+
+/**
+ * @summary Create an owner-bound merchant image upload
+ */
+export const createCashbackMerchantAssetUpload = async (cashbackMerchantAssetUploadInput: CashbackMerchantAssetUploadInput, options?: Parameters<typeof customFetch>[1]): Promise<CashbackMerchantAssetUpload> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<CashbackMerchantAssetUpload>(getCreateCashbackMerchantAssetUploadUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(cashbackMerchantAssetUploadInput)
+  }
+);}
+
+
+
+
+
+export const getCreateCashbackMerchantAssetUploadMutationKey = () => ['createCashbackMerchantAssetUpload'] as const;
+
+export const getCreateCashbackMerchantAssetUploadMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCashbackMerchantAssetUpload>>, TError,CreateCashbackMerchantAssetUploadMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createCashbackMerchantAssetUpload>>, TError,CreateCashbackMerchantAssetUploadMutationVariables, TContext> => {
+
+const mutationKey = getCreateCashbackMerchantAssetUploadMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createCashbackMerchantAssetUpload>>, CreateCashbackMerchantAssetUploadMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createCashbackMerchantAssetUpload(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateCashbackMerchantAssetUploadMutationResult = NonNullable<Awaited<ReturnType<typeof createCashbackMerchantAssetUpload>>>
+    export type CreateCashbackMerchantAssetUploadMutationBody = BodyType<CashbackMerchantAssetUploadInput>
+    export type CreateCashbackMerchantAssetUploadMutationError = ErrorType<unknown>
+    export type CreateCashbackMerchantAssetUploadMutationVariables = {data: BodyType<CashbackMerchantAssetUploadInput>}
+
+    /**
+ * @summary Create an owner-bound merchant image upload
+ */
+export const useCreateCashbackMerchantAssetUpload = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCashbackMerchantAssetUpload>>, TError,CreateCashbackMerchantAssetUploadMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createCashbackMerchantAssetUpload>>,
+        TError,
+        CreateCashbackMerchantAssetUploadMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateCashbackMerchantAssetUploadMutationOptions(options));
+    }
+
+export const getUpdateCashbackMerchantStoreUrl = () => {
+
+
+
+
+  return `/api/cashback/merchant/store`
+}
+
+/**
+ * @summary Update editable merchant store information
+ */
+export const updateCashbackMerchantStore = async (cashbackMerchantStoreUpdate: CashbackMerchantStoreUpdate, options?: Parameters<typeof customFetch>[1]): Promise<ActionResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ActionResult>(getUpdateCashbackMerchantStoreUrl(),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(cashbackMerchantStoreUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateCashbackMerchantStoreMutationKey = () => ['updateCashbackMerchantStore'] as const;
+
+export const getUpdateCashbackMerchantStoreMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCashbackMerchantStore>>, TError,UpdateCashbackMerchantStoreMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateCashbackMerchantStore>>, TError,UpdateCashbackMerchantStoreMutationVariables, TContext> => {
+
+const mutationKey = getUpdateCashbackMerchantStoreMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateCashbackMerchantStore>>, UpdateCashbackMerchantStoreMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateCashbackMerchantStore(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateCashbackMerchantStoreMutationResult = NonNullable<Awaited<ReturnType<typeof updateCashbackMerchantStore>>>
+    export type UpdateCashbackMerchantStoreMutationBody = BodyType<CashbackMerchantStoreUpdate>
+    export type UpdateCashbackMerchantStoreMutationError = ErrorType<unknown>
+    export type UpdateCashbackMerchantStoreMutationVariables = {data: BodyType<CashbackMerchantStoreUpdate>}
+
+    /**
+ * @summary Update editable merchant store information
+ */
+export const useUpdateCashbackMerchantStore = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCashbackMerchantStore>>, TError,UpdateCashbackMerchantStoreMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateCashbackMerchantStore>>,
+        TError,
+        UpdateCashbackMerchantStoreMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateCashbackMerchantStoreMutationOptions(options));
+    }
+
+export const getCreateCashbackMerchantStoreChangeRequestUrl = () => {
+
+
+
+
+  return `/api/cashback/merchant/store-change-requests`
+}
+
+/**
+ * @summary Request approval for sensitive store changes
+ */
+export const createCashbackMerchantStoreChangeRequest = async (cashbackMerchantSensitiveChangeInput: CashbackMerchantSensitiveChangeInput, options?: Parameters<typeof customFetch>[1]): Promise<ActionResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ActionResult>(getCreateCashbackMerchantStoreChangeRequestUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(cashbackMerchantSensitiveChangeInput)
+  }
+);}
+
+
+
+
+
+export const getCreateCashbackMerchantStoreChangeRequestMutationKey = () => ['createCashbackMerchantStoreChangeRequest'] as const;
+
+export const getCreateCashbackMerchantStoreChangeRequestMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCashbackMerchantStoreChangeRequest>>, TError,CreateCashbackMerchantStoreChangeRequestMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createCashbackMerchantStoreChangeRequest>>, TError,CreateCashbackMerchantStoreChangeRequestMutationVariables, TContext> => {
+
+const mutationKey = getCreateCashbackMerchantStoreChangeRequestMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createCashbackMerchantStoreChangeRequest>>, CreateCashbackMerchantStoreChangeRequestMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createCashbackMerchantStoreChangeRequest(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateCashbackMerchantStoreChangeRequestMutationResult = NonNullable<Awaited<ReturnType<typeof createCashbackMerchantStoreChangeRequest>>>
+    export type CreateCashbackMerchantStoreChangeRequestMutationBody = BodyType<CashbackMerchantSensitiveChangeInput>
+    export type CreateCashbackMerchantStoreChangeRequestMutationError = ErrorType<unknown>
+    export type CreateCashbackMerchantStoreChangeRequestMutationVariables = {data: BodyType<CashbackMerchantSensitiveChangeInput>}
+
+    /**
+ * @summary Request approval for sensitive store changes
+ */
+export const useCreateCashbackMerchantStoreChangeRequest = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCashbackMerchantStoreChangeRequest>>, TError,CreateCashbackMerchantStoreChangeRequestMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createCashbackMerchantStoreChangeRequest>>,
+        TError,
+        CreateCashbackMerchantStoreChangeRequestMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateCashbackMerchantStoreChangeRequestMutationOptions(options));
+    }
+
+export const getDecideCashbackMerchantStoreChangeUrl = (id: string,) => {
+
+
+
+
+  return `/api/cashback/admin/store-change-requests/${id}/decision`
+}
+
+/**
+ * @summary Approve or reject sensitive merchant changes
+ */
+export const decideCashbackMerchantStoreChange = async (id: string,
+    cashbackMerchantSensitiveChangeDecision: CashbackMerchantSensitiveChangeDecision, options?: Parameters<typeof customFetch>[1]): Promise<ActionResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ActionResult>(getDecideCashbackMerchantStoreChangeUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(cashbackMerchantSensitiveChangeDecision)
+  }
+);}
+
+
+
+
+
+export const getDecideCashbackMerchantStoreChangeMutationKey = () => ['decideCashbackMerchantStoreChange'] as const;
+
+export const getDecideCashbackMerchantStoreChangeMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof decideCashbackMerchantStoreChange>>, TError,DecideCashbackMerchantStoreChangeMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof decideCashbackMerchantStoreChange>>, TError,DecideCashbackMerchantStoreChangeMutationVariables, TContext> => {
+
+const mutationKey = getDecideCashbackMerchantStoreChangeMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof decideCashbackMerchantStoreChange>>, DecideCashbackMerchantStoreChangeMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  decideCashbackMerchantStoreChange(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DecideCashbackMerchantStoreChangeMutationResult = NonNullable<Awaited<ReturnType<typeof decideCashbackMerchantStoreChange>>>
+    export type DecideCashbackMerchantStoreChangeMutationBody = BodyType<CashbackMerchantSensitiveChangeDecision>
+    export type DecideCashbackMerchantStoreChangeMutationError = ErrorType<unknown>
+    export type DecideCashbackMerchantStoreChangeMutationVariables = {id: string;data: BodyType<CashbackMerchantSensitiveChangeDecision>}
+
+    /**
+ * @summary Approve or reject sensitive merchant changes
+ */
+export const useDecideCashbackMerchantStoreChange = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof decideCashbackMerchantStoreChange>>, TError,DecideCashbackMerchantStoreChangeMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof decideCashbackMerchantStoreChange>>,
+        TError,
+        DecideCashbackMerchantStoreChangeMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDecideCashbackMerchantStoreChangeMutationOptions(options));
+    }
+
+export const getCreateCashbackMerchantTopupUrl = () => {
+
+
+
+
+  return `/api/cashback/merchant/topups`
+}
+
+/**
+ * @summary Submit a merchant balance top-up request
+ */
+export const createCashbackMerchantTopup = async (cashbackMerchantTopupInput: CashbackMerchantTopupInput, options?: Parameters<typeof customFetch>[1]): Promise<ActionResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ActionResult>(getCreateCashbackMerchantTopupUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(cashbackMerchantTopupInput)
+  }
+);}
+
+
+
+
+
+export const getCreateCashbackMerchantTopupMutationKey = () => ['createCashbackMerchantTopup'] as const;
+
+export const getCreateCashbackMerchantTopupMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCashbackMerchantTopup>>, TError,CreateCashbackMerchantTopupMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createCashbackMerchantTopup>>, TError,CreateCashbackMerchantTopupMutationVariables, TContext> => {
+
+const mutationKey = getCreateCashbackMerchantTopupMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createCashbackMerchantTopup>>, CreateCashbackMerchantTopupMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createCashbackMerchantTopup(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateCashbackMerchantTopupMutationResult = NonNullable<Awaited<ReturnType<typeof createCashbackMerchantTopup>>>
+    export type CreateCashbackMerchantTopupMutationBody = BodyType<CashbackMerchantTopupInput>
+    export type CreateCashbackMerchantTopupMutationError = ErrorType<unknown>
+    export type CreateCashbackMerchantTopupMutationVariables = {data: BodyType<CashbackMerchantTopupInput>}
+
+    /**
+ * @summary Submit a merchant balance top-up request
+ */
+export const useCreateCashbackMerchantTopup = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCashbackMerchantTopup>>, TError,CreateCashbackMerchantTopupMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createCashbackMerchantTopup>>,
+        TError,
+        CreateCashbackMerchantTopupMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateCashbackMerchantTopupMutationOptions(options));
+    }
+
+export const getDecideCashbackMerchantTopupUrl = (id: string,) => {
+
+
+
+
+  return `/api/cashback/admin/topups/${id}/decision`
+}
+
+/**
+ * @summary Approve or reject a merchant top-up
+ */
+export const decideCashbackMerchantTopup = async (id: string,
+    cashbackMerchantTopupDecision: CashbackMerchantTopupDecision, options?: Parameters<typeof customFetch>[1]): Promise<ActionResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ActionResult>(getDecideCashbackMerchantTopupUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(cashbackMerchantTopupDecision)
+  }
+);}
+
+
+
+
+
+export const getDecideCashbackMerchantTopupMutationKey = () => ['decideCashbackMerchantTopup'] as const;
+
+export const getDecideCashbackMerchantTopupMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof decideCashbackMerchantTopup>>, TError,DecideCashbackMerchantTopupMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof decideCashbackMerchantTopup>>, TError,DecideCashbackMerchantTopupMutationVariables, TContext> => {
+
+const mutationKey = getDecideCashbackMerchantTopupMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof decideCashbackMerchantTopup>>, DecideCashbackMerchantTopupMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  decideCashbackMerchantTopup(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DecideCashbackMerchantTopupMutationResult = NonNullable<Awaited<ReturnType<typeof decideCashbackMerchantTopup>>>
+    export type DecideCashbackMerchantTopupMutationBody = BodyType<CashbackMerchantTopupDecision>
+    export type DecideCashbackMerchantTopupMutationError = ErrorType<unknown>
+    export type DecideCashbackMerchantTopupMutationVariables = {id: string;data: BodyType<CashbackMerchantTopupDecision>}
+
+    /**
+ * @summary Approve or reject a merchant top-up
+ */
+export const useDecideCashbackMerchantTopup = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof decideCashbackMerchantTopup>>, TError,DecideCashbackMerchantTopupMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof decideCashbackMerchantTopup>>,
+        TError,
+        DecideCashbackMerchantTopupMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDecideCashbackMerchantTopupMutationOptions(options));
+    }
+
+export const getCreateCashbackMerchantWithdrawalUrl = () => {
+
+
+
+
+  return `/api/cashback/merchant/withdrawals`
+}
+
+/**
+ * @summary Request withdrawal of merchant QR payment proceeds
+ */
+export const createCashbackMerchantWithdrawal = async (cashbackMerchantWithdrawalInput: CashbackMerchantWithdrawalInput, options?: Parameters<typeof customFetch>[1]): Promise<ActionResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ActionResult>(getCreateCashbackMerchantWithdrawalUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(cashbackMerchantWithdrawalInput)
+  }
+);}
+
+
+
+
+
+export const getCreateCashbackMerchantWithdrawalMutationKey = () => ['createCashbackMerchantWithdrawal'] as const;
+
+export const getCreateCashbackMerchantWithdrawalMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCashbackMerchantWithdrawal>>, TError,CreateCashbackMerchantWithdrawalMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createCashbackMerchantWithdrawal>>, TError,CreateCashbackMerchantWithdrawalMutationVariables, TContext> => {
+
+const mutationKey = getCreateCashbackMerchantWithdrawalMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createCashbackMerchantWithdrawal>>, CreateCashbackMerchantWithdrawalMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createCashbackMerchantWithdrawal(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateCashbackMerchantWithdrawalMutationResult = NonNullable<Awaited<ReturnType<typeof createCashbackMerchantWithdrawal>>>
+    export type CreateCashbackMerchantWithdrawalMutationBody = BodyType<CashbackMerchantWithdrawalInput>
+    export type CreateCashbackMerchantWithdrawalMutationError = ErrorType<unknown>
+    export type CreateCashbackMerchantWithdrawalMutationVariables = {data: BodyType<CashbackMerchantWithdrawalInput>}
+
+    /**
+ * @summary Request withdrawal of merchant QR payment proceeds
+ */
+export const useCreateCashbackMerchantWithdrawal = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCashbackMerchantWithdrawal>>, TError,CreateCashbackMerchantWithdrawalMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createCashbackMerchantWithdrawal>>,
+        TError,
+        CreateCashbackMerchantWithdrawalMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateCashbackMerchantWithdrawalMutationOptions(options));
+    }
+
+export const getUpdateCashbackMerchantWithdrawalUrl = (id: string,) => {
+
+
+
+
+  return `/api/cashback/admin/withdrawals/${id}/update`
+}
+
+/**
+ * @summary Update merchant withdrawal processing status
+ */
+export const updateCashbackMerchantWithdrawal = async (id: string,
+    cashbackMerchantWithdrawalUpdate: CashbackMerchantWithdrawalUpdate, options?: Parameters<typeof customFetch>[1]): Promise<ActionResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ActionResult>(getUpdateCashbackMerchantWithdrawalUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(cashbackMerchantWithdrawalUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateCashbackMerchantWithdrawalMutationKey = () => ['updateCashbackMerchantWithdrawal'] as const;
+
+export const getUpdateCashbackMerchantWithdrawalMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCashbackMerchantWithdrawal>>, TError,UpdateCashbackMerchantWithdrawalMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateCashbackMerchantWithdrawal>>, TError,UpdateCashbackMerchantWithdrawalMutationVariables, TContext> => {
+
+const mutationKey = getUpdateCashbackMerchantWithdrawalMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateCashbackMerchantWithdrawal>>, UpdateCashbackMerchantWithdrawalMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateCashbackMerchantWithdrawal(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateCashbackMerchantWithdrawalMutationResult = NonNullable<Awaited<ReturnType<typeof updateCashbackMerchantWithdrawal>>>
+    export type UpdateCashbackMerchantWithdrawalMutationBody = BodyType<CashbackMerchantWithdrawalUpdate>
+    export type UpdateCashbackMerchantWithdrawalMutationError = ErrorType<unknown>
+    export type UpdateCashbackMerchantWithdrawalMutationVariables = {id: string;data: BodyType<CashbackMerchantWithdrawalUpdate>}
+
+    /**
+ * @summary Update merchant withdrawal processing status
+ */
+export const useUpdateCashbackMerchantWithdrawal = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCashbackMerchantWithdrawal>>, TError,UpdateCashbackMerchantWithdrawalMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateCashbackMerchantWithdrawal>>,
+        TError,
+        UpdateCashbackMerchantWithdrawalMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateCashbackMerchantWithdrawalMutationOptions(options));
+    }
+
+export const getUpdateCashbackPaymentMethodsUrl = () => {
+
+
+
+
+  return `/api/cashback/settings/payment-methods`
+}
+
+/**
+ * @summary Configure merchant top-up payment instructions
+ */
+export const updateCashbackPaymentMethods = async (cashbackPaymentMethodsUpdate: CashbackPaymentMethodsUpdate, options?: Parameters<typeof customFetch>[1]): Promise<ActionResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ActionResult>(getUpdateCashbackPaymentMethodsUrl(),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(cashbackPaymentMethodsUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateCashbackPaymentMethodsMutationKey = () => ['updateCashbackPaymentMethods'] as const;
+
+export const getUpdateCashbackPaymentMethodsMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCashbackPaymentMethods>>, TError,UpdateCashbackPaymentMethodsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateCashbackPaymentMethods>>, TError,UpdateCashbackPaymentMethodsMutationVariables, TContext> => {
+
+const mutationKey = getUpdateCashbackPaymentMethodsMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateCashbackPaymentMethods>>, UpdateCashbackPaymentMethodsMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateCashbackPaymentMethods(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateCashbackPaymentMethodsMutationResult = NonNullable<Awaited<ReturnType<typeof updateCashbackPaymentMethods>>>
+    export type UpdateCashbackPaymentMethodsMutationBody = BodyType<CashbackPaymentMethodsUpdate>
+    export type UpdateCashbackPaymentMethodsMutationError = ErrorType<unknown>
+    export type UpdateCashbackPaymentMethodsMutationVariables = {data: BodyType<CashbackPaymentMethodsUpdate>}
+
+    /**
+ * @summary Configure merchant top-up payment instructions
+ */
+export const useUpdateCashbackPaymentMethods = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCashbackPaymentMethods>>, TError,UpdateCashbackPaymentMethodsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateCashbackPaymentMethods>>,
+        TError,
+        UpdateCashbackPaymentMethodsMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateCashbackPaymentMethodsMutationOptions(options));
+    }
+
+export const getMarkCashbackMerchantNotificationsReadUrl = () => {
+
+
+
+
+  return `/api/cashback/merchant/notifications/read-all`
+}
+
+/**
+ * @summary Mark all merchant notifications as read
+ */
+export const markCashbackMerchantNotificationsRead = async ( options?: Parameters<typeof customFetch>[1]): Promise<ActionResult> => {
+
+  return customFetch<ActionResult>(getMarkCashbackMerchantNotificationsReadUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getMarkCashbackMerchantNotificationsReadMutationKey = () => ['markCashbackMerchantNotificationsRead'] as const;
+
+export const getMarkCashbackMerchantNotificationsReadMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markCashbackMerchantNotificationsRead>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof markCashbackMerchantNotificationsRead>>, TError,void, TContext> => {
+
+const mutationKey = getMarkCashbackMerchantNotificationsReadMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof markCashbackMerchantNotificationsRead>>, void> = () => {
+
+
+          return  markCashbackMerchantNotificationsRead(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type MarkCashbackMerchantNotificationsReadMutationResult = NonNullable<Awaited<ReturnType<typeof markCashbackMerchantNotificationsRead>>>
+
+    export type MarkCashbackMerchantNotificationsReadMutationError = ErrorType<unknown>
+
+
+    /**
+ * @summary Mark all merchant notifications as read
+ */
+export const useMarkCashbackMerchantNotificationsRead = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markCashbackMerchantNotificationsRead>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof markCashbackMerchantNotificationsRead>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getMarkCashbackMerchantNotificationsReadMutationOptions(options));
     }
 
 export const getCreateCashbackPaymentSessionUrl = () => {
