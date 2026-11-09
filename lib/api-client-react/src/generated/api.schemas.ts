@@ -89,14 +89,36 @@ export interface CashbackRegistration {
   logoData?: string;
 }
 
+/**
+ * Expected account type
+ */
+export type CashbackLoginRole = typeof CashbackLoginRole[keyof typeof CashbackLoginRole];
+
+
+export const CashbackLoginRole = {
+  customer: 'customer',
+  merchant: 'merchant',
+} as const;
+
 export interface CashbackLogin {
-  /** @maxLength 254 */
-  email: string;
+  /**
+     * Email address or verified phone number
+     * @minLength 1
+     * @maxLength 254
+     */
+  identifier?: string;
+  /**
+     * Legacy email field
+     * @maxLength 254
+     */
+  email?: string;
   /**
      * @minLength 8
      * @maxLength 128
      */
   password: string;
+  /** Expected account type */
+  role?: CashbackLoginRole;
 }
 
 export interface CashbackReceiptInput {

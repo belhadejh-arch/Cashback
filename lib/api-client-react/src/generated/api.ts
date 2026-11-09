@@ -395,7 +395,7 @@ export const getLoginCashbackUrl = () => {
 }
 
 /**
- * @summary Sign in with an email address and password
+ * @summary Sign in with an email address or verified phone and password
  */
 export const loginCashback = async (cashbackLogin: CashbackLogin, options?: Parameters<typeof customFetch>[1]): Promise<CashbackProfile> => {
 
@@ -461,7 +461,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type LoginCashbackMutationVariables = {data: BodyType<CashbackLogin>}
 
     /**
- * @summary Sign in with an email address and password
+ * @summary Sign in with an email address or verified phone and password
  */
 export const useLoginCashback = <TError = ErrorType<unknown>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof loginCashback>>, TError,LoginCashbackMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}

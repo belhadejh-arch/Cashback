@@ -354,6 +354,10 @@ export function emailLookupId(email: string): string {
   return createHash("sha256").update(email.trim().toLowerCase()).digest("hex");
 }
 
+export function phoneLookupId(phone: string): string {
+  return createHash("sha256").update(phone).digest("hex");
+}
+
 export function hashPassword(password: string): { salt: string; hash: string } {
   const salt = randomBytes(16).toString("hex");
   return { salt, hash: scryptSync(password, salt, 64).toString("hex") };

@@ -95,8 +95,10 @@ export const RegisterCashbackProfileResponse = zod.object({
 
 
 /**
- * @summary Sign in with an email address and password
+ * @summary Sign in with an email address or verified phone and password
  */
+export const loginCashbackBodyIdentifierMax = 254;
+
 export const loginCashbackBodyEmailMax = 254;
 
 export const loginCashbackBodyPasswordMin = 8;
@@ -105,8 +107,10 @@ export const loginCashbackBodyPasswordMax = 128;
 
 
 export const LoginCashbackBody = zod.object({
-  "email": zod.string().email().max(loginCashbackBodyEmailMax),
-  "password": zod.string().min(loginCashbackBodyPasswordMin).max(loginCashbackBodyPasswordMax)
+  "identifier": zod.string().min(1).max(loginCashbackBodyIdentifierMax).optional().describe('Email address or verified phone number'),
+  "email": zod.string().max(loginCashbackBodyEmailMax).optional().describe('Legacy email field'),
+  "password": zod.string().min(loginCashbackBodyPasswordMin).max(loginCashbackBodyPasswordMax),
+  "role": zod.enum(['customer', 'merchant']).optional().describe('Expected account type')
 })
 
 export const LoginCashbackResponse = zod.object({

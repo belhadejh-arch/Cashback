@@ -25,6 +25,7 @@ import {
   getDocument,
   getState,
   hashPassword,
+  phoneLookupId,
   requireAdmin,
   revokeSession,
   savePreferences,
@@ -57,6 +58,13 @@ const CATEGORIES = new Set([
   "gifts",
   "shops",
   "other",
+]);
+const MERCHANT_APPLICATION_CATEGORIES = new Set([
+  "groceries",
+  "clothing",
+  "electronics",
+  "cafes",
+  "restaurants",
 ]);
 
 function respondError(res: Response, error: unknown): void {
@@ -266,7 +274,8 @@ router.post("/cashback/register", async (req, res) => {
         !input.country ||
         !fieldString(input.city) ||
         !fieldString(input.address) ||
-        !CATEGORIES.has(fieldString(input.category))
+        !fieldString(input.mapsUrl) ||
+        !MERCHANT_APPLICATION_CATEGORIES.has(fieldString(input.category))
       ) {
         throw new CashbackError(400, "MERCHANT_FIELDS_REQUIRED");
       }
@@ -287,6 +296,7 @@ router.post("/cashback/register", async (req, res) => {
       phone: phone || null,
       email,
       preferences: { language: "ar", theme: "dark" },
+      ...(phone ? { phoneVerified: false } : {}),
       ...(isMerchant ? { country: input.country, city: input.city, address: input.address } : {}),
     };
     await mutateState((state) => {
@@ -326,6 +336,9 @@ router.post("/cashback/register", async (req, res) => {
         : [];
       const accountWrites = [
         documentWrite("account_emails", emailLookupId(email), { uid }, false),
+        ...(phone
+          ? [documentWrite("account_phones", phoneLookupId(phone), { uid, verified: false }, false)]
+          : []),
         documentWrite("accounts", uid, {
           email,
           passwordSalt: password.salt,
@@ -365,10 +378,31 @@ router.post("/cashback/auth/login", async (req, res) => {
   try {
     const parsed = LoginCashbackBody.safeParse(req.body);
     if (!parsed.success) throw new CashbackError(400, "INVALID_REQUEST");
-    const email = fieldString(parsed.data.email).toLowerCase();
-    const emailDocument = await getDocument(`account_emails/${emailLookupId(email)}`);
-    const emailFields = decodeCashbackFields(emailDocument);
-    const uid = typeof emailFields.uid === "string" ? emailFields.uid : "";
+    const identifier = fieldString(parsed.data.identifier ?? parsed.data.email);
+    if (!identifier) throw new CashbackError(400, "INVALID_REQUEST");
+    const emailLogin = identifier.includes("@");
+    let email = "";
+    let uid = "";
+    if (emailLogin) {
+      email = identifier.toLowerCase();
+      const emailDocument = await getDocument(`account_emails/${emailLookupId(email)}`);
+      const emailFields = decodeCashbackFields(emailDocument);
+      uid = typeof emailFields.uid === "string" ? emailFields.uid : "";
+    } else {
+      const phone = normalizePhone(identifier);
+      if (phone.length < 7 || phone.length > 18) {
+        throw new CashbackError(401, "INVALID_CREDENTIALS");
+      }
+      const phoneDocument = await getDocument(`account_phones/${phoneLookupId(phone)}`);
+      const phoneFields = decodeCashbackFields(phoneDocument);
+      if (!phoneDocument || typeof phoneFields.uid !== "string") {
+        throw new CashbackError(401, "INVALID_CREDENTIALS");
+      }
+      if (phoneFields.verified !== true) {
+        throw new CashbackError(401, "INVALID_CREDENTIALS");
+      }
+      uid = phoneFields.uid;
+    }
     const accountDocument = uid ? await getDocument(`accounts/${uid}`) : null;
     const account = decodeCashbackFields(accountDocument);
     if (
@@ -387,6 +421,9 @@ router.post("/cashback/auth/login", async (req, res) => {
     if (!eid || !["customer", "merchant", "admin"].includes(role)) {
       throw new CashbackError(403, "PROFILE_INCOMPLETE");
     }
+    if (parsed.data.role && role !== parsed.data.role && role !== "admin") {
+      throw new CashbackError(403, "ACCOUNT_TYPE_MISMATCH");
+    }
     const sessionToken = await createSession(uid);
     res.cookie(sessionCookieName(), sessionToken, {
       httpOnly: true,
@@ -401,7 +438,7 @@ router.post("/cashback/auth/login", async (req, res) => {
       eid,
       name: String(fields.name ?? ""),
       phone: fields.phone ?? null,
-      email,
+      email: typeof fields.email === "string" ? fields.email : email || null,
       preferences: fields.preferences ?? { language: "ar", theme: "dark" },
     });
   } catch (error) {
@@ -593,8 +630,10 @@ router.patch("/cashback/merchants/:id/decision", async (req, res) => {
         merchant.activatedAt = Date.now();
         addNote(state, merchant.id, "تمت الموافقة على طلب انضمام متجرك، يمكنك الآن استخدام لوحة التاجر");
       } else {
+        const reason = fieldString(parsed.data.reason ?? "");
+        if (!reason) throw new CashbackError(400, "REJECTION_REASON_REQUIRED");
         merchant.status = "rejected";
-        merchant.rejectionReason = fieldString(parsed.data.reason ?? "") || "APPLICATION_REJECTED";
+        merchant.rejectionReason = reason;
         merchant.rejectedAt = Date.now();
         addNote(state, merchant.id, `تم رفض طلب انضمام متجرك: ${merchant.rejectionReason}`);
       }

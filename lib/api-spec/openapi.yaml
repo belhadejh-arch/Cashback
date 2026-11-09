@@ -78,7 +78,7 @@ paths:
     post:
       operationId: loginCashback
       tags: [cashback]
-      summary: Sign in with an email address and password
+      summary: Sign in with an email address or verified phone and password
       requestBody:
         required: true
         content:
@@ -348,10 +348,12 @@ components:
         logoData: { type: string, maxLength: 650000 }
     CashbackLogin:
       type: object
-      required: [email, password]
+      required: [password]
       properties:
-        email: { type: string, format: email, maxLength: 254 }
+        identifier: { type: string, minLength: 1, maxLength: 254, description: Email address or verified phone number }
+        email: { type: string, maxLength: 254, description: Legacy email field }
         password: { type: string, minLength: 8, maxLength: 128 }
+        role: { type: string, enum: [customer, merchant], description: Expected account type }
     CashbackReceiptInput:
       type: object
       required: [merchantId, amount, date, imageData]

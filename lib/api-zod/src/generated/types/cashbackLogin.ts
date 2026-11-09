@@ -5,13 +5,25 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { CashbackLoginRole } from './cashbackLoginRole';
 
 export interface CashbackLogin {
-  /** @maxLength 254 */
-  email: string;
+  /**
+     * Email address or verified phone number
+     * @minLength 1
+     * @maxLength 254
+     */
+  identifier?: string;
+  /**
+     * Legacy email field
+     * @maxLength 254
+     */
+  email?: string;
   /**
      * @minLength 8
      * @maxLength 128
      */
   password: string;
+  /** Expected account type */
+  role?: CashbackLoginRole;
 }
