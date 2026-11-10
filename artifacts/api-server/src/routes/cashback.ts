@@ -400,6 +400,7 @@ router.post("/cashback/register", async (req, res) => {
           phone: phone || null,
           email,
           cbm: {},
+          createdAt: Date.now(),
           status: "active",
         });
       } else {
