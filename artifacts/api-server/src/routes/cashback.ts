@@ -60,9 +60,50 @@ import {
   readProfilePhoto,
 } from "../lib/profilePhotoStorage";
 import { calculateCommissionAmounts } from "../lib/commission-ledger";
+import { addCashbackNotification } from "../lib/cashback-notifications";
 
 const router: IRouter = Router();
 const MAX_IMAGE_LENGTH = 650_000;
+async function recordFailedPayment(
+  profile: CashbackProfile,
+  req: any,
+  error: unknown,
+  details: { sessionId?: string; merchantId?: string } = {},
+): Promise<void> {
+  if (!(error instanceof CashbackError)) return;
+  const allowedCodes = new Set([
+    "PAYMENT_SESSION_NOT_FOUND",
+    "PAYMENT_SESSION_ALREADY_USED",
+    "PAYMENT_SESSION_EXPIRED",
+    "QR_MERCHANT_UNAVAILABLE",
+    "QR_INVALID_OR_WRONG_MERCHANT",
+    "INSUFFICIENT_MERCHANT_BALANCE",
+  ]);
+  if (!allowedCodes.has(error.code)) return;
+  try {
+    await mutateState((state) => {
+      const session = (state.paymentSessions ?? []).find(
+        (entry: any) => entry.id === details.sessionId,
+      );
+      const merchantId = details.merchantId || session?.merchantId || "";
+      const merchant = (state.merchants ?? []).find(
+        (entry: any) => entry.id === merchantId,
+      );
+      addCashbackNotification(state, "admin", "admin.security.payment_failed", {
+        customerId: profile.eid,
+        merchant: merchant?.name || merchantId || "unknown",
+        merchantId: merchantId || undefined,
+        sessionId: details.sessionId || undefined,
+        reason: error.code,
+        ip: String(req.ip ?? "").slice(0, 80),
+        dedupeKey: `payment:${profile.eid}:${details.sessionId || merchantId || "unknown"}:${error.code}`,
+      });
+      return { result: { ok: true } };
+    });
+  } catch {
+    // The original payment error remains authoritative if alert persistence fails.
+  }
+}
 const CATEGORIES = new Set([
   "restaurants",
   "cafes",
@@ -168,13 +209,6 @@ function validateImageData(value: string): { data: string; type: string; hash: s
     type,
     hash: createHash("sha256").update(base64).digest("hex"),
   };
-}
-
-function addNote(state: CashbackState, to: string, text: string): void {
-  if (state.settings?.notificationsEnabled === false) return;
-  state.notes ??= [];
-  state.notes.unshift({ id: randomUUID(), to, text, t: Date.now(), read: false });
-  state.notes.length = Math.min(state.notes.length, 300);
 }
 
 const mutateState = mutateCashbackState;
@@ -337,6 +371,43 @@ router.get("/cashback/session", async (req, res) => {
   }
 });
 
+router.get("/cashback/notifications", async (req, res) => {
+  try {
+    const profile = (req as AuthenticatedRequest).cashbackProfile;
+    const { state } = await getState();
+    const recipient = profile.role === "admin" ? "admin" : profile.eid;
+    const notifications = (state.notes ?? [])
+      .filter((note: any) => note.to === recipient)
+      .slice(0, 300);
+    res.json({
+      notifications,
+      unreadCount: notifications.filter((note: any) => !note.read).length,
+    });
+  } catch (error) {
+    respondError(res, error);
+  }
+});
+
+router.post("/cashback/notifications/read-all", async (req, res) => {
+  try {
+    const profile = (req as AuthenticatedRequest).cashbackProfile;
+    const recipient = profile.role === "admin" ? "admin" : profile.eid;
+    const result = await mutateState((state) => {
+      let updated = 0;
+      for (const note of state.notes ?? []) {
+        if (note.to === recipient && !note.read) {
+          note.read = true;
+          updated += 1;
+        }
+      }
+      return { result: { ok: true, updated } };
+    });
+    res.json(result);
+  } catch (error) {
+    respondError(res, error);
+  }
+});
+
 router.post("/cashback/register", async (req, res) => {
   try {
     const parsed = RegisterCashbackProfileBody.safeParse(req.body);
@@ -405,7 +476,7 @@ router.post("/cashback/register", async (req, res) => {
         });
       } else {
         if (!isCurrencyEnabled(state, input.country)) throw new CashbackError(400, "CURRENCY_DISABLED");
-        state.merchants.push({
+        const merchant = {
           id,
           profileUid: uid,
           name,
@@ -419,8 +490,15 @@ router.post("/cashback/register", async (req, res) => {
           status: "pending",
           appliedAt: Date.now(),
           cashbackRate: null,
+        };
+        state.merchants.push(merchant);
+        addCashbackNotification(state, "admin", "admin.merchant.application.new", {
+          merchant: name,
+          city: merchant.city,
+          country: merchant.country,
+          merchantId: merchant.id,
         });
-        addNote(state, "admin", `طلب انضمام تاجر جديد: ${name}`);
+        addCashbackNotification(state, merchant.id, "merchant.application.pending");
       }
       const photoWrite = image && mediaId
         ? [documentWrite("photos", mediaId, {
@@ -597,6 +675,7 @@ router.post("/cashback/receipts/upload-url", async (req, res) => {
 
 router.post("/cashback/receipts", async (req, res) => {
   const profile = (req as unknown as AuthenticatedRequest).cashbackProfile;
+  let suspiciousReceipt: { merchantId: string; merchantName: string; reason: string } | null = null;
   try {
     unauthorizedRole(profile, "customer");
     const parsed = SubmitCashbackReceiptBody.safeParse(req.body);
@@ -678,6 +757,7 @@ router.post("/cashback/receipts", async (req, res) => {
         uploadedPhoto &&
         state.claims.some((claim: any) => claim.uploadId === uploadedPhoto?.uploadId)
       ) {
+        suspiciousReceipt = { merchantId: merchant.id, merchantName: merchant.name, reason: "RECEIPT_UPLOAD_ALREADY_USED" };
         throw new CashbackError(409, "RECEIPT_UPLOAD_ALREADY_USED");
       }
       const sameInvoice = invoiceNumber &&
@@ -685,12 +765,18 @@ router.post("/cashback/receipts", async (req, res) => {
           claim.mid === merchant.id &&
           String(claim.invoiceNumber ?? claim.no ?? "").trim().toLowerCase() === invoiceNumber.toLowerCase(),
         );
-      if (sameInvoice) throw new CashbackError(409, "DUPLICATE_RECEIPT");
+      if (sameInvoice) {
+        suspiciousReceipt = { merchantId: merchant.id, merchantName: merchant.name, reason: "DUPLICATE_INVOICE_NUMBER" };
+        throw new CashbackError(409, "DUPLICATE_RECEIPT");
+      }
       const sameImage = state.claims.some((claim: any) =>
         claim.imageHash === image.hash ||
         claim.ph === legacyPhotoHash(image.data),
       );
-      if (sameImage) throw new CashbackError(409, "DUPLICATE_RECEIPT");
+      if (sameImage) {
+        suspiciousReceipt = { merchantId: merchant.id, merchantName: merchant.name, reason: "DUPLICATE_IMAGE" };
+        throw new CashbackError(409, "DUPLICATE_RECEIPT");
+      }
       const possibleDuplicate = !invoiceNumber && state.claims.some(
         (claim: any) =>
           claim.mid === merchant.id &&
@@ -717,11 +803,32 @@ router.post("/cashback/receipts", async (req, res) => {
         submittedByUid: profile.uid,
       };
       state.claims.unshift(value);
-      addNote(state, "admin", `فاتورة جديدة بانتظار المراجعة من ${customer.name}`);
+      addCashbackNotification(state, "admin", "admin.receipt.new", {
+        customer: customer.name,
+        merchant: merchant.name,
+        customerId: customer.id,
+        merchantId: merchant.id,
+        receiptId: claimId,
+        amount,
+      });
       if (possibleDuplicate) {
-        addNote(state, "admin", `اشتباه تكرار فاتورة: نفس المتجر والزبون والتاريخ والمبلغ (${merchant.name})`);
+        addCashbackNotification(state, "admin", "admin.security.suspicious_receipt", {
+          customerId: customer.id,
+          merchant: merchant.name,
+          reason: "SAME_STORE_CUSTOMER_DATE_AND_AMOUNT",
+          dedupeKey: `receipt:${customer.id}:${merchant.id}:${dateOnly}:${amount}`,
+          receiptId: claimId,
+          ip: String(req.ip ?? ""),
+        });
       }
-      addNote(state, customer.id, `تم إرسال الفاتورة إلى المراجعة لدى ${merchant.name}`);
+      addCashbackNotification(state, customer.id, "customer.receipt.submitted", {
+        merchant: merchant.name,
+        receiptId: claimId,
+      });
+      addCashbackNotification(state, merchant.id, "merchant.receipt.new", {
+        customer: customer.name,
+        receiptId: claimId,
+      });
       return {
         result: value,
         extraWrites: [
@@ -741,6 +848,27 @@ router.post("/cashback/receipts", async (req, res) => {
     });
     res.status(201).json(receipt);
   } catch (error) {
+    if (
+      suspiciousReceipt &&
+      error instanceof CashbackError &&
+      ["DUPLICATE_RECEIPT", "RECEIPT_UPLOAD_ALREADY_USED"].includes(error.code)
+    ) {
+      try {
+        await mutateState((state) => {
+          addCashbackNotification(state, "admin", "admin.security.suspicious_receipt", {
+            customerId: profile.eid,
+            merchant: suspiciousReceipt?.merchantName ?? "unknown",
+            merchantId: suspiciousReceipt?.merchantId,
+            reason: suspiciousReceipt?.reason ?? error.code,
+            dedupeKey: `receipt-attempt:${profile.eid}:${suspiciousReceipt?.merchantId ?? "unknown"}:${error.code}`,
+            ip: String(req.ip ?? ""),
+          });
+          return { result: { ok: true } };
+        });
+      } catch {
+        // Do not replace the original receipt error if alert persistence fails.
+      }
+    }
     respondError(res, error);
   }
 });
@@ -862,18 +990,39 @@ router.patch("/cashback/receipts/:id/decision", async (req, res) => {
           method: "receipt",
           receiptId: claim.id,
         });
-        addNote(
-          state,
-          merchant.id,
-          `تم اعتماد فاتورة ${claim.invoiceNumber || claim.id}: التزام ${merchantObligation} ${commissionEntry.currency}، تمت تسوية ${settlement.amount} والمتبقي ${commissionEntry.outstandingAmount}`,
-        );
-        addNote(state, customer.id, `تم اعتماد فاتورتك لدى ${merchant.name} وإضافة المكافأة إلى رصيد هذا المتجر`);
+        addCashbackNotification(state, merchant.id, "merchant.invoice.approved", {
+          receiptId: claim.invoiceNumber || claim.id,
+          obligation: merchantObligation,
+          settled: settlement.amount,
+          outstanding: commissionEntry.outstandingAmount,
+          currency: commissionEntry.currency,
+        });
+        addCashbackNotification(state, customer.id, "customer.receipt.approved", {
+          merchant: merchant.name,
+          receiptId: claim.id,
+        });
+        addCashbackNotification(state, customer.id, "customer.reward.added", {
+          merchant: merchant.name,
+          amount: cashback,
+          currency: commissionEntry.currency,
+          receiptId: claim.id,
+        });
+        addCashbackNotification(state, customer.id, "customer.balance.updated", {
+          merchant: merchant.name,
+          balance: Number(customer.cbm[merchant.id] ?? 0),
+          currency: commissionEntry.currency,
+          receiptId: claim.id,
+        });
       } else {
         claim.status = "rejected";
         claim.reviewedAt = Date.now();
         claim.reviewedBy = profile.uid;
         claim.reason = fieldString(parsed.data.reason ?? "") || "RECEIPT_REJECTED";
-        addNote(state, customer.id, `تم رفض الفاتورة لدى ${merchant.name}`);
+        addCashbackNotification(state, customer.id, "customer.receipt.rejected", {
+          merchant: merchant.name,
+          reason: claim.reason,
+          receiptId: claim.id,
+        });
       }
       return { result: { id, status: claim.status, cashback: claim.cashback ?? 0 } };
     });
@@ -900,8 +1049,11 @@ router.delete("/cashback/receipts/:id", async (req, res) => {
       }
       claim.status = "cancelled";
       claim.cancelledAt = Date.now();
-      addNote(state, "admin", `تم إلغاء الفاتورة ${receiptId} من صاحب الحساب`);
-      addNote(state, profile.eid, "تم إلغاء إرسال الفاتورة قبل مراجعتها");
+      addCashbackNotification(state, "admin", "admin.receipt.cancelled", {
+        customerId: profile.eid,
+        receiptId,
+      });
+      addCashbackNotification(state, profile.eid, "customer.receipt.cancelled", { receiptId });
       return { result: { ok: true } };
     });
     res.json({ ok: true });
@@ -936,14 +1088,19 @@ router.patch("/cashback/merchants/:id/decision", async (req, res) => {
         }
         merchant.qrValue = `cashback://merchant/${merchant.publicId}`;
         merchant.activatedAt = Date.now();
-        addNote(state, merchant.id, "تمت الموافقة على طلب انضمام متجرك، يمكنك الآن استخدام لوحة التاجر");
+        addCashbackNotification(state, merchant.id, "merchant.application.approved", {
+          merchant: merchant.name,
+        });
       } else {
         const reason = fieldString(parsed.data.reason ?? "");
         if (!reason) throw new CashbackError(400, "REJECTION_REASON_REQUIRED");
         merchant.status = "rejected";
         merchant.rejectionReason = reason;
         merchant.rejectedAt = Date.now();
-        addNote(state, merchant.id, `تم رفض طلب انضمام متجرك: ${merchant.rejectionReason}`);
+        addCashbackNotification(state, merchant.id, "merchant.application.rejected", {
+          merchant: merchant.name,
+          reason: merchant.rejectionReason,
+        });
       }
       return { result: { id: merchant.id, status: merchant.status } };
     });
@@ -1117,9 +1274,26 @@ router.post("/cashback/wallet/redemptions", async (req, res) => {
         amount,
         at,
       });
-      const currencyLabel = merchant.country === "Libya" ? "د.ل" : "دج";
-      addNote(state, merchant.id, `تم استلام دفعة كاش باك ${amount} ${currencyLabel}، المرجع ${reference}`);
-      addNote(state, customer.id, `تم دفع ${amount} من رصيد ${merchant.name}، المرجع ${reference}`);
+      const currency = merchant.country === "Libya" ? "LYD" : "DZD";
+      addCashbackNotification(state, merchant.id, "merchant.qr.payment.received", {
+        merchant: merchant.name,
+        customer: customer.name,
+        amount,
+        currency,
+        reference,
+      });
+      addCashbackNotification(state, customer.id, "customer.qr.payment.completed", {
+        merchant: merchant.name,
+        amount,
+        currency,
+        reference,
+      });
+      addCashbackNotification(state, customer.id, "customer.balance.updated", {
+        merchant: merchant.name,
+        balance: Number(customer.cbm[merchant.id] ?? 0),
+        currency,
+        reference,
+      });
       return {
         result: {
           id,
@@ -1135,6 +1309,9 @@ router.post("/cashback/wallet/redemptions", async (req, res) => {
     });
     res.status(201).json(result);
   } catch (error) {
+    await recordFailedPayment(profile, req, error, {
+      sessionId: typeof req.body?.sessionId === "string" ? req.body.sessionId.slice(0, 100) : undefined,
+    });
     respondError(res, error);
   }
 });
@@ -1202,6 +1379,9 @@ router.post("/cashback/wallet/payment-sessions", async (req, res) => {
     });
     res.status(201).json(result);
   } catch (error) {
+    await recordFailedPayment(profile, req, error, {
+      merchantId: typeof req.body?.merchantId === "string" ? req.body.merchantId.slice(0, 100) : undefined,
+    });
     respondError(res, error);
   }
 });
@@ -1271,8 +1451,18 @@ router.post("/cashback/wallet/payments/:id/reversal", async (req, res) => {
         at: payment.reversedAt,
         merchantDebtAdded: debtAdded,
       });
-      addNote(state, customer.id, `تم إلغاء العملية ${payment.reference} وإعادة المبلغ إلى رصيد المتجر`);
-      addNote(state, merchant.id, `تم عكس العملية ${payment.reference} من قبل الإدارة`);
+      const currency = merchant.country === "Libya" ? "LYD" : "DZD";
+      addCashbackNotification(state, customer.id, "customer.payment.reversed", {
+        merchant: merchant.name,
+        amount: payment.amount,
+        currency,
+        reference: payment.reference,
+      });
+      addCashbackNotification(state, merchant.id, "merchant.payment.reversed", {
+        amount: payment.amount,
+        currency,
+        reference: payment.reference,
+      });
       return { result: { ok: true } };
     });
     res.json({ ok: true });
@@ -1552,9 +1742,11 @@ router.patch("/cashback/admin/customers/:id/status", async (req, res) => {
         adminUid: profile.uid,
         at: Date.now(),
       });
-      addNote(state, customer.id, parsed.data.status === "suspended"
-        ? "تم تعليق الحساب من الإدارة"
-        : "تمت إعادة تفعيل الحساب");
+      addCashbackNotification(
+        state,
+        customer.id,
+        parsed.data.status === "suspended" ? "customer.account.suspended" : "customer.account.reactivated",
+      );
       return { result: { id: customer.id, status: customer.status } };
     });
     res.json({ ok: true, status: parsed.data.status });
@@ -1590,9 +1782,11 @@ router.patch("/cashback/admin/merchants/:id/status", async (req, res) => {
         adminUid: profile.uid,
         at: Date.now(),
       });
-      addNote(state, merchant.id, parsed.data.status === "suspended"
-        ? "تم تعليق المتجر من الإدارة"
-        : "تمت إعادة تفعيل المتجر");
+      addCashbackNotification(
+        state,
+        merchant.id,
+        parsed.data.status === "suspended" ? "merchant.account.suspended" : "merchant.account.reactivated",
+      );
       return { result: { id: merchant.id, status: merchant.status } };
     });
     res.json({ ok: true, status: parsed.data.status });
@@ -1673,7 +1867,7 @@ router.post("/cashback/admin/merchants/:id/rotate-qr", async (req, res) => {
         adminUid: profile.uid,
         at: Date.now(),
       });
-      addNote(state, merchant.id, "تم إنشاء رمز QR جديد وإبطال الرمز السابق");
+      addCashbackNotification(state, merchant.id, "merchant.qr.rotated");
       return { result: { ok: true, merchantId: merchant.id, publicId: merchant.publicId, qrValue: merchant.qrValue } };
     });
     res.json(result);

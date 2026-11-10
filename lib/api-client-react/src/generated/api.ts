@@ -52,6 +52,7 @@ import type {
   CashbackSession,
   CashbackSystemSettingsUpdate,
   CashbackWithdrawalProofUploadInput,
+  GetCashbackNotifications200,
   HealthStatus,
   MerchantCommissionRatesUpdate,
   ProfilePhotoFinalizeInput,
@@ -1970,6 +1971,157 @@ export const useUpdateCashbackPaymentMethods = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getUpdateCashbackPaymentMethodsMutationOptions(options));
+    }
+
+export const getGetCashbackNotificationsUrl = () => {
+
+
+
+
+  return `/api/cashback/notifications`
+}
+
+/**
+ * @summary List notifications for the authenticated account
+ */
+export const getCashbackNotifications = async ( options?: Parameters<typeof customFetch>[1]): Promise<GetCashbackNotifications200> => {
+
+  return customFetch<GetCashbackNotifications200>(getGetCashbackNotificationsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCashbackNotificationsQueryKey = () => {
+    return [
+    `/api/cashback/notifications`
+    ] as const;
+    }
+
+
+export const getGetCashbackNotificationsQueryOptions = <TData = Awaited<ReturnType<typeof getCashbackNotifications>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCashbackNotifications>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCashbackNotificationsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCashbackNotifications>>> = ({ signal }) => getCashbackNotifications({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCashbackNotifications>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetCashbackNotificationsQueryResult = NonNullable<Awaited<ReturnType<typeof getCashbackNotifications>>>
+export type GetCashbackNotificationsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List notifications for the authenticated account
+ */
+
+export function useGetCashbackNotifications<TData = Awaited<ReturnType<typeof getCashbackNotifications>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCashbackNotifications>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetCashbackNotificationsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getMarkCashbackNotificationsReadUrl = () => {
+
+
+
+
+  return `/api/cashback/notifications/read-all`
+}
+
+/**
+ * @summary Mark notifications for the authenticated account as read
+ */
+export const markCashbackNotificationsRead = async ( options?: Parameters<typeof customFetch>[1]): Promise<ActionResult> => {
+
+  return customFetch<ActionResult>(getMarkCashbackNotificationsReadUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getMarkCashbackNotificationsReadMutationKey = () => ['markCashbackNotificationsRead'] as const;
+
+export const getMarkCashbackNotificationsReadMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markCashbackNotificationsRead>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof markCashbackNotificationsRead>>, TError,void, TContext> => {
+
+const mutationKey = getMarkCashbackNotificationsReadMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof markCashbackNotificationsRead>>, void> = () => {
+
+
+          return  markCashbackNotificationsRead(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type MarkCashbackNotificationsReadMutationResult = NonNullable<Awaited<ReturnType<typeof markCashbackNotificationsRead>>>
+
+    export type MarkCashbackNotificationsReadMutationError = ErrorType<unknown>
+
+
+    /**
+ * @summary Mark notifications for the authenticated account as read
+ */
+export const useMarkCashbackNotificationsRead = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markCashbackNotificationsRead>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof markCashbackNotificationsRead>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getMarkCashbackNotificationsReadMutationOptions(options));
     }
 
 export const getMarkCashbackMerchantNotificationsReadUrl = () => {

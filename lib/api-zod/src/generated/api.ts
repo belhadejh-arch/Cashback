@@ -530,6 +530,25 @@ export const UpdateCashbackPaymentMethodsResponse = zod.record(zod.string(), zod
 
 
 /**
+ * @summary List notifications for the authenticated account
+ */
+export const getCashbackNotificationsResponseUnreadCountMin = 0;
+
+
+
+export const GetCashbackNotificationsResponse = zod.object({
+  "notifications": zod.array(zod.record(zod.string(), zod.unknown())),
+  "unreadCount": zod.number().int().min(getCashbackNotificationsResponseUnreadCountMin)
+})
+
+
+/**
+ * @summary Mark notifications for the authenticated account as read
+ */
+export const MarkCashbackNotificationsReadResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
  * @summary Mark all merchant notifications as read
  */
 export const MarkCashbackMerchantNotificationsReadResponse = zod.record(zod.string(), zod.unknown())

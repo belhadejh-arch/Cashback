@@ -430,6 +430,40 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ActionResult"
+  /cashback/notifications:
+    get:
+      operationId: getCashbackNotifications
+      tags: [cashback]
+      summary: List notifications for the authenticated account
+      responses:
+        "200":
+          description: Account notifications
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [notifications, unreadCount]
+                properties:
+                  notifications:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+                  unreadCount:
+                    type: integer
+                    minimum: 0
+  /cashback/notifications/read-all:
+    post:
+      operationId: markCashbackNotificationsRead
+      tags: [cashback]
+      summary: Mark notifications for the authenticated account as read
+      responses:
+        "200":
+          description: Notifications marked as read
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActionResult"
   /cashback/merchant/notifications/read-all:
     post:
       operationId: markCashbackMerchantNotificationsRead

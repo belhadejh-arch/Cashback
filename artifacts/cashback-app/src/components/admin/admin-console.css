@@ -124,6 +124,15 @@
 .ac-feedback.is-error {border-color:hsl(var(--ac-red)/.3);background:hsl(var(--ac-red)/.07);color:hsl(var(--ac-red))}
 .ac-empty {min-height:90px;display:flex;align-items:center;justify-content:center;gap:9px;border:1px dashed hsl(var(--ac-line));border-radius:13px;color:hsl(var(--ac-muted));font-size:12px}
 .ac-empty svg {color:hsl(var(--ac-orange))}
+.ac-notification-list {display:grid;gap:9px}
+.ac-notification {padding:13px 14px;border:1px solid hsl(var(--ac-line));border-radius:13px;background:hsl(var(--ac-bg)/.48)}
+.ac-notification.is-unread {border-inline-start:3px solid hsl(var(--ac-orange))}
+.ac-notification.is-warning {border-color:hsl(var(--ac-red)/.42);background:hsl(var(--ac-red)/.045)}
+.ac-notification-top {display:flex;align-items:center;justify-content:space-between;gap:10px}
+.ac-notification-top small,.ac-notification-detail {color:hsl(var(--ac-muted));font-size:10px}
+.ac-notification h3 {margin:8px 0 2px;font-size:14px}
+.ac-notification p {margin:0;color:hsl(var(--ac-muted));font-size:12px;line-height:1.65}
+.ac-notification-detail {display:block;margin-top:5px}
 .ac-fund-card {padding:14px;border:1px solid hsl(var(--ac-line));border-radius:14px;background:hsl(var(--ac-bg)/.45)}
 .ac-fund-card h3 {margin:0 0 5px;font-size:14px;color:hsl(var(--ac-gold))}
 .ac-inline-title {display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}

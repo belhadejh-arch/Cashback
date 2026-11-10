@@ -3,9 +3,11 @@ import { useQueryClient } from '@tanstack/react-query';
 import {
   useCreateCashbackMerchantAssetUpload, useUpdateCashbackMerchantStore,
   useCreateCashbackMerchantStoreChangeRequest, useCreateCashbackMerchantWithdrawal,
-  useCreateCashbackMerchantTopup, useMarkCashbackMerchantNotificationsRead,
-  getGetCashbackSessionQueryKey,
+  useCreateCashbackMerchantTopup, getGetCashbackSessionQueryKey,
+  getGetCashbackNotificationsQueryKey, useGetCashbackNotifications,
+  useMarkCashbackNotificationsRead,
 } from '@workspace/api-client-react';
+import { notificationCopy } from '@/components/notifications/notification-copy';
 import {
   Activity, ArrowDownToLine, ArrowLeftRight, ArrowUpRight, BadgeDollarSign,
   Bell, Check, CircleDollarSign, Download,
@@ -258,7 +260,12 @@ export function MerchantWorkspace(props: MerchantWorkspaceProps) {
   const changeRequest = useCreateCashbackMerchantStoreChangeRequest();
   const createWithdrawal = useCreateCashbackMerchantWithdrawal();
   const createTopup = useCreateCashbackMerchantTopup();
-  const markRead = useMarkCashbackMerchantNotificationsRead();
+  const notificationQuery = useGetCashbackNotifications({ query: {
+    queryKey: getGetCashbackNotificationsQueryKey(),
+    refetchInterval: 15000,
+    refetchOnWindowFocus: true,
+  } });
+  const markRead = useMarkCashbackNotificationsRead();
   const onRefreshRef = useRef(onRefresh);
   onRefreshRef.current = onRefresh;
   useEffect(() => {
@@ -291,7 +298,10 @@ export function MerchantWorkspace(props: MerchantWorkspaceProps) {
   const cbpays = asRows(state.cbpays).filter(r => str(first(r, 'mid', 'merchantId', 'shopId')) === str(shop.id));
   const customers = asRows(state.customers);
   const customerById = useMemo(() => new Map(customers.map(customer => [str(customer.id), customer])), [customers]);
-  const notes = asRows(state.notes).filter(r => !first(r, 'to') || str(r.to) === str(shop.id));
+  const notes = asRows(
+    (notificationQuery.data as { notifications?: unknown[] }|undefined)?.notifications ?? state.notes,
+  ).filter(r => str(first(r, 'to')) === str(shop.id));
+  const unreadNotifications = notes.filter(r => !r.read).length;
   const topups = asRows(first(state, 'merchantTopups', 'topups')).filter(r => !first(r, 'merchantId', 'mid') || str(first(r, 'merchantId', 'mid')) === str(shop.id));
   const withdrawals = asRows(first(state, 'merchantWithdrawals', 'withdrawals')).filter(r => !first(r, 'merchantId', 'mid') || str(first(r, 'merchantId', 'mid')) === str(shop.id));
   const commissionEntries = asRows(first(state, 'merchantCommissionLedger')).filter(r => str(first(r,'merchantId','mid')) === str(shop.id));
@@ -345,7 +355,11 @@ export function MerchantWorkspace(props: MerchantWorkspaceProps) {
   }, [approvedClaims, cbpays, customerById, shop.id]);
   const activeNav = navItems.find(item => item.path === currentPath) ?? navItems[0];
   const currentTitle = t[activeNav.key];
-  const invalidating = () => { void queryClient.invalidateQueries({ queryKey:getGetCashbackSessionQueryKey() }); onRefresh(); };
+  const invalidating = () => {
+    void queryClient.invalidateQueries({ queryKey:getGetCashbackSessionQueryKey() });
+    void queryClient.invalidateQueries({ queryKey:getGetCashbackNotificationsQueryKey() });
+    onRefresh();
+  };
   const notificationAction = async () => {
     setMessage('');
     try { await markRead.mutateAsync(); invalidating(); setMessage(t.markedRead); }
@@ -630,7 +644,7 @@ export function MerchantWorkspace(props: MerchantWorkspaceProps) {
     </>;
     if (currentPath === '/merchant/notifications') return <>
       {heading(t.notifications,t.recentActivity,<button className="mw-btn" onClick={notificationAction} disabled={markRead.isPending}><Check size={15}/>{t.readAll}</button>)}
-      {notes.length ? <div className="mw-grid">{notes.map((note,i)=><section className="mw-card" key={str(note.id,String(i))}><div className="mw-row-main"><i className="mw-row-icon"><Bell size={17}/></i><div className="mw-row-copy"><strong>{str(note.text, t.notifications)}</strong><small>{dateOf(note)}</small></div><span className={`mw-status ${note.read ? '' : 'is-pending'}`}>{note.read ? t.read : t.unread}</span></div></section>)}</div> : <Empty title={t.noNotifications} hint={t.noNotifications}/>}
+      {notes.length ? <div className="mw-grid">{notes.map((note,i)=>{const copy=notificationCopy(note as any,lang);return <section className="mw-card" key={str(note.id,String(i))}><div className="mw-row-main"><i className="mw-row-icon"><Bell size={17}/></i><div className="mw-row-copy"><strong>{copy.title||t.notifications}</strong><small>{copy.body}</small><small>{dateOf(note)}</small></div><span className={`mw-status ${note.read ? '' : 'is-pending'}`}>{note.read ? t.read : t.unread}</span></div></section>})}</div> : <Empty title={t.noNotifications} hint={t.noNotifications}/>}
     </>;
     if (currentPath === '/merchant/settings') return <>
       {heading(t.settings,t.settingsHint)}
@@ -658,7 +672,7 @@ export function MerchantWorkspace(props: MerchantWorkspaceProps) {
       <aside className={`mw-sidebar ${menuOpen?'is-open':''}`}>
         <div className="mw-brand"><div className="mw-brand-mark">CB</div><div className="mw-brand-copy"><strong>CASH BACK</strong><small>{t.workspace}</small></div></div>
         <div className="mw-shop-chip"><div className="mw-shop-avatar">{str(shop.name,'C').slice(0,1)}</div><span><strong>{str(shop.name,t.store)}</strong><small>{str(shop.city, countryLabel(shop.country))}</small></span></div>
-        <nav className="mw-nav" aria-label={t.workspace}>{navItems.map(({path,key,icon:Icon})=><button type="button" key={path} className={`mw-nav-item ${path===currentPath?'is-active':''}`} onClick={()=>{onNavigate(path);setMenuOpen(false)}} data-testid={`nav-${key}`}><Icon size={17}/><span>{t[key]}</span></button>)}</nav>
+        <nav className="mw-nav" aria-label={t.workspace}>{navItems.map(({path,key,icon:Icon})=><button type="button" key={path} className={`mw-nav-item ${path===currentPath?'is-active':''}`} onClick={()=>{onNavigate(path);setMenuOpen(false)}} data-testid={`nav-${key}`}><Icon size={17}/><span>{t[key]}</span>{key==='notifications'&&unreadNotifications>0&&<i className="mw-nav-badge">{unreadNotifications>9?'9+':unreadNotifications}</i>}</button>)}</nav>
         <div className="mw-sidebar-foot">CASH BACK · {new Date().getFullYear()}</div>
       </aside>
       <div className="mw-main">

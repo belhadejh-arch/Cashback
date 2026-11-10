@@ -44,6 +44,7 @@
 .mw-nav-item:hover {color:hsl(var(--mw-text));background:hsl(var(--mw-panel-2));transform:translateX(-2px)}
 .mw-nav-item.is-active {color:hsl(var(--mw-text));background:hsl(var(--mw-orange)/.12);border-color:hsl(var(--mw-orange)/.25)}
 .mw-nav-item.is-active svg {color:hsl(var(--mw-orange))}
+.mw-nav-badge {margin-inline-start:auto;min-width:19px;height:19px;padding:0 5px;display:grid;place-items:center;border-radius:99px;background:#e34832;color:#fff;font-size:10px;font-style:normal;font-weight:700}
 .mw-sidebar-foot {margin-top:auto;padding:13px 9px 0;border-top:1px solid hsl(var(--mw-line));color:hsl(var(--mw-muted));font-size:11px}
 .mw-main {min-width:0}
 .mw-topbar {height:76px;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:0 clamp(16px,3.5vw,42px);border-bottom:1px solid hsl(var(--mw-line));background:hsl(var(--mw-bg)/.78);backdrop-filter:blur(14px)}

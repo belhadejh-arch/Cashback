@@ -714,3 +714,11 @@ export interface MerchantCommissionRatesUpdate {
 
 export interface ActionResult { [key: string]: unknown }
 
+export type GetCashbackNotifications200NotificationsItem = { [key: string]: unknown };
+
+export type GetCashbackNotifications200 = {
+  notifications: GetCashbackNotifications200NotificationsItem[];
+  /** @minimum 0 */
+  unreadCount: number;
+};
+

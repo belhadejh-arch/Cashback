@@ -1,15 +1,17 @@
 import { lazy, Suspense, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
-  getGetCashbackSessionQueryKey, getGetCashbackMediaQueryKey, useGetCashbackMedia,
+  getGetCashbackSessionQueryKey, getGetCashbackMediaQueryKey, getGetCashbackNotificationsQueryKey,
+  useGetCashbackMedia, useGetCashbackNotifications, useMarkCashbackNotificationsRead,
   useUpdateCashbackCustomerStatus, useUpdateCashbackMerchantStatus, useRotateCashbackMerchantQr,
   useUpdateCashbackSystemSettings, useUpdateCashbackMerchantCategory,
 } from '@workspace/api-client-react';
 import {
-  Activity, Banknote, Check, Clock3, FileCheck2, FileSpreadsheet, Filter, Globe2, RotateCcw,
+  Activity, Banknote, Bell, Check, CheckCheck, Clock3, FileCheck2, FileSpreadsheet, Filter, Globe2, RotateCcw,
   Search, Settings2, ShieldCheck, Store, Users, Wallet, X,
 } from 'lucide-react';
 import { MerchantAdminPanel } from '@/components/merchant-workspace/MerchantAdminPanel';
+import { notificationCopy } from '@/components/notifications/notification-copy';
 import './admin-console.css';
 
 const ReportsSection=lazy(()=>import('./ReportsSection').then(module=>({default:module.ReportsSection})));
@@ -52,10 +54,19 @@ const countryName=(country:unknown,lang:Lang)=>{
 export function AdminConsole(props:Props) {
   const {merchants,claims,state,t,lang,onRefresh}=props;
   const tx=copy[lang],labels=overviewCopy[lang],rtl=lang==='ar',client=useQueryClient();
+  const notificationsQuery=useGetCashbackNotifications({query:{
+    queryKey:getGetCashbackNotificationsQueryKey(),
+    refetchInterval:15000,
+    refetchOnWindowFocus:true,
+  }});
+  const markNotificationsRead=useMarkCashbackNotificationsRead();
   const combinedRateLabel=lang==='ar'?'إجمالي التزام التاجر الافتراضي':lang==='fr'?'Taux total par défaut du commerce':'Default total merchant obligation rate';
   const updateCustomer=useUpdateCashbackCustomerStatus(),updateMerchant=useUpdateCashbackMerchantStatus(),rotateQr=useRotateCashbackMerchantQr(),updateSettings=useUpdateCashbackSystemSettings(),updateCategory=useUpdateCashbackMerchantCategory();
   const [tab,setTab]=useState('overview'),[period,setPeriod]=useState('month'),[group,setGroup]=useState('country'),[query,setQuery]=useState(''),[claimStatus,setClaimStatus]=useState('all'),[merchantFilter,setMerchantFilter]=useState('all'),[customerFilter,setCustomerFilter]=useState('all');
   const [flash,setFlash]=useState(''),[busy,setBusy]=useState(''),[selectedCountry,setSelectedCountry]=useState('all');
+  const notificationResponse=notificationsQuery.data as {notifications?:Row[]}|undefined;
+  const notificationRows=notificationResponse?.notifications ?? rows(state.notes).filter(note=>note.to==='admin');
+  const unreadAdminNotifications=notificationRows.filter(note=>!note.read).length;
   const customers=rows(state.customers),ledger=rows(state.merchantCommissionLedger),payments=rows(state.cbpays);
   const topups=rows(state.merchantTopups),withdrawals=rows(state.merchantWithdrawals);
   const statusText=(status:string)=>status==='pending'?tx.pending:status==='approved'?tx.approved:status==='rejected'?tx.rejected:status==='active'?tx.active:status==='suspended'?tx.suspended:status==='cancelled'?t('cancelled'):status==='paid'?(lang==='ar'?'تم التحويل':lang==='fr'?'Payé':'Paid'):status==='transferring'?(lang==='ar'?'جارٍ التحويل':lang==='fr'?'En cours de virement':'Transferring'):status;
@@ -106,7 +117,20 @@ export function AdminConsole(props:Props) {
     });
     return [...map.values()].sort((a,b)=>b.commission-a.commission);
   };
-  const persist=()=>{void client.invalidateQueries({queryKey:getGetCashbackSessionQueryKey()});onRefresh();};
+  const persist=()=>{
+    void client.invalidateQueries({queryKey:getGetCashbackSessionQueryKey()});
+    void client.invalidateQueries({queryKey:getGetCashbackNotificationsQueryKey()});
+    onRefresh();
+  };
+  const markAllAdminNotificationsRead=async()=>{
+    try {
+      await markNotificationsRead.mutateAsync();
+      await client.invalidateQueries({queryKey:getGetCashbackNotificationsQueryKey()});
+      setFlash(lang==='ar'?'تم تحديد الإشعارات كمقروءة':lang==='fr'?'Notifications marquées comme lues.':'Notifications marked as read.');
+    } catch {
+      setFlash(tx.failed);
+    }
+  };
   const mutateStatus=async(kind:'merchant'|'customer',row:Row,status:'active'|'suspended')=>{
     if(status==='suspended'&&!window.confirm(kind==='merchant'?labels.suspendMerchantConfirm:labels.suspendCustomerConfirm))return;
     const id=str(row.id);setBusy(`${kind}:${id}`);setFlash('');
@@ -131,7 +155,7 @@ export function AdminConsole(props:Props) {
     try{await updateSettings.mutateAsync({data:{claimHours:Number(form.claimHours),minimumTopupDzd:Number(form.minimumTopupDzd),minimumTopupLyd:Number(form.minimumTopupLyd),enabledCurrencies:(form.currencies.length?form.currencies:['DZD']) as ('DZD'|'LYD')[],enabledLanguages:(form.languages.length?form.languages:['ar']) as ('ar'|'en'|'fr')[],notificationsEnabled:form.notifications}});persist();setFlash(tx.saved)}
     catch{setFlash(tx.saveError)}finally{setBusy('')}
   };
-  const tabs=[['overview',tx.overview,Activity],['analytics',tx.analytics,Activity],['reports',lang==='ar'?'التقارير':lang==='fr'?'Rapports':'Reports',FileSpreadsheet],['merchants',tx.merchants,Store],['customers',tx.customerTab,Users],['invoices',tx.invoices,FileCheck2],['operations',tx.operations,Wallet],['settings',tx.settings,Settings2]] as const;
+  const tabs=[['overview',tx.overview,Activity],['analytics',tx.analytics,Activity],['reports',lang==='ar'?'التقارير':lang==='fr'?'Rapports':'Reports',FileSpreadsheet],['merchants',tx.merchants,Store],['customers',tx.customerTab,Users],['invoices',tx.invoices,FileCheck2],['operations',tx.operations,Wallet],['notifications',lang==='ar'?'الإشعارات':lang==='fr'?'Notifications':'Notifications',Bell],['settings',tx.settings,Settings2]] as const;
   const sectionTitle=(title:string,hint?:string)=><div className="ac-section-title"><div><span className="ac-eyebrow">{lang==='ar'?'لوحة إدارة CASH BACK':lang==='fr'?'CONTRÔLE CASH BACK':'CASH BACK ADMIN'}</span><h2>{title}</h2>{hint&&<p>{hint}</p>}</div></div>;
   const empty=(message=tx.empty)=><div className="ac-empty"><Search size={19}/><span>{message}</span></div>;
   const summaryCard=(label:string,value:string,icon:ReactNode,tint='orange')=><article className={`ac-stat ac-stat-${tint}`}><span className="ac-stat-icon">{icon}</span><small>{label}</small><strong>{value}</strong></article>;
@@ -182,11 +206,25 @@ export function AdminConsole(props:Props) {
   </div>;
   const toggleOption=(list:'currencies'|'languages',value:string)=>setForm(old=>{const next=old[list].includes(value)?old[list].filter(v=>v!==value):[...old[list],value];return next.length?{...old,[list]:next}:old});
   const viewSettings=()=> <div className="ac-stack"><section className="ac-panel">{sectionTitle(tx.settings)}<div className="ac-settings-form"><label>{tx.claimWindow}<input type="number" min="1" max="8760" className="ac-input" value={form.claimHours} onChange={e=>setForm({...form,claimHours:e.target.value})} data-testid="input-claim-window"/></label><label>{tx.minimumDzd}<input type="number" min="1000" className="ac-input" value={form.minimumTopupDzd} onChange={e=>setForm({...form,minimumTopupDzd:e.target.value})} data-testid="input-minimum-topup-dzd"/></label><label>{tx.minimumLyd}<input type="number" min="10" className="ac-input" value={form.minimumTopupLyd} onChange={e=>setForm({...form,minimumTopupLyd:e.target.value})} data-testid="input-minimum-topup-lyd"/></label></div><div className="ac-settings-options"><fieldset><legend>{tx.currencies}</legend>{['DZD','LYD'].map(v=><label key={v}><input type="checkbox" checked={form.currencies.includes(v)} onChange={()=>toggleOption('currencies',v)}/>{v}</label>)}</fieldset><fieldset><legend>{tx.languages}</legend>{['ar','en','fr'].map(v=><label key={v}><input type="checkbox" checked={form.languages.includes(v)} onChange={()=>toggleOption('languages',v)}/>{v.toUpperCase()}</label>)}</fieldset><label className="ac-switch"><input type="checkbox" checked={form.notifications} onChange={e=>setForm({...form,notifications:e.target.checked})}/>{tx.notifications}</label></div><p className="ac-settings-note">{labels.currencyScope}</p><button className="ac-button ac-button-primary" onClick={()=>void saveSystemSettings()} disabled={busy==='settings'} data-testid="button-save-system-settings"><Check size={15}/>{busy==='settings'?tx.saving:tx.save}</button></section><section className="ac-panel"><header className="ac-inline-title"><div><h2>{tx.settings} · {t('rate')}</h2><p>{tx.separate}</p></div></header><div className="ac-settings-form"><label>{lang==='ar'?'مكافأة الزبون (%)':lang==='fr'?'Taux de récompense client (%)':'Customer cashback (%)'}<input className="ac-input" type="number" min="0" max="100" step=".1" value={props.rate||str(settings.cashback,'4')} onChange={e=>props.setRate(e.target.value)} data-testid="input-admin-rate"/></label><label>{lang==='ar'?'عمولة المنصة (%)':lang==='fr'?'Commission plateforme (%)':'Platform commission (%)'}<input className="ac-input" type="number" min="0" max="100" step=".1" value={props.platformCommissionRate||str(settings.platformCommission,'2')} onChange={e=>props.setPlatformCommissionRate(e.target.value)} data-testid="input-admin-platform-commission"/></label><button className="ac-button ac-button-primary" onClick={props.saveRate} data-testid="button-admin-save-rate"><Check size={15}/>{t('save')}</button></div><div className="ac-category-editor"><strong>{t('categoriesManager')}</strong><p>{t('categoriesHint')}</p>{['restaurants','cafes','clothing','electronics','malls','groceries','perfume','gifts','shops'].map(cat=><label key={cat}><input type="checkbox" checked={(state.categories as string[]|undefined)?.includes(cat)??true} onChange={e=>{const current=(state.categories as string[]|undefined)||[];props.saveCategories(e.target.checked?[...new Set([...current,cat])]:current.filter(x=>x!==cat))}}/>{t(`cat_${cat}`)}</label>)}</div></section></div>;
-  const view=tab==='reports'?<Suspense fallback={<div className="ac-panel">{lang==='ar'?'جارٍ تحميل التقارير…':lang==='fr'?'Chargement des rapports…':'Loading reports…'}</div>}><ReportsSection state={state} merchants={merchants} claims={claims} lang={lang}/></Suspense>:tab==='overview'?viewOverview():tab==='analytics'?viewAnalytics():tab==='merchants'?viewMerchants():tab==='customers'?viewCustomers():tab==='invoices'?viewInvoices():tab==='operations'?viewOperations():viewSettings();
+  const viewNotifications=()=> <section className="ac-panel ac-notifications">
+    <header className="ac-inline-title">
+      <div><h2>{lang==='ar'?'مركز الإشعارات':lang==='fr'?'Centre de notifications':'Notification center'}</h2><p>{lang==='ar'?'تنبيهات طلبات التجار والفواتير والشحن والسحب ومحاولات الدفع.':lang==='fr'?'Demandes des commerces, factures, recharges, retraits et paiements échoués.':'Merchant requests, invoices, top-ups, withdrawals, and failed payments.'}</p></div>
+      {unreadAdminNotifications>0&&<button className="ac-button" onClick={()=>void markAllAdminNotificationsRead()} disabled={markNotificationsRead.isPending}><CheckCheck size={15}/>{lang==='ar'?'تحديد الكل كمقروء':lang==='fr'?'Tout marquer comme lu':'Mark all as read'}</button>}
+    </header>
+    {notificationRows.length===0?<div className="ac-empty"><Bell size={22}/>{lang==='ar'?'لا توجد إشعارات بعد.':lang==='fr'?'Aucune notification pour le moment.':'No notifications yet.'}</div>:<div className="ac-notification-list">
+      {notificationRows.map((note,index)=>{const message=notificationCopy(note,lang);const warning=note.severity==='warning';return <article className={`ac-notification ${note.read?'is-read':'is-unread'} ${warning?'is-warning':''}`} key={str(note.id,String(index))} data-testid={`admin-notification-${str(note.id,String(index))}`}>
+        <div className="ac-notification-top"><span className={`ac-status ${warning?'is-rejected':note.read?'':'is-pending'}`}>{warning?(lang==='ar'?'تنبيه أمني':lang==='fr'?'Alerte de sécurité':'Security alert'):note.read?(lang==='ar'?'مقروء':lang==='fr'?'Lu':'Read'):(lang==='ar'?'جديد':lang==='fr'?'Nouveau':'New')}</span><small>{note.t?new Date(Number(note.t)).toLocaleString(lang==='ar'?'ar-DZ':lang==='fr'?'fr-FR':'en'):''}</small></div>
+        <h3>{message.title||(lang==='ar'?'إشعار':lang==='fr'?'Notification':'Notification')}</h3><p>{message.body}</p>
+        {note.data?.ip&&<small className="ac-notification-detail">IP: {str(note.data.ip)}</small>}
+        {Number(note.occurrences)>1&&<small className="ac-notification-detail">{lang==='ar'?'تكررت المحاولة':'Repeated'} ×{note.occurrences}</small>}
+      </article>})}
+    </div>}
+  </section>;
+  const view=tab==='reports'?<Suspense fallback={<div className="ac-panel">{lang==='ar'?'جارٍ تحميل التقارير…':lang==='fr'?'Chargement des rapports…':'Loading reports…'}</div>}><ReportsSection state={state} merchants={merchants} claims={claims} lang={lang}/></Suspense>:tab==='notifications'?viewNotifications():tab==='overview'?viewOverview():tab==='analytics'?viewAnalytics():tab==='merchants'?viewMerchants():tab==='customers'?viewCustomers():tab==='invoices'?viewInvoices():tab==='operations'?viewOperations():viewSettings();
   return <main className="admin-console" dir={rtl?'rtl':'ltr'} data-testid="admin-console">
-    <header className="ac-header"><div><span className="ac-brand-mark"><ShieldCheck size={20}/></span><span><small>{lang==='ar'?'إدارة المكافآت المحلية · شمال أفريقيا':lang==='fr'?'RÉCOMPENSES LOCALES · AFRIQUE DU NORD':'LOCAL REWARDS · NORTH AFRICA'}</small><strong>CASH BACK <i>{lang==='ar'?'إدارة':lang==='fr'?'ADMIN':'ADMIN'}</i></strong></span></div><button className="ac-refresh" onClick={onRefresh} data-testid="button-admin-refresh"><RotateCcw size={15}/>{t('retryLoad')}</button></header>
+    <header className="ac-header"><div><span className="ac-brand-mark"><ShieldCheck size={20}/></span><span><small>{lang==='ar'?'إدارة المكافآت المحلية · شمال أفريقيا':lang==='fr'?'RÉCOMPENSES LOCALES · AFRIQUE DU NORD':'LOCAL REWARDS · NORTH AFRICA'}</small><strong>CASH BACK <i>{lang==='ar'?'إدارة':lang==='fr'?'ADMIN':'ADMIN'}</i></strong></span></div><button className="ac-refresh" onClick={()=>{onRefresh();void client.invalidateQueries({queryKey:getGetCashbackNotificationsQueryKey()})}} data-testid="button-admin-refresh"><RotateCcw size={15}/>{t('retryLoad')}</button></header>
     <div className="ac-content"><div className="ac-welcome"><div><span className="ac-eyebrow">{lang==='ar'?'العمليات':lang==='fr'?'OPÉRATIONS':'OPERATIONS'} / {new Date().toLocaleDateString(lang==='ar'?'ar-DZ':lang==='fr'?'fr-FR':'en',{weekday:'long',day:'numeric',month:'long'})}</span><h1>{t('adminDashboard')}</h1><p>{tx.separate}</p></div><div className="ac-live"><span/>{lang==='ar'?'النظام يعمل':lang==='fr'?'SYSTÈME ACTIF':'SYSTEM LIVE'}</div></div>
-      <nav className="ac-tabs" aria-label={tx.operations}>{tabs.map(([id,label,Icon])=><button className={tab===id?'is-active':''} key={id} onClick={()=>{setTab(id);setQuery('')}} data-testid={`tab-admin-${id}`}><Icon size={16}/>{label}{id==='invoices'&&pendingClaims>0&&<i>{pendingClaims}</i>}</button>)}</nav>
+      <nav className="ac-tabs" aria-label={tx.operations}>{tabs.map(([id,label,Icon])=><button className={tab===id?'is-active':''} key={id} onClick={()=>{setTab(id);setQuery('')}} data-testid={`tab-admin-${id}`}><Icon size={16}/>{label}{id==='invoices'&&pendingClaims>0&&<i>{pendingClaims}</i>}{id==='notifications'&&unreadAdminNotifications>0&&<i>{unreadAdminNotifications>99?'99+':unreadAdminNotifications}</i>}</button>)}</nav>
       {(props.error||flash||props.notice)&&<div className={`ac-feedback ${props.error?'is-error':''}`} role={props.error?'alert':'status'} data-testid="status-admin-feedback">{props.error||flash||props.notice}</div>}
       {view}
     </div>

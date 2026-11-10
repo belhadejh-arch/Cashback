@@ -20,6 +20,7 @@ import {
   UpdateCashbackMerchantWithdrawalBody,
   UpdateCashbackPaymentMethodsBody,
 } from "@workspace/api-zod";
+import { addCashbackNotification } from "../lib/cashback-notifications";
 import {
   CashbackError,
   authenticateRequest,
@@ -35,7 +36,6 @@ import {
   stateWrite,
   unauthorizedRole,
   type AuthenticatedRequest,
-  type CashbackState,
 } from "../lib/cashback-neon";
 import {
   createMerchantAssetUpload,
@@ -83,13 +83,6 @@ function getParamId(req: any): string {
     throw new CashbackError(400, "INVALID_ID");
   }
   return raw;
-}
-
-function addNote(state: CashbackState, to: string, text: string): void {
-  if (state.settings?.notificationsEnabled === false) return;
-  state.notes ??= [];
-  state.notes.unshift({ id: randomUUID(), to, text, t: Date.now(), read: false });
-  state.notes.length = Math.min(state.notes.length, 300);
 }
 
 function roundMoney(value: number): number {
@@ -286,8 +279,14 @@ router.post("/cashback/merchant/store-change-requests", async (req, res) => {
         createdAt: Date.now(),
       };
       state.merchantStoreChangeRequests.unshift(request);
-      addNote(state, profile.eid, "تم إرسال تعديلات بيانات المتجر الحساسة إلى الإدارة للموافقة");
-      addNote(state, "admin", `طلب المتجر ${merchant.name} الموافقة على تعديل بيانات حساسة`);
+      addCashbackNotification(state, profile.eid, "merchant.store.change.submitted", {
+        requestId,
+      });
+      addCashbackNotification(state, "admin", "admin.store.change.new", {
+        merchant: merchant.name,
+        merchantId: merchant.id,
+        requestId,
+      });
       return { result: { id: requestId, status: request.status } };
     });
     res.status(201).json({ id: requestId, status: "pending" });
@@ -341,9 +340,12 @@ router.patch("/cashback/admin/store-change-requests/:id/decision", async (req, r
         at: Date.now(),
         reason: reason || undefined,
       });
-      addNote(state, merchant.id, parsed.data.approved
-        ? "وافقت الإدارة على تعديل بيانات المتجر الحساسة"
-        : `رفضت الإدارة تعديل بيانات المتجر الحساسة: ${reason}`);
+      addCashbackNotification(
+        state,
+        merchant.id,
+        parsed.data.approved ? "merchant.store.change.approved" : "merchant.store.change.rejected",
+        { reason, requestId: request.id },
+      );
       return { result: { id: request.id, status: request.status } };
     });
     res.json({ ok: true });
@@ -431,8 +433,18 @@ router.post("/cashback/merchant/topups", async (req, res) => {
         createdAt: Date.now(),
       };
       state.merchantTopups.unshift(request);
-      addNote(state, "admin", `طلب ${currentMerchant.name} شحن رصيد بمبلغ ${amount} ${request.currency}`);
-      addNote(state, profile.eid, "تم إرسال طلب شحن الرصيد إلى الإدارة للمراجعة");
+      addCashbackNotification(state, "admin", "admin.topup.new", {
+        merchant: currentMerchant.name,
+        merchantId: currentMerchant.id,
+        amount,
+        currency: request.currency,
+        requestId,
+      });
+      addCashbackNotification(state, profile.eid, "merchant.topup.submitted", {
+        amount,
+        currency: request.currency,
+        requestId,
+      });
       return {
         result: { id: requestId, reference, status: "pending" },
         extraWrites: proof.writes,
@@ -471,9 +483,17 @@ router.patch("/cashback/admin/topups/:id/decision", async (req, res) => {
         request.commissionPlatformSettled = settlement.platformCommissionAmount;
         request.availableFundedBalance = merchant.topupBalance;
       }
-      addNote(state, merchant.id, parsed.data.approved
-        ? `تم اعتماد شحن رصيدك بمبلغ ${request.amount} ${request.currency}`
-        : `تم رفض طلب شحن الرصيد: ${reason}`);
+      addCashbackNotification(
+        state,
+        merchant.id,
+        parsed.data.approved ? "merchant.topup.approved" : "merchant.topup.rejected",
+        {
+          amount: request.amount,
+          currency: request.currency,
+          reason,
+          requestId: request.id,
+        },
+      );
       state.audit ??= [];
       state.audit.unshift({
         id: `audit_${randomUUID().replaceAll("-", "").slice(0, 18)}`,
@@ -532,8 +552,18 @@ router.post("/cashback/merchant/withdrawals", async (req, res) => {
         createdAt: Date.now(),
       };
       state.merchantWithdrawals.unshift(request);
-      addNote(state, merchant.id, "تم إرسال طلب السحب إلى الإدارة للمراجعة");
-      addNote(state, "admin", `طلب ${merchant.name} سحب ${amount} ${request.currency}`);
+      addCashbackNotification(state, merchant.id, "merchant.withdrawal.submitted", {
+        amount,
+        currency: request.currency,
+        requestId,
+      });
+      addCashbackNotification(state, "admin", "admin.withdrawal.new", {
+        merchant: merchant.name,
+        merchantId: merchant.id,
+        amount,
+        currency: request.currency,
+        requestId,
+      });
       return { result: { id: requestId, reference, status: "pending" } };
     });
     res.status(201).json({ id: requestId, reference, status: "pending" });
@@ -610,11 +640,24 @@ router.patch("/cashback/admin/withdrawals/:id/update", async (req, res) => {
       request.reason = reason || undefined;
       request.updatedAt = Date.now();
       request.reviewedBy = profile.uid;
-      addNote(state, merchant.id, parsed.data.status === "rejected"
-        ? `تم رفض طلب السحب: ${reason}`
-        : parsed.data.status === "paid"
-          ? `تم تنفيذ طلب السحب، المرجع ${transferReference}`
-          : `تم تحديث حالة طلب السحب إلى ${parsed.data.status}`);
+      const withdrawalNotificationType: Record<string, string> = {
+        approved: "merchant.withdrawal.approved",
+        transferring: "merchant.withdrawal.transferring",
+        paid: "merchant.withdrawal.paid",
+        rejected: "merchant.withdrawal.rejected",
+      };
+      addCashbackNotification(
+        state,
+        merchant.id,
+        withdrawalNotificationType[parsed.data.status] ?? "merchant.withdrawal.approved",
+        {
+          amount: request.amount,
+          currency: request.currency,
+          reason,
+          reference: transferReference,
+          requestId: request.id,
+        },
+      );
       state.audit ??= [];
       state.audit.unshift({
         id: `audit_${randomUUID().replaceAll("-", "").slice(0, 18)}`,

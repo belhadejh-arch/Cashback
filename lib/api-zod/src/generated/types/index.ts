@@ -60,6 +60,8 @@ export * from './cashbackSystemSettingsUpdateEnabledCurrenciesItem';
 export * from './cashbackSystemSettingsUpdateEnabledLanguagesItem';
 export * from './cashbackWithdrawalProofUploadInput';
 export * from './cashbackWithdrawalProofUploadInputContentType';
+export * from './getCashbackNotifications200';
+export * from './getCashbackNotifications200NotificationsItem';
 export * from './healthStatus';
 export * from './merchantCommissionRatesUpdate';
 export * from './profilePhotoFinalizeInput';

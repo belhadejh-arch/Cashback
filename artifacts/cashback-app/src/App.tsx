@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import {
-  getGetCashbackSessionQueryKey, getGetCashbackMediaQueryKey,
+  getGetCashbackSessionQueryKey, getGetCashbackMediaQueryKey, getGetCashbackNotificationsQueryKey,
   useGetCashbackSession, useRegisterCashbackProfile, useSubmitCashbackReceipt,
   useDecideCashbackReceipt, useDecideCashbackMerchant, useRedeemMerchantCashback,
   useCreateCashbackPaymentSession, useReverseCashbackPayment,
@@ -9,6 +9,7 @@ import {
   useLoginCashback, useLogoutCashback, useCreateCashbackProfilePhotoUpload,
   useSaveCashbackProfilePhoto, useCreateCashbackReceiptPhotoUpload,
   useCancelCashbackReceipt, useRateCashbackMerchant, useUpdateCashbackCategories,
+  useGetCashbackNotifications, useMarkCashbackNotificationsRead,
 } from '@workspace/api-client-react';
 import { useLocation } from 'wouter';
 import { QRCodeSVG } from 'qrcode.react';
@@ -16,7 +17,7 @@ import {
   ArrowDownLeft, ArrowLeft, ArrowRight, BadgeCheck, Banknote, Bell, Camera, Check, ChevronDown, Home,
   CircleHelp, Clock3, Compass, Coffee, FileCheck2, FilePlus2, Gift, Globe2, Laptop, LogOut, MapPin, Moon, Share2,
   Plus, ReceiptText, Search, Settings, ShieldCheck, Store, Sun, UserRound, Wallet,
-  X, RefreshCw, LockKeyhole, Percent, LocateFixed, MoreHorizontal, Shirt, ShoppingBag, Star, Tag, Utensils, Download, Printer, ScanLine, RotateCcw, FileDown,
+  X, RefreshCw, LockKeyhole, Percent, LocateFixed, MoreHorizontal, Shirt, ShoppingBag, Star, Tag, Utensils, Download, Printer, ScanLine, RotateCcw, FileDown, CheckCheck,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Route, Switch, Router as WouterRouter } from 'wouter';
@@ -24,6 +25,7 @@ import NotFound from '@/pages/not-found';
 import { MerchantWorkspace } from '@/components/merchant-workspace/MerchantWorkspace';
 import { MerchantAdminPanel } from '@/components/merchant-workspace/MerchantAdminPanel';
 import { AdminConsole } from '@/components/admin/AdminConsole';
+import { notificationCopy } from '@/components/notifications/notification-copy';
 
 type Lang = 'en' | 'fr' | 'ar';
 type Theme = 'dark' | 'light';
@@ -223,15 +225,33 @@ function AppInner() {
   const state = user?.state || {};
   const merchants = state.merchants || []; const claims = state.claims || []; const txns = state.txns || [];
   const profile = user?.profile;
+  const notificationsQuery = useGetCashbackNotifications({ query: {
+    queryKey: getGetCashbackNotificationsQueryKey(),
+    enabled: Boolean(profile),
+    refetchInterval: 15000,
+    refetchOnWindowFocus: true,
+    retry: false,
+  } });
+  const markNotificationsRead = useMarkCashbackNotificationsRead();
    const activeMerchants = merchants.filter(m=>m.status==='active');
    const activeCategories: string[] = Array.isArray(state.categories)
      ? state.categories.filter(category=>browseCategories.includes(category as typeof browseCategories[number]))
      : [...browseCategories];
-  const customerNotes = (state.notes||[])
-    .filter(note=>!note.to||note.to===profile?.eid)
+  const apiNotes = (notificationsQuery.data as { notifications?: any[] }|undefined)?.notifications;
+  const profileNotifications = (apiNotes ?? (state.notes||[]))
+    .filter(note=>note.to===profile?.eid)
     .slice()
     .sort((a,b)=>Number(b.t||0)-Number(a.t||0));
-  const notificationCount = customerNotes.length;
+  const notificationBaseline = useRef<{ uid: string; latest: number }|null>(null);
+  const latestNotificationTime = profileNotifications.reduce((latest,note)=>Math.max(latest,Number(note.t||0)),0);
+  useEffect(()=>{
+    if(!profile?.uid||!notificationsQuery.data)return;
+    const previous=notificationBaseline.current;
+    if(previous?.uid===profile.uid&&latestNotificationTime>previous.latest)void refetch();
+    notificationBaseline.current={uid:profile.uid,latest:latestNotificationTime};
+  },[profile?.uid,profile?.role,notificationsQuery.data,latestNotificationTime,refetch]);
+  const customerNotes = profileNotifications;
+  const notificationCount = customerNotes.filter(note=>!note.read).length;
   const receiptStore = activeMerchants.find(m=>m.id===receiptMerchantId) || (selectedMerchant?.status==='active'?selectedMerchant:null);
   const selectedBalance = selectedMerchant && profile ? Number(state.customers?.find(c=>c.id===profile.eid)?.cbm?.[selectedMerchant.id] ?? 0) : 0;
   const isRtl = lang === 'ar';
@@ -249,7 +269,27 @@ function AppInner() {
     });
   }, [receiptCameraActive, location]);
   useEffect(() => { if (location.startsWith('/shop/')) { const id = location.split('/')[2]; setSelectedMerchant(merchants.find(m=>m.id===id)||null); } else if (location !== '/shop') setSelectedMerchant(null); }, [location, merchants]);
-  const refreshSession = () => client.invalidateQueries({ queryKey: getGetCashbackSessionQueryKey() });
+  const refreshSession = () => {
+    void client.invalidateQueries({ queryKey: getGetCashbackSessionQueryKey() });
+    void client.invalidateQueries({ queryKey: getGetCashbackNotificationsQueryKey() });
+  };
+  const markAllCustomerNotificationsRead = async () => {
+    setError('');
+    try {
+      await markNotificationsRead.mutateAsync();
+      await client.invalidateQueries({ queryKey: getGetCashbackNotificationsQueryKey() });
+      setNotice(lang==='ar'?'تم تحديد الإشعارات كمقروءة':lang==='fr'?'Notifications marquées comme lues.':'Notifications marked as read.');
+    } catch {
+      setError(lang==='ar'?'تعذر تحديث الإشعارات. حاول مجدداً.':lang==='fr'?'Impossible de mettre à jour les notifications. Réessayez.':'Could not update notifications. Try again.');
+    }
+  };
+  const renderStatusNotifications = () => profileNotifications.length ? <section className="surface" style={{padding:16,marginTop:14,textAlign:'start'}}>
+    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:10,marginBottom:10}}>
+      <h2 style={{fontSize:18,margin:0}}>{lang==='ar'?'الإشعارات':lang==='fr'?'Notifications':'Notifications'}</h2>
+      {notificationCount>0&&<button className="btn btn-outline" onClick={()=>void markAllCustomerNotificationsRead()} disabled={markNotificationsRead.isPending}><CheckCheck size={15}/>{lang==='ar'?'تحديد الكل كمقروء':lang==='fr'?'Tout marquer comme lu':'Mark all as read'}</button>}
+    </div>
+    <div className="notification-page-list">{profileNotifications.slice(0,8).map(note=>{const copy=notificationCopy(note,lang);return <article className={`surface home-notification-row ${note.read?'is-read':'is-unread'}`} key={note.id}><span className="home-notification-mark"><Bell size={17}/></span><div><p>{copy.title&&<strong>{copy.title}. </strong>}{copy.body}</p>{note.t&&<small className="subtle">{new Date(note.t).toLocaleString(lang==='ar'?'ar-DZ':lang==='fr'?'fr-FR':'en')}</small>}</div></article>})}</div>
+  </section> : null;
    const availableCities = useMemo(()=>Array.from(new Set(activeMerchants.filter(m=>!countryFilter||m.country===countryFilter).map(m=>m.city).filter((value): value is string=>Boolean(value)))),[activeMerchants,countryFilter]);
   const availableCountries = useMemo(()=>Array.from(new Set(activeMerchants.map(m=>m.country).filter((value): value is string=>Boolean(value)))),[activeMerchants]);
    const filtered = useMemo(()=>{
@@ -727,10 +767,12 @@ function AppInner() {
       <h1 dir="auto">{t('notifications')}</h1>
       <button className="profile-brand" onClick={()=>nav('/')} aria-label={t('home')} data-testid="link-notifications-brand"><img src="/cashback-logo-transparent.png" alt="CASH BACK"/></button>
     </div>
+    {(error||notice)&&<div className={`profile-feedback ${error?'is-error':''}`} role={error?'alert':'status'}>{error||notice}</div>}
+    {customerNotes.some(note=>!note.read)&&<button className="btn btn-outline" onClick={()=>void markAllCustomerNotificationsRead()} disabled={markNotificationsRead.isPending} data-testid="button-notifications-read-all"><CheckCheck size={16}/>{lang==='ar'?'تحديد الكل كمقروء':lang==='fr'?'Tout marquer comme lu':'Mark all as read'}</button>}
     {customerNotes.length===0 ? <div className="surface profile-empty"><Bell size={24}/><span>{t('noNotifications')}</span></div> : <div className="notification-page-list">
       {customerNotes.map(note=><article className={`surface home-notification-row ${note.read?'is-read':'is-unread'}`} key={note.id} data-testid={`notification-${note.id}`}>
         <span className="home-notification-mark" aria-hidden="true"><Bell size={18}/></span>
-        <div><p>{note.text}</p>{note.t&&<small className="subtle">{new Date(note.t).toLocaleString(lang==='ar'?'ar-DZ':lang==='fr'?'fr-FR':'en')}</small>}</div>
+        <div>{(()=>{const copy=notificationCopy(note,lang);return <><p>{copy.title&&<strong>{copy.title}. </strong>}{copy.body}</p>{Number(note.occurrences)>1&&<small className="subtle">×{note.occurrences}</small>}</>})()}{note.t&&<small className="subtle">{new Date(note.t).toLocaleString(lang==='ar'?'ar-DZ':lang==='fr'?'fr-FR':'en')}</small>}</div>
       </article>)}
     </div>}
   </section>);
@@ -789,8 +831,8 @@ function AppInner() {
 
   if (merchant) {
     const status=profile.status || merchants.find(m=>m.id===profile.eid)?.status || 'pending';
-    if (status==='suspended') return shell(<div style={{maxWidth:670,margin:'32px auto'}}>{error&&noticeBox(error,true)}{notice&&noticeBox(notice)}<div className="surface" style={{padding:'clamp(24px,6vw,44px)',textAlign:'center'}}><div style={{width:74,height:74,borderRadius:24,margin:'0 auto 18px',display:'grid',placeItems:'center',background:'hsl(var(--destructive) / .12)',color:'hsl(var(--destructive))'}}><ShieldCheck size={34}/></div><span className="status-pill">{lang==='ar'?'موقوف':lang==='fr'?'Suspendu':'Suspended'}</span><h1 style={{fontSize:34,margin:'14px 0 8px'}}>{lang==='ar'?'الحساب التجاري موقوف':lang==='fr'?'Compte marchand suspendu':'Merchant account suspended'}</h1><p className="subtle" style={{fontSize:16,lineHeight:1.7}}>{lang==='ar'?'تم إيقاف المتجر مؤقتاً. تواصل مع الإدارة لمعرفة التفاصيل.':lang==='fr'?'Votre commerce est temporairement suspendu. Contactez l’administration pour plus de détails.':'Your store is temporarily inactive. Contact the administration for details.'}</p><button className="btn btn-outline" style={{marginTop:18}} onClick={()=>void logout()} data-testid="button-logout"><LogOut size={17}/>{t('signOut')}</button></div></div>);
-    if (status==='pending' || status==='rejected') return shell(<div style={{maxWidth:670,margin:'32px auto'}}>{error&&noticeBox(error,true)}{notice&&noticeBox(notice)}<div className="surface" style={{padding:'clamp(24px,6vw,44px)',textAlign:'center'}}><div style={{width:74,height:74,borderRadius:24,margin:'0 auto 18px',display:'grid',placeItems:'center',background:status==='pending'?'hsl(var(--secondary) / .28)':'hsl(var(--destructive) / .12)',color:status==='pending'?'hsl(var(--primary))':'hsl(var(--destructive))'}}>{status==='pending'?<Clock3 size={34}/>:<ShieldCheck size={34}/>}</div><span className="status-pill">{statusLabel(status)}</span><h1 style={{fontSize:34,margin:'14px 0 8px'}}>{status==='pending'?t('statusPending'):t('statusRejected')}</h1><p className="subtle" style={{fontSize:16,lineHeight:1.7}}>{status==='pending'?t('pendingHint'):profile.rejectionReason||t('retry')}</p><button className="btn btn-outline" style={{marginTop:18}} onClick={()=>void logout()} data-testid="button-logout"><LogOut size={17}/>{t('signOut')}</button></div></div>);
+    if (status==='suspended') return shell(<div style={{maxWidth:670,margin:'32px auto'}}>{error&&noticeBox(error,true)}{notice&&noticeBox(notice)}<div className="surface" style={{padding:'clamp(24px,6vw,44px)',textAlign:'center'}}><div style={{width:74,height:74,borderRadius:24,margin:'0 auto 18px',display:'grid',placeItems:'center',background:'hsl(var(--destructive) / .12)',color:'hsl(var(--destructive))'}}><ShieldCheck size={34}/></div><span className="status-pill">{lang==='ar'?'موقوف':lang==='fr'?'Suspendu':'Suspended'}</span><h1 style={{fontSize:34,margin:'14px 0 8px'}}>{lang==='ar'?'الحساب التجاري موقوف':lang==='fr'?'Compte marchand suspendu':'Merchant account suspended'}</h1><p className="subtle" style={{fontSize:16,lineHeight:1.7}}>{lang==='ar'?'تم إيقاف المتجر مؤقتاً. تواصل مع الإدارة لمعرفة التفاصيل.':lang==='fr'?'Votre commerce est temporairement suspendu. Contactez l’administration pour plus de détails.':'Your store is temporarily inactive. Contact the administration for details.'}</p><button className="btn btn-outline" style={{marginTop:18}} onClick={()=>void logout()} data-testid="button-logout"><LogOut size={17}/>{t('signOut')}</button></div>{renderStatusNotifications()}</div>);
+    if (status==='pending' || status==='rejected') return shell(<div style={{maxWidth:670,margin:'32px auto'}}>{error&&noticeBox(error,true)}{notice&&noticeBox(notice)}<div className="surface" style={{padding:'clamp(24px,6vw,44px)',textAlign:'center'}}><div style={{width:74,height:74,borderRadius:24,margin:'0 auto 18px',display:'grid',placeItems:'center',background:status==='pending'?'hsl(var(--secondary) / .28)':'hsl(var(--destructive) / .12)',color:status==='pending'?'hsl(var(--primary))':'hsl(var(--destructive))'}}>{status==='pending'?<Clock3 size={34}/>:<ShieldCheck size={34}/>}</div><span className="status-pill">{statusLabel(status)}</span><h1 style={{fontSize:34,margin:'14px 0 8px'}}>{status==='pending'?t('statusPending'):t('statusRejected')}</h1><p className="subtle" style={{fontSize:16,lineHeight:1.7}}>{status==='pending'?t('pendingHint'):profile.rejectionReason||t('retry')}</p><button className="btn btn-outline" style={{marginTop:18}} onClick={()=>void logout()} data-testid="button-logout"><LogOut size={17}/>{t('signOut')}</button></div>{renderStatusNotifications()}</div>);
     const shop=merchants.find(m=>m.id===profile.eid);
     if (!shop) return shell(<Empty icon={<Store size={28}/>} title={t('loadError')} text={t('retryLoad')}/>,false);
     const merchantPath=location.startsWith('/merchant')?location:'/merchant';
