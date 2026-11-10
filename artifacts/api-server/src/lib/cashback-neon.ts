@@ -6,6 +6,10 @@ import {
 } from "node:crypto";
 import type { Request } from "express";
 import { pool } from "@workspace/db";
+export {
+  getMerchantCommissionDue,
+  settleMerchantCommissionObligations,
+} from "./commission-ledger";
 
 const PROJECT_ID = "cashback-neon";
 const DOCUMENT_ROOT = `projects/${PROJECT_ID}/databases/(default)/documents`;
@@ -49,6 +53,8 @@ const emptyState = (): CashbackState => ({
   merchants: [],
   customers: [],
   claims: [],
+  merchantCommissionLedger: [],
+  merchantCommissionSettlements: [],
   ratings: [],
   txns: [],
   cbpays: [],
@@ -65,7 +71,7 @@ function normalizeState(state: CashbackState): CashbackState {
   state.settings.paymentMethods ??= [];
   state.settings.maxTopupAmountDzd ??= null;
   state.settings.maxTopupAmountLyd ??= null;
-  for (const key of ["merchants", "customers", "claims", "ratings", "txns", "cbpays", "paymentSessions", "notes", "audit", "merchantTopups", "merchantWithdrawals", "merchantStoreChangeRequests"]) {
+  for (const key of ["merchants", "customers", "claims", "merchantCommissionLedger", "merchantCommissionSettlements", "ratings", "txns", "cbpays", "paymentSessions", "notes", "audit", "merchantTopups", "merchantWithdrawals", "merchantStoreChangeRequests"]) {
     if (!Array.isArray(state[key])) state[key] = [];
   }
   state.categories ??= ["restaurants", "cafes", "clothing", "electronics", "malls", "groceries", "perfume", "gifts", "shops"];

@@ -14,6 +14,8 @@ import {
   CreateCashbackAdminWithdrawalProofUploadParams,
   CreateCashbackAdminWithdrawalProofUploadBody,
   CreateCashbackAdminWithdrawalProofUploadResponse,
+  UpdateCashbackMerchantCommissionRatesParams,
+  UpdateCashbackMerchantCommissionRatesBody,
   UpdateCashbackMerchantWithdrawalParams,
   UpdateCashbackMerchantWithdrawalBody,
   UpdateCashbackPaymentMethodsBody,
@@ -24,10 +26,12 @@ import {
   commit,
   decodeCashbackFields,
   documentWrite,
+  getMerchantCommissionDue,
   getDocument,
   getState,
   mutateCashbackState,
   requireAdmin,
+  settleMerchantCommissionObligations,
   stateWrite,
   unauthorizedRole,
   type AuthenticatedRequest,
@@ -450,6 +454,11 @@ router.patch("/cashback/admin/topups/:id/decision", async (req, res) => {
       request.reviewedBy = profile.uid;
       if (parsed.data.approved) {
         merchant.topupBalance = roundMoney(Number(merchant.topupBalance ?? 0) + Number(request.amount));
+        const settlement = settleMerchantCommissionObligations(state, merchant, request.id);
+        request.commissionSettlementAmount = settlement.amount;
+        request.commissionRewardSettled = settlement.rewardAmount;
+        request.commissionPlatformSettled = settlement.platformCommissionAmount;
+        request.availableFundedBalance = merchant.topupBalance;
       }
       addNote(state, merchant.id, parsed.data.approved
         ? `تم اعتماد شحن رصيدك بمبلغ ${request.amount} ${request.currency}`
@@ -461,6 +470,9 @@ router.patch("/cashback/admin/topups/:id/decision", async (req, res) => {
         requestId: request.id,
         merchantId: merchant.id,
         amount: request.amount,
+        commissionSettlementAmount: request.commissionSettlementAmount ?? 0,
+        commissionRewardSettled: request.commissionRewardSettled ?? 0,
+        commissionPlatformSettled: request.commissionPlatformSettled ?? 0,
         adminUid: profile.uid,
         at: Date.now(),
         reason: reason || undefined,
@@ -485,7 +497,9 @@ router.post("/cashback/merchant/withdrawals", async (req, res) => {
     await mutateCashbackState((state) => {
       const merchant = (state.merchants ?? []).find((entry: any) => entry.id === profile.eid);
       if (!merchant || merchant.status !== "active") throw new CashbackError(403, "MERCHANT_NOT_ACTIVE");
-      if (amount > Number(merchant.payoutBalance ?? 0)) {
+      const commissionDue = getMerchantCommissionDue(state, merchant.id);
+      const withdrawable = roundMoney(Math.max(0, Number(merchant.payoutBalance ?? 0) - commissionDue));
+      if (amount > withdrawable) {
         throw new CashbackError(400, "WITHDRAWAL_EXCEEDS_AVAILABLE");
       }
       merchant.payoutBalance = roundMoney(Number(merchant.payoutBalance ?? 0) - amount);
@@ -499,6 +513,8 @@ router.post("/cashback/merchant/withdrawals", async (req, res) => {
         country: merchant.country,
         currency: merchant.country === "Libya" ? "LYD" : "DZD",
         amount,
+        commissionDueAtRequest: commissionDue,
+        availableBalanceAtRequest: withdrawable,
         method: fieldString(parsed.data.method),
         accountDetails: fieldString(parsed.data.accountDetails),
         status: "pending",
@@ -654,6 +670,55 @@ router.post("/cashback/admin/withdrawals/:id/proof-upload-url", async (req, res)
       objectPath: upload.objectPath,
       uploadId,
     }));
+  } catch (error) {
+    respondError(res, error);
+  }
+});
+
+router.patch("/cashback/admin/merchants/:id/commission-rates", async (req, res) => {
+  const profile = (req as unknown as AuthenticatedRequest).cashbackProfile;
+  try {
+    requireAdmin(profile);
+    const params = UpdateCashbackMerchantCommissionRatesParams.safeParse(req.params);
+    const parsed = UpdateCashbackMerchantCommissionRatesBody.safeParse(req.body);
+    if (!params.success || !parsed.success) throw new CashbackError(400, "INVALID_REQUEST");
+    await mutateCashbackState((state) => {
+      const merchant = (state.merchants ?? []).find((entry: any) => entry.id === params.data.id);
+      if (!merchant) throw new CashbackError(404, "MERCHANT_NOT_FOUND");
+      const cashbackRate = parsed.data.cashbackRate;
+      const platformCommissionRate = parsed.data.platformCommissionRate;
+      const effectiveCashbackRate = Number(cashbackRate ?? state.settings?.cashback ?? 4);
+      const effectiveCommissionRate = Number(
+        platformCommissionRate ?? state.settings?.platformCommission ?? 2,
+      );
+      if (effectiveCashbackRate + effectiveCommissionRate > 100) {
+        throw new CashbackError(400, "TOTAL_COMMISSION_EXCEEDS_100");
+      }
+      merchant.cashbackRate = cashbackRate;
+      merchant.platformCommissionRate = platformCommissionRate;
+      state.audit ??= [];
+      state.audit.unshift({
+        id: `audit_${randomUUID().replaceAll("-", "").slice(0, 18)}`,
+        action: "merchant_commission_rates_updated",
+        merchantId: merchant.id,
+        cashbackRate,
+        platformCommissionRate,
+        effectiveCashbackRate,
+        effectiveCommissionRate,
+        adminUid: profile.uid,
+        at: Date.now(),
+      });
+      return {
+        result: {
+          merchantId: merchant.id,
+          cashbackRate,
+          platformCommissionRate,
+          effectiveCashbackRate,
+          effectiveCommissionRate,
+        },
+      };
+    });
+    res.json({ ok: true });
   } catch (error) {
     respondError(res, error);
   }

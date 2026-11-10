@@ -593,6 +593,29 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ActionResult"
+  /cashback/admin/merchants/{id}/commission-rates:
+    patch:
+      operationId: updateCashbackMerchantCommissionRates
+      tags: [cashback]
+      summary: Set or clear merchant-specific cashback and commission rates
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 100 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MerchantCommissionRatesUpdate"
+      responses:
+        "200":
+          description: Merchant commission rates updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActionResult"
   /cashback/settings/categories:
     patch:
       operationId: updateCashbackCategories
@@ -916,6 +939,13 @@ components:
       required: [rate]
       properties:
         rate: { type: number, minimum: 0, maximum: 100 }
+        platformCommissionRate: { type: number, minimum: 0, maximum: 100 }
+    MerchantCommissionRatesUpdate:
+      type: object
+      required: [cashbackRate, platformCommissionRate]
+      properties:
+        cashbackRate: { type: ["number", "null"], minimum: 0, maximum: 100 }
+        platformCommissionRate: { type: ["number", "null"], minimum: 0, maximum: 100 }
     ActionResult:
       type: object
       additionalProperties: true

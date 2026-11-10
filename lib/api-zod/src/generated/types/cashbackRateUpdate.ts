@@ -12,4 +12,9 @@ export interface CashbackRateUpdate {
      * @maximum 100
      */
   rate: number;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  platformCommissionRate?: number;
 }

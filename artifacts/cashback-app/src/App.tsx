@@ -26,11 +26,11 @@ import { MerchantAdminPanel } from '@/components/merchant-workspace/MerchantAdmi
 
 type Lang = 'en' | 'fr' | 'ar';
 type Theme = 'dark' | 'light';
-type Merchant = { id: string; name: string; cat?: string; status?: string; country?: string; city?: string; address?: string; mapsUrl?: string; lat?: number; lng?: number; cashbackRate?: number; logoId?: string; coverId?: string; publicId?: string; qrValue?: string; description?: string; phone?: string; openingHours?: string; legalData?: Record<string, string>; rating?: number; ratingCount?: number; userRating?: number; payoutBalance?: number; payoutDebt?: number; topupBalance?: number; reservedWithdrawalBalance?: number };
-type Claim = { id: string; mid: string; cid: string; invoiceNumber?: string; date?: string; amount: number; photoId?: string; status: string; created?: string; cashback?: number; reason?: string; submitIp?: string; submittedByUid?: string; possibleDuplicate?: boolean };
+type Merchant = { id: string; name: string; cat?: string; status?: string; country?: string; city?: string; address?: string; mapsUrl?: string; lat?: number; lng?: number; cashbackRate?: number|null; platformCommissionRate?: number|null; logoId?: string; coverId?: string; publicId?: string; qrValue?: string; description?: string; phone?: string; openingHours?: string; legalData?: Record<string, string>; rating?: number; ratingCount?: number; userRating?: number; payoutBalance?: number; payoutDebt?: number; topupBalance?: number; reservedWithdrawalBalance?: number };
+type Claim = { id: string; mid: string; cid: string; invoiceNumber?: string; date?: string; amount: number; photoId?: string; status: string; created?: string; cashback?: number; cashbackRate?: number; platformCommission?: number; platformCommissionRate?: number; merchantObligation?: number; netSale?: number; commissionOutstanding?: number; commissionSettled?: number; reason?: string; submitIp?: string; submittedByUid?: string; possibleDuplicate?: boolean };
 type Txn = { id: string; t?: string; mid: string; cid: string; amount: number; cashback?: number; method?: string };
 type CashbackNote = { id: string; to?: string; text: string; t?: number; read?: boolean };
-type Session = { profile: { uid: string; role: string; eid: string; name: string; phone?: string; email?: string; avatarUpdatedAt?: number; preferences?: { language?: Lang; theme?: Theme }; status?: string; rejectionReason?: string }; state: { settings?: { cashback?: number; claimHours?: number; paymentMethods?: Record<string, unknown>[] }; categories?: string[]; merchants?: Merchant[]; customers?: { id: string; name: string; phone?: string; cbm?: Record<string, number> }[]; claims?: Claim[]; txns?: Txn[]; cbpays?: { id: string; cid: string; mid: string; amount: number; status: string; at?: string|number; reference?: string; method?: string; reversalReason?: string }[]; merchantTopups?: Record<string, unknown>[]; merchantWithdrawals?: Record<string, unknown>[]; merchantStoreChangeRequests?: Record<string, unknown>[]; notes?: CashbackNote[] } };
+type Session = { profile: { uid: string; role: string; eid: string; name: string; phone?: string; email?: string; avatarUpdatedAt?: number; preferences?: { language?: Lang; theme?: Theme }; status?: string; rejectionReason?: string }; state: { settings?: { cashback?: number; platformCommission?: number; claimHours?: number; paymentMethods?: Record<string, unknown>[] }; categories?: string[]; merchants?: Merchant[]; customers?: { id: string; name: string; phone?: string; cbm?: Record<string, number> }[]; claims?: Claim[]; merchantCommissionLedger?: Record<string, unknown>[]; merchantCommissionSettlements?: Record<string, unknown>[]; txns?: Txn[]; cbpays?: { id: string; cid: string; mid: string; amount: number; status: string; at?: string|number; reference?: string; method?: string; reversalReason?: string }[]; merchantTopups?: Record<string, unknown>[]; merchantWithdrawals?: Record<string, unknown>[]; merchantStoreChangeRequests?: Record<string, unknown>[]; notes?: CashbackNote[] } };
 type Dict = Record<string, string>;
 const dictionaries: Record<Lang, Dict> = {
   en: {
@@ -208,7 +208,7 @@ function AppInner() {
   const receiptCameraStreamRef = useRef<MediaStream|null>(null);
   const receiptCameraRequestRef = useRef(0);
   const [receiptMerchantId, setReceiptMerchantId] = useState(''); const [receiptFile, setReceiptFile] = useState(''); const [invoice, setInvoice] = useState(''); const [purchaseAmount, setPurchaseAmount] = useState(''); const [purchaseDate, setPurchaseDate] = useState(new Date().toISOString().slice(0,10));
-  const [reason, setReason] = useState(''); const [rateValue, setRateValue] = useState('');
+  const [reason, setReason] = useState(''); const [rateValue, setRateValue] = useState(''); const [platformCommissionValue, setPlatformCommissionValue] = useState('');
    const t = (key: string) => paymentTranslations[lang][key] || homeNavTranslations[lang][key] || cameraTranslations[lang][key] || authStatusTranslations[lang][key] || featureTranslations[lang][key] || extraTranslations[lang][key] || dictionaries[lang][key] || (key.startsWith('cat_') ? key.slice(4) : key);
   const { data: session, isLoading, isError, error: queryError, refetch } = useGetCashbackSession({ query: { queryKey: getGetCashbackSessionQueryKey(), enabled: authReady, retry: false, refetchOnWindowFocus: false } });
   const sessionHttpStatus = getHttpStatus(queryError);
@@ -507,8 +507,10 @@ function AppInner() {
   }
   async function saveRate() {
     const rate=Number(rateValue || state.settings?.cashback || 0);
-    if(!Number.isFinite(rate) || rate<0 || rate>100) { setError(t('incomplete')); return; }
-    try { await updateRate.mutateAsync({ data:{ rate } }); invalidate(); setNotice(t('rateSaved')); }
+    const platformCommissionRate=Number(platformCommissionValue || state.settings?.platformCommission || 2);
+    if(!Number.isFinite(rate) || rate<0 || rate>100 || !Number.isFinite(platformCommissionRate) || platformCommissionRate<0 || platformCommissionRate>100) { setError(t('incomplete')); return; }
+    if(rate+platformCommissionRate>100) { setError(lang==='ar'?'مجموع النسب لا يمكن أن يتجاوز 100%.':lang==='fr'?'La somme des taux ne peut pas dépasser 100 %.':'Combined rates cannot exceed 100%.'); return; }
+    try { await updateRate.mutateAsync({ data:{ rate, platformCommissionRate } }); invalidate(); setRateValue(''); setPlatformCommissionValue(''); setNotice(t('rateSaved')); }
     catch { setError(t('genericError')); }
   }
   async function saveCategories(categories: string[]) {
@@ -771,7 +773,7 @@ function AppInner() {
     const mid=location.split('/')[2]; const shop=merchants.find(m=>m.id===mid);
     return shell(shop?<WalletDetail shop={shop} profile={profile} state={state} txns={txns} lang={lang} t={t} createSession={beginQrPayment} confirmPayment={finishQrPayment}/>:<Empty icon={<Wallet size={28}/>} title={t('walletTitle')} text={t('noShopsHint')}/>);
   }
-  if (customer && selectedMerchant && location.startsWith('/shop/')) return shell(<ShopDetail shop={selectedMerchant} balance={selectedBalance} canRate={claims.some(claim=>claim.mid===selectedMerchant.id&&claim.cid===profile.eid&&claim.status==='approved')} ratingPending={rateMerchant.isPending} onRate={rating=>void rateShop(selectedMerchant,rating)} t={t} lang={lang} onBack={()=>nav('/')} onReceipt={()=>openReceiptPage(selectedMerchant.id)} onWallet={()=>nav(`/wallet/${selectedMerchant.id}`)} />);
+  if (customer && selectedMerchant && location.startsWith('/shop/')) return shell(<ShopDetail shop={selectedMerchant} balance={selectedBalance} defaultCashbackRate={Number(state.settings?.cashback??4)} canRate={claims.some(claim=>claim.mid===selectedMerchant.id&&claim.cid===profile.eid&&claim.status==='approved')} ratingPending={rateMerchant.isPending} onRate={rating=>void rateShop(selectedMerchant,rating)} t={t} lang={lang} onBack={()=>nav('/')} onReceipt={()=>openReceiptPage(selectedMerchant.id)} onWallet={()=>nav(`/wallet/${selectedMerchant.id}`)} />);
   if (customer && location.startsWith('/shop')) return shell(<Empty icon={<Store size={28}/>} title={t('details')} text={t('noShopsHint')}/>);
   if (customer && location.startsWith('/settings')) return null;
 
@@ -808,7 +810,7 @@ function AppInner() {
       onRefresh={()=>void refetch()}
     />,false,false);
   }
-  if (admin) return shell(<AdminDashboard merchants={merchants} claims={claims} state={state} t={t} lang={lang} reason={reason} setReason={setReason} decideShop={decideShop} decideClaim={decideClaim} rate={rateValue} setRate={setRateValue} saveRate={saveRate} saveCategories={saveCategories} reversePayment={reverseQrPayment} reversalPending={reversePayment.isPending} notice={notice} error={error} onRefresh={()=>void refetch()} />);
+  if (admin) return shell(<AdminDashboard merchants={merchants} claims={claims} state={state} t={t} lang={lang} reason={reason} setReason={setReason} decideShop={decideShop} decideClaim={decideClaim} rate={rateValue} setRate={setRateValue} platformCommissionRate={platformCommissionValue} setPlatformCommissionRate={setPlatformCommissionValue} saveRate={saveRate} saveCategories={saveCategories} reversePayment={reverseQrPayment} reversalPending={reversePayment.isPending} notice={notice} error={error} onRefresh={()=>void refetch()} />);
   if (!customer) return shell(<Empty icon={<CircleHelp size={28}/>} title={t('noPermission')} text={t('retryLoad')}/>);
 
   const customerClaims=claims.filter(c=>c.cid===profile.eid);
@@ -837,7 +839,7 @@ function AppInner() {
       <section id="home-shops" className="home-shops-section">
         <div className="home-section-head"><div><h2>{t('nearby')}</h2><p className="subtle">{cityFilter?localizeCity(cityFilter,lang):countryFilter?t(countryFilter==='Libya'?'libya':'algeria'):availableCountries.length===1?t(availableCountries[0]==='Libya'?'libya':'algeria'):t('allShops')}</p></div><div style={{display:'flex',gap:10}}><button className="text-link" onClick={requestNearbySort} aria-label={t('useMyLocation')} title={t('useMyLocation')} data-testid="button-sort-nearby"><LocateFixed size={17}/>{/* accessible location sort */}</button><button className="text-link" onClick={()=>nav('/shops')} data-testid="button-view-shops">{t('viewAll')}</button></div></div>
         {filtered.length===0 ? <Empty icon={<Compass size={30}/>} title={t('noShops')} text={t('noShopsHint')}/> : <div className="merchant-grid">{filtered.map(shop=><button key={shop.id} className="surface merchant-card" onClick={()=>nav(`/shop/${shop.id}`)} data-testid={`card-shop-${shop.id}`}>
-          <div className="merchant-card-image"><MediaImage id={shop.logoId} alt={shop.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>{shop.cashbackRate!==undefined&&<span className="merchant-rate"><strong>{shop.cashbackRate}%</strong><small>{t('cashback')}</small></span>}</div>
+          <div className="merchant-card-image"><MediaImage id={shop.logoId} alt={shop.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/><span className="merchant-rate"><strong>{shop.cashbackRate??state.settings?.cashback??4}%</strong><small>{t('cashback')}</small></span></div>
           <div className="merchant-card-copy"><div className="merchant-card-title"><div><h3>{shop.name}</h3><span className="subtle">{shop.cat?t(`cat_${shop.cat}`):t('merchant')}</span></div><ArrowRight size={17}/></div>
              {(shop.city||shop.address)&&<div className="merchant-location"><MapPin size={14}/><span>{localizeCity(shop.city,lang)||shop.address}{nearbyCoords&&Number.isFinite(distanceKm(nearbyCoords,shop))&&<> · {distanceKm(nearbyCoords,shop).toFixed(1)} {t('kmAway')}</>}</span></div>}
           </div>
@@ -1008,7 +1010,7 @@ function PaymentDialog({shop,balance,lang,t,createSession,confirmPayment,close}:
     </section>
   </div>;
 }
-function ShopDetail({shop,balance,canRate,ratingPending,onRate,t,onBack,onReceipt,onWallet,lang}:{shop:Merchant;balance:number;canRate:boolean;ratingPending:boolean;onRate:(rating:number)=>void;t:(s:string)=>string;onBack:()=>void;onReceipt:()=>void;onWallet:()=>void;lang:Lang}) {
+function ShopDetail({shop,balance,defaultCashbackRate,canRate,ratingPending,onRate,t,onBack,onReceipt,onWallet,lang}:{shop:Merchant;balance:number;defaultCashbackRate:number;canRate:boolean;ratingPending:boolean;onRate:(rating:number)=>void;t:(s:string)=>string;onBack:()=>void;onReceipt:()=>void;onWallet:()=>void;lang:Lang}) {
   return <div style={{maxWidth:820,margin:'10px auto',display:'grid',gap:18}}>
     <button onClick={onBack} className="btn btn-outline" style={{justifySelf:'start'}} data-testid="button-back-shops"><ArrowLeft size={17}/>{t('allShops')}</button>
     <div className="surface" style={{overflow:'hidden'}}>
@@ -1016,7 +1018,7 @@ function ShopDetail({shop,balance,canRate,ratingPending,onRate,t,onBack,onReceip
       <div style={{padding:'clamp(18px,4vw,30px)',display:'grid',gap:16}}>
         <div style={{display:'flex',justifyContent:'space-between',gap:10,alignItems:'start'}}>
           <div><span className="subtle">{shop.cat?t(`cat_${shop.cat}`):t('merchant')}</span><h1 style={{fontSize:30,margin:'3px 0'}}>{shop.name}</h1></div>
-          <div style={{color:'hsl(var(--primary))',fontSize:25,fontWeight:800,whiteSpace:'nowrap'}}>{shop.cashbackRate??0}%</div>
+          <div style={{color:'hsl(var(--primary))',fontSize:25,fontWeight:800,whiteSpace:'nowrap'}}>{shop.cashbackRate??defaultCashbackRate}%</div>
         </div>
         <div aria-label={t('rating')} style={{display:'flex',alignItems:'center',gap:7,flexWrap:'wrap'}}>
           <Star size={17} fill="hsl(var(--primary))" color="hsl(var(--primary))"/>
@@ -1165,7 +1167,7 @@ function printMerchantQr(t:(key:string)=>string,shopName:string,shopId:string) {
   window.setTimeout(()=>{if(!popup.closed)popup.close();},20000);
 }
 function Metric({label,value,icon}:{label:string;value:string;icon:ReactNode}) { return <div className="surface" style={{padding:17}}><div style={{color:'hsl(var(--primary))'}}>{icon}</div><strong style={{fontSize:27,display:'block'}}>{value}</strong><span className="subtle">{label}</span></div>; }
-function AdminDashboard({merchants,claims,state,t,lang,reason,setReason,decideShop,decideClaim,rate,setRate,saveRate,saveCategories,reversePayment,reversalPending,notice,error,onRefresh}:{merchants:Merchant[];claims:Claim[];state:Session['state'];t:(s:string)=>string;lang:Lang;reason:string;setReason:(s:string)=>void;decideShop:(m:Merchant,a:boolean)=>void;decideClaim:(c:Claim,a:boolean)=>void;rate:string;setRate:(s:string)=>void;saveRate:()=>void;saveCategories:(categories:string[])=>void;reversePayment:(id:string,reason:string)=>Promise<void>;reversalPending:boolean;notice:string;error:string;onRefresh:()=>void}) {
+function AdminDashboard({merchants,claims,state,t,lang,reason,setReason,decideShop,decideClaim,rate,setRate,platformCommissionRate,setPlatformCommissionRate,saveRate,saveCategories,reversePayment,reversalPending,notice,error,onRefresh}:{merchants:Merchant[];claims:Claim[];state:Session['state'];t:(s:string)=>string;lang:Lang;reason:string;setReason:(s:string)=>void;decideShop:(m:Merchant,a:boolean)=>void;decideClaim:(c:Claim,a:boolean)=>void;rate:string;setRate:(s:string)=>void;platformCommissionRate:string;setPlatformCommissionRate:(s:string)=>void;saveRate:()=>void;saveCategories:(categories:string[])=>void;reversePayment:(id:string,reason:string)=>Promise<void>;reversalPending:boolean;notice:string;error:string;onRefresh:()=>void}) {
   const configuredCategories=state.categories||[...browseCategories];
   const [selectedCategories,setSelectedCategories]=useState<string[]>(configuredCategories);
   useEffect(()=>setSelectedCategories(configuredCategories),[configuredCategories.join('|')]);
@@ -1189,8 +1191,9 @@ function AdminDashboard({merchants,claims,state,t,lang,reason,setReason,decideSh
      <PaymentReversalList payments={state.cbpays||[]} merchants={merchants} customers={state.customers||[]} lang={lang} t={t} reversePayment={reversePayment} pending={reversalPending}/>
     <section className="surface" style={{padding:18}}>
       <strong>{t('adminSettings')} · {t('rate')}</strong>
-      <div style={{display:'flex',gap:9,marginTop:10}}>
-        <input className="field" type="number" min="0" max="100" step=".1" value={rate||String(state.settings?.cashback||0)} onChange={e=>setRate(e.target.value)} data-testid="input-admin-rate"/>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:9,marginTop:10}}>
+        <label style={{flex:1}}><span className="subtle">{lang==='ar'?'مكافأة الزبون (%)':lang==='fr'?'Récompense client (%)':'Customer cashback (%)'}</span><input className="field" type="number" min="0" max="100" step=".1" value={rate||String(state.settings?.cashback??4)} onChange={e=>setRate(e.target.value)} data-testid="input-admin-rate"/></label>
+        <label style={{flex:1}}><span className="subtle">{lang==='ar'?'عمولة التطبيق (%)':lang==='fr'?'Commission de l’application (%)':'Platform commission (%)'}</span><input className="field" type="number" min="0" max="100" step=".1" value={platformCommissionRate||String(state.settings?.platformCommission??2)} onChange={e=>setPlatformCommissionRate(e.target.value)} data-testid="input-admin-platform-commission"/></label>
         <button className="btn btn-primary" onClick={saveRate} data-testid="button-admin-save-rate"><Percent size={17}/>{t('save')}</button>
       </div>
     </section>

@@ -20,3 +20,9 @@ Merchant top-up funds, QR proceeds, customer rewards, platform fees, and reserve
 **Why:** The user requires separate merchant financial accounts and prohibits treating top-ups, customer rewards, or unsettled amounts as withdrawable proceeds.
 
 **How to apply:** Keep ledger balances distinct in the backend and dashboard. Reserve withdrawals atomically from QR proceeds, release them on rejection, and do not include top-up balance in the withdrawal limit.
+
+When an approved invoice creates a reward and platform fee that exceed available merchant funding, approve the invoice and credit the customer reward, but retain the unpaid obligation as due. Future approved top-ups settle due entries oldest-first, applying funds to the reward component before the platform fee. QR redemption changes the customer balance and merchant QR proceeds; it must not create a second commission charge. Withdrawable QR proceeds are reduced by outstanding merchant obligations.
+
+**Why:** The user chose to accept valid invoices and record the unfunded amount as a debt for later settlement. Reward-first settlement protects the customer reward balance, while separating QR proceeds prevents counting the same invoice obligation twice.
+
+**How to apply:** Keep invoice rate snapshots and separate reward/fee outstanding amounts. Apply top-up settlements atomically, and use outstanding obligations when calculating merchant withdrawal availability.

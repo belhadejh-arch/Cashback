@@ -54,6 +54,7 @@ export * from './cashbackState';
 export * from './cashbackWithdrawalProofUploadInput';
 export * from './cashbackWithdrawalProofUploadInputContentType';
 export * from './healthStatus';
+export * from './merchantCommissionRatesUpdate';
 export * from './profilePhotoFinalizeInput';
 export * from './profilePhotoResult';
 export * from './profilePhotoUpload';

@@ -680,13 +680,44 @@ export const GetCashbackProfilePhotoResponse = zod.unknown()
 export const updateCashbackRateBodyRateMin = 0;
 export const updateCashbackRateBodyRateMax = 100;
 
+export const updateCashbackRateBodyPlatformCommissionRateMin = 0;
+export const updateCashbackRateBodyPlatformCommissionRateMax = 100;
+
 
 
 export const UpdateCashbackRateBody = zod.object({
-  "rate": zod.number().min(updateCashbackRateBodyRateMin).max(updateCashbackRateBodyRateMax)
+  "rate": zod.number().min(updateCashbackRateBodyRateMin).max(updateCashbackRateBodyRateMax),
+  "platformCommissionRate": zod.number().min(updateCashbackRateBodyPlatformCommissionRateMin).max(updateCashbackRateBodyPlatformCommissionRateMax).optional()
 })
 
 export const UpdateCashbackRateResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
+ * @summary Set or clear merchant-specific cashback and commission rates
+ */
+export const updateCashbackMerchantCommissionRatesPathIdMax = 100;
+
+
+
+export const UpdateCashbackMerchantCommissionRatesParams = zod.object({
+  "id": zod.coerce.string().min(1).max(updateCashbackMerchantCommissionRatesPathIdMax)
+})
+
+export const updateCashbackMerchantCommissionRatesBodyCashbackRateMin = 0;
+export const updateCashbackMerchantCommissionRatesBodyCashbackRateMax = 100;
+
+export const updateCashbackMerchantCommissionRatesBodyPlatformCommissionRateMin = 0;
+export const updateCashbackMerchantCommissionRatesBodyPlatformCommissionRateMax = 100;
+
+
+
+export const UpdateCashbackMerchantCommissionRatesBody = zod.object({
+  "cashbackRate": zod.number().min(updateCashbackMerchantCommissionRatesBodyCashbackRateMin).max(updateCashbackMerchantCommissionRatesBodyCashbackRateMax).nullable(),
+  "platformCommissionRate": zod.number().min(updateCashbackMerchantCommissionRatesBodyPlatformCommissionRateMin).max(updateCashbackMerchantCommissionRatesBodyPlatformCommissionRateMax).nullable()
+})
+
+export const UpdateCashbackMerchantCommissionRatesResponse = zod.record(zod.string(), zod.unknown())
 
 
 /**

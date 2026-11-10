@@ -619,6 +619,26 @@ export interface CashbackRateUpdate {
      * @maximum 100
      */
   rate: number;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  platformCommissionRate?: number;
+}
+
+export interface MerchantCommissionRatesUpdate {
+  /**
+     * @minimum 0
+     * @maximum 100
+     * @nullable
+     */
+  cashbackRate: number | null;
+  /**
+     * @minimum 0
+     * @maximum 100
+     * @nullable
+     */
+  platformCommissionRate: number | null;
 }
 
 export interface ActionResult { [key: string]: unknown }

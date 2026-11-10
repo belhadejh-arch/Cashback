@@ -30,6 +30,7 @@ import {
   documentWrite,
   emailLookupId,
   getDocument,
+  settleMerchantCommissionObligations,
   getState,
   hashPassword,
   mutateCashbackState,
@@ -53,6 +54,7 @@ import {
   readPrivateImage,
   readProfilePhoto,
 } from "../lib/profilePhotoStorage";
+import { calculateCommissionAmounts } from "../lib/commission-ledger";
 
 const router: IRouter = Router();
 const MAX_IMAGE_LENGTH = 650_000;
@@ -187,11 +189,14 @@ function projectState(
   const merchantTopups = Array.isArray(state.merchantTopups) ? state.merchantTopups : [];
   const merchantWithdrawals = Array.isArray(state.merchantWithdrawals) ? state.merchantWithdrawals : [];
   const merchantStoreChangeRequests = Array.isArray(state.merchantStoreChangeRequests) ? state.merchantStoreChangeRequests : [];
+  const merchantCommissionLedger = Array.isArray(state.merchantCommissionLedger) ? state.merchantCommissionLedger : [];
+  const merchantCommissionSettlements = Array.isArray(state.merchantCommissionSettlements) ? state.merchantCommissionSettlements : [];
   const ratings = Array.isArray(state.ratings) ? state.ratings : [];
   const settings = {
     cashback: Number(state.settings?.cashback ?? 4),
     claimHours: Number(state.settings?.claimHours ?? 720),
   };
+  const platformCommission = Number(state.settings?.platformCommission ?? 2);
 
   if (profile.role === "admin") return state;
   if (profile.role === "customer") {
@@ -255,6 +260,7 @@ function projectState(
   return {
     settings: {
       ...settings,
+      platformCommission,
       paymentMethods: (state.settings?.paymentMethods ?? []).filter((method: any) => method.active),
     },
     merchants: merchant ? [merchant] : [],
@@ -270,6 +276,8 @@ function projectState(
     cbpays: ownPayments,
     merchantTopups: merchantTopups.filter((entry: any) => entry.merchantId === profile.eid),
     merchantWithdrawals: merchantWithdrawals.filter((entry: any) => entry.merchantId === profile.eid),
+    merchantCommissionLedger: merchantCommissionLedger.filter((entry: any) => entry.merchantId === profile.eid),
+    merchantCommissionSettlements: merchantCommissionSettlements.filter((entry: any) => entry.merchantId === profile.eid),
     merchantStoreChangeRequests: merchantStoreChangeRequests.filter((entry: any) => entry.merchantId === profile.eid),
     notes: notes.filter((note: any) => note.to === profile.eid),
   };
@@ -725,15 +733,79 @@ router.patch("/cashback/receipts/:id/decision", async (req, res) => {
       if (!merchant || !customer) throw new CashbackError(409, "RECEIPT_PROFILE_MISSING");
       if (parsed.data.approved) {
         const cashbackRate = Number(merchant.cashbackRate ?? state.settings?.cashback ?? 4);
-        const cashback = Math.round(claim.amount * cashbackRate) / 100;
+        const platformCommissionRate = Number(
+          merchant.platformCommissionRate ?? state.settings?.platformCommission ?? 2,
+        );
+        if (
+          !Number.isFinite(cashbackRate) ||
+          !Number.isFinite(platformCommissionRate) ||
+          cashbackRate < 0 ||
+          platformCommissionRate < 0 ||
+          cashbackRate + platformCommissionRate > 100
+        ) {
+          throw new CashbackError(409, "INVALID_COMMISSION_CONFIGURATION");
+        }
+        const amounts = calculateCommissionAmounts(
+          Number(claim.amount),
+          cashbackRate,
+          platformCommissionRate,
+        );
+        const cashback = amounts.cashbackAmount;
+        const platformCommission = amounts.platformCommissionAmount;
+        const merchantObligation = amounts.merchantObligationAmount;
+        const commissionEntry = {
+          id: `com_${randomUUID().replaceAll("-", "").slice(0, 18)}`,
+          merchantId: merchant.id,
+          customerId: customer.id,
+          receiptId: claim.id,
+          invoiceNumber: claim.invoiceNumber ?? null,
+          country: merchant.country ?? null,
+          currency: merchant.country === "Libya" ? "LYD" : "DZD",
+          invoiceAmount: claim.amount,
+          cashbackRate,
+          platformCommissionRate,
+          cashbackAmount: cashback,
+          platformCommissionAmount: platformCommission,
+          merchantObligationAmount: merchantObligation,
+          netSaleAmount: amounts.netSaleAmount,
+          rewardOutstanding: cashback,
+          platformCommissionOutstanding: platformCommission,
+          settledReward: 0,
+          settledPlatformCommission: 0,
+          settledAmount: 0,
+          outstandingAmount: merchantObligation,
+          status: "due",
+          createdAt: Date.now(),
+        };
+        state.merchantCommissionLedger ??= [];
+        state.merchantCommissionLedger.unshift(commissionEntry);
         customer.cbm ??= {};
         customer.cbm[merchant.id] = Math.round(
           (Number(customer.cbm[merchant.id] ?? 0) + cashback) * 100,
         ) / 100;
+        const settlement = settleMerchantCommissionObligations(state, merchant, claim.id);
         claim.status = "approved";
         claim.cashback = cashback;
         claim.reviewedAt = Date.now();
         claim.reviewedBy = profile.uid;
+        state.audit ??= [];
+        state.audit.unshift({
+          id: `audit_${randomUUID().replaceAll("-", "").slice(0, 18)}`,
+          action: "invoice_commission_accrued",
+          receiptId: claim.id,
+          commissionEntryId: commissionEntry.id,
+          merchantId: merchant.id,
+          customerId: customer.id,
+          invoiceAmount: claim.amount,
+          cashbackAmount: cashback,
+          platformCommissionAmount: platformCommission,
+          merchantObligationAmount: merchantObligation,
+          netSaleAmount: commissionEntry.netSaleAmount,
+          settledAmount: settlement.amount,
+          outstandingAmount: commissionEntry.outstandingAmount,
+          adminUid: profile.uid,
+          at: Date.now(),
+        });
         state.txns ??= [];
         state.txns.unshift({
           id: `tx_${randomUUID().replaceAll("-", "").slice(0, 18)}`,
@@ -745,6 +817,11 @@ router.patch("/cashback/receipts/:id/decision", async (req, res) => {
           method: "receipt",
           receiptId: claim.id,
         });
+        addNote(
+          state,
+          merchant.id,
+          `تم اعتماد فاتورة ${claim.invoiceNumber || claim.id}: التزام ${merchantObligation} ${commissionEntry.currency}، تمت تسوية ${settlement.amount} والمتبقي ${commissionEntry.outstandingAmount}`,
+        );
         addNote(state, customer.id, `تم اعتماد فاتورتك لدى ${merchant.name} وإضافة المكافأة إلى رصيد هذا المتجر`);
       } else {
         claim.status = "rejected";
@@ -1285,16 +1362,42 @@ router.patch("/cashback/settings/rate", async (req, res) => {
     const parsed = UpdateCashbackRateBody.safeParse(req.body);
     if (!parsed.success) throw new CashbackError(400, "INVALID_REQUEST");
     const rate = Number(parsed.data.rate);
+    let platformCommissionRate = 2;
     await mutateState((state) => {
       state.settings ??= {};
+      platformCommissionRate = Number(
+        parsed.data.platformCommissionRate ?? state.settings.platformCommission ?? 2,
+      );
+      if (rate + platformCommissionRate > 100) {
+        throw new CashbackError(400, "TOTAL_COMMISSION_EXCEEDS_100");
+      }
+      const invalidMerchant = (state.merchants ?? []).some((merchant: any) =>
+        Number(merchant.cashbackRate ?? rate) +
+          Number(merchant.platformCommissionRate ?? platformCommissionRate) > 100,
+      );
+      if (invalidMerchant) throw new CashbackError(409, "MERCHANT_COMMISSION_CONFIGURATION_CONFLICT");
+      const previousRates = {
+        cashback: Number(state.settings.cashback ?? 4),
+        platformCommission: Number(state.settings.platformCommission ?? 2),
+      };
       state.settings.cashback = rate;
+      state.settings.platformCommission = platformCommissionRate;
       state.merchants ??= [];
       state.merchants.forEach((merchant: any) => {
         if (merchant.cashbackRate == null) merchant.cashbackRate = null;
       });
-      return { result: { rate } };
+      state.audit ??= [];
+      state.audit.unshift({
+        id: `audit_${randomUUID().replaceAll("-", "").slice(0, 18)}`,
+        action: "program_commission_rates_updated",
+        previousRates,
+        rates: { cashback: rate, platformCommission: platformCommissionRate },
+        adminUid: profile.uid,
+        at: Date.now(),
+      });
+      return { result: { rate, platformCommissionRate } };
     });
-    res.json({ ok: true, rate });
+    res.json({ ok: true, rate, platformCommissionRate });
   } catch (error) {
     respondError(res, error);
   }

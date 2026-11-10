@@ -9,7 +9,7 @@ import {
 import {
   Activity, ArrowDownToLine, ArrowLeftRight, ArrowUpRight, BadgeDollarSign,
   Bell, Check, CircleDollarSign, Download,
-  FileText, Gift, Home, MapPin, Menu, QrCode, ReceiptText, RefreshCw,
+  Clock3, FileText, Gift, Home, MapPin, Menu, Percent, QrCode, ReceiptText, RefreshCw,
   Settings, Store, SunMoon, Users, Wallet, X,
 } from 'lucide-react';
 import './merchant-workspace.css';
@@ -38,8 +38,9 @@ const words: Record<Lang, Copy> = {
     withdrawals:'Withdrawals', transfers:'Transfers', reports:'Reports', notifications:'Notifications',
     settings:'Settings', workspace:'MERCHANT WORKSPACE', welcome:'Your shop, at a glance',
     overviewHint:'A clear view of today’s business.', sales:'Approved invoice sales', approvedInvoices:'Approved invoices',
-    cashbackAwarded:'Cashback awarded', qrSpent:'QR cashback spent', payoutBalance:'Available QR proceeds',
-    funded:'Funded balance', qrBalance:'QR proceeds balance', topupFunded:'Funded top-ups', withdrawalsPaid:'Paid withdrawals',
+    cashbackAwarded:'Cashback awarded', qrSpent:'QR cashback spent', payoutBalance:'QR proceeds balance', withdrawableBalance:'Available to withdraw', commissionDue:'Merchant obligations due', platformCommissionDue:'Platform commission due',
+    funded:'Funded balance', qrBalance:'QR proceeds balance', topupFunded:'Funded top-ups', withdrawalsPaid:'Paid withdrawals', reservedWithdrawals:'Withdrawals in settlement',
+    commissionLedger:'Commission ledger',commissionLedgerHint:'Each invoice records the customer reward and platform fee once. Total obligation is their sum.',commissionTotal:'Total obligation',commissionSettled:'Settled',commissionOutstanding:'Outstanding',platformFee:'Platform fee',netSale:'Net sale',invoiceAmount:'Invoice amount',fundedSettlement:'Applied to obligations',cashbackRate:'Reward rate',platformCommissionRate:'Platform commission rate',
     uniqueCustomers:'Unique customers', recentActivity:'Recent activity', viewAll:'View all', noActivity:'No activity to show yet',
     noActivityHint:'Approved sales and customer payments will appear here.', amount:'Amount', date:'Date', status:'Status',
     invoice:'Invoice', customer:'Customer', cashback:'Cashback', method:'Method', reference:'Reference',
@@ -94,8 +95,9 @@ const words: Record<Lang, Copy> = {
     withdrawals:'Retraits', transfers:'Virements', reports:'Rapports', notifications:'Notifications',
     settings:'Paramètres', workspace:'ESPACE COMMERÇANT', welcome:'Votre commerce en un coup d’œil',
     overviewHint:'Une vue claire de votre activité.', sales:'Ventes des factures approuvées', approvedInvoices:'Factures approuvées',
-    cashbackAwarded:'Cashback accordé', qrSpent:'Cashback dépensé par QR', payoutBalance:'Recettes QR disponibles',
-    funded:'Solde alimenté', qrBalance:'Solde des recettes QR', topupFunded:'Rechargements financés', withdrawalsPaid:'Retraits payés',
+    cashbackAwarded:'Cashback accordé', qrSpent:'Cashback dépensé par QR', payoutBalance:'Solde des recettes QR', withdrawableBalance:'Montant retirable', commissionDue:'Obligations dues', platformCommissionDue:'Commission de la plateforme due',
+    funded:'Solde alimenté', qrBalance:'Solde des recettes QR', topupFunded:'Rechargements financés', withdrawalsPaid:'Retraits payés', reservedWithdrawals:'Retraits en règlement',
+    commissionLedger:'Registre des commissions',commissionLedgerHint:'Chaque facture enregistre une seule fois la récompense et la commission. L’obligation totale est leur somme.',commissionTotal:'Obligation totale',commissionSettled:'Réglé',commissionOutstanding:'Restant dû',platformFee:'Commission plateforme',netSale:'Vente nette',invoiceAmount:'Montant de la facture',fundedSettlement:'Affecté aux obligations',cashbackRate:'Taux de récompense',platformCommissionRate:'Taux de commission',
     uniqueCustomers:'Clients uniques', recentActivity:'Activité récente', viewAll:'Tout voir', noActivity:'Aucune activité pour le moment',
     noActivityHint:'Les ventes validées et paiements apparaîtront ici.', amount:'Montant', date:'Date', status:'Statut',
     invoice:'Facture', customer:'Client', cashback:'Cashback', method:'Méthode', reference:'Référence',
@@ -150,8 +152,9 @@ const words: Record<Lang, Copy> = {
     withdrawals:'طلبات السحب', transfers:'التحويلات', reports:'التقارير', notifications:'الإشعارات',
     settings:'الإعدادات', workspace:'مساحة التاجر', welcome:'متجرك في لمحة',
     overviewHint:'صورة واضحة عن نشاطك اليومي.', sales:'مبيعات الفواتير المقبولة', approvedInvoices:'الفواتير المقبولة',
-    cashbackAwarded:'المكافآت الممنوحة', qrSpent:'المكافآت المصروفة عبر QR', payoutBalance:'عائدات QR المتاحة',
-    funded:'الرصيد الممول', qrBalance:'رصيد عائدات QR', topupFunded:'التمويل المقبول', withdrawalsPaid:'السحوبات المدفوعة',
+    cashbackAwarded:'المكافآت الممنوحة', qrSpent:'المكافآت المصروفة عبر QR', payoutBalance:'رصيد عائدات QR', withdrawableBalance:'الرصيد المتاح للسحب', commissionDue:'التزامات التاجر المستحقة', platformCommissionDue:'عمولة التطبيق المستحقة',
+    funded:'الرصيد الممول', qrBalance:'رصيد عائدات QR', topupFunded:'التمويل المقبول', withdrawalsPaid:'السحوبات المدفوعة', reservedWithdrawals:'السحوبات قيد التسوية',
+    commissionLedger:'سجل العمولات',commissionLedgerHint:'تُسجل مكافأة الزبون وعمولة التطبيق مرة واحدة لكل فاتورة. إجمالي الالتزام هو مجموعهما.',commissionTotal:'إجمالي الالتزام',commissionSettled:'تمت تسويته',commissionOutstanding:'المتبقي',platformFee:'عمولة التطبيق',netSale:'صافي البيع',invoiceAmount:'قيمة الفاتورة',fundedSettlement:'المبلغ المستخدم لتسوية الالتزامات',cashbackRate:'نسبة المكافأة',platformCommissionRate:'نسبة عمولة التطبيق',
     uniqueCustomers:'الزبائن الفريدون', recentActivity:'النشاط الأخير', viewAll:'عرض الكل', noActivity:'لا يوجد نشاط لعرضه بعد',
     noActivityHint:'ستظهر المبيعات المقبولة ومدفوعات الزبائن هنا.', amount:'المبلغ', date:'التاريخ', status:'الحالة',
     invoice:'الفاتورة', customer:'الزبون', cashback:'المكافأة', method:'الطريقة', reference:'المرجع',
@@ -289,6 +292,9 @@ export function MerchantWorkspace(props: MerchantWorkspaceProps) {
   const notes = asRows(state.notes).filter(r => !first(r, 'to') || str(r.to) === str(shop.id));
   const topups = asRows(first(state, 'merchantTopups', 'topups')).filter(r => !first(r, 'merchantId', 'mid') || str(first(r, 'merchantId', 'mid')) === str(shop.id));
   const withdrawals = asRows(first(state, 'merchantWithdrawals', 'withdrawals')).filter(r => !first(r, 'merchantId', 'mid') || str(first(r, 'merchantId', 'mid')) === str(shop.id));
+  const commissionEntries = asRows(first(state, 'merchantCommissionLedger')).filter(r => str(first(r,'merchantId','mid')) === str(shop.id));
+  const commissionDue = commissionEntries.reduce((sum,r)=>sum+(num(first(r,'outstandingAmount'))||num(first(r,'rewardOutstanding'))+num(first(r,'platformCommissionOutstanding'))),0);
+  const platformCommissionDue = commissionEntries.reduce((sum,r)=>sum+num(first(r,'platformCommissionOutstanding')),0);
   const sensitiveRequests = asRows(state.merchantStoreChangeRequests)
     .filter(r => !first(r,'merchantId','mid') || str(first(r,'merchantId','mid')) === str(shop.id));
   const approvedClaims = claims.filter(r => statusOf(r) === 'approved');
@@ -301,6 +307,8 @@ export function MerchantWorkspace(props: MerchantWorkspaceProps) {
     return sum + num(first(r, 'amount'));
   }, 0);
   const payoutBalance = num(shop.payoutBalance);
+  const withdrawableBalance = Math.max(0,payoutBalance-commissionDue);
+  const reservedWithdrawalBalance = num(shop.reservedWithdrawalBalance);
   const fundedBalance = num(shop.topupBalance);
   const customerStats = useMemo(() => {
     const map = new Map<string, {row:RecordLike; visits:number; balance:number; last:unknown}>();
@@ -410,6 +418,7 @@ export function MerchantWorkspace(props: MerchantWorkspaceProps) {
   const requestWithdrawal = async (event: FormEvent) => {
     event.preventDefault(); setBusy(true); setMessage('');
     if (!num(form.amount) || !form.method || !form.accountDetails) { setBusy(false); setMessage(t.formError); return; }
+    if (num(form.amount) > withdrawableBalance) { setBusy(false); setMessage(t.withdrawalLimitError); return; }
     try {
       await createWithdrawal.mutateAsync({ data:{ amount:num(form.amount), method:form.method, accountDetails:form.accountDetails } });
       invalidating(); setForm({}); setMessage(t.submitted);
@@ -493,7 +502,7 @@ export function MerchantWorkspace(props: MerchantWorkspaceProps) {
         <td>{str(first(r,'invoiceNumber','reference','id'), '—')}</td>
         <td>{kind === 'invoice' ? <span>{resolvedCustomerName}{customerRecord?.phone ? <small className="mw-table-secondary">{str(customerRecord.phone)}</small> : null}</span> : kind === 'withdrawal' ? str(first(r,'transferReference'),str(first(r,'method'),t.method)) : str(first(r,'method','paymentMethodName','payerReference'), kind === 'qr' ? t.QR : t.method)}</td>
         <td>{dateOf(r)}</td><td>{money(num(first(r,'amount','total')))}</td>
-        {kind === 'invoice' && <td>{money(num(first(r,'cashback','rewardAmount')))}</td>}<td>{statusPill(status)}{kind === 'topup' && status === 'rejected' && str(first(r,'reason')) && <small className="mw-table-secondary">{t.rejectionReason}: {str(r.reason)}</small>}{kind === 'withdrawal' && transferProofId && <a className="mw-table-secondary" href={`/api/cashback/media/${encodeURIComponent(transferProofId)}`} target="_blank" rel="noreferrer">{t.transferReceipt}</a>}</td>
+        {kind === 'invoice' && <td>{money(num(first(r,'cashback','rewardAmount')))}</td>}<td>{statusPill(status)}{kind === 'topup' && num(first(r,'commissionSettlementAmount'))>0 && <small className="mw-table-secondary">{t.fundedSettlement}: {money(num(r.commissionSettlementAmount))}</small>}{kind === 'topup' && status === 'rejected' && str(first(r,'reason')) && <small className="mw-table-secondary">{t.rejectionReason}: {str(r.reason)}</small>}{kind === 'withdrawal' && transferProofId && <a className="mw-table-secondary" href={`/api/cashback/media/${encodeURIComponent(transferProofId)}`} target="_blank" rel="noreferrer">{t.transferReceipt}</a>}</td>
       </tr>;
     })}</tbody></table></div>;
   };
@@ -508,9 +517,12 @@ export function MerchantWorkspace(props: MerchantWorkspaceProps) {
         {kpi(t.invoiceCount,String(claims.length),t.allStatuses,<ReceiptText size={16}/>)}
         {kpi(t.cashbackAwarded,money(cashbacks),t.earnedHint,<Gift size={16}/>)}
         {kpi(t.qrSpent,money(qrNet),t.net,<CircleDollarSign size={16}/>)}
-        {kpi(t.payoutBalance,money(payoutBalance),t.available,<Wallet size={16}/>)}
+        {kpi(t.withdrawableBalance,money(withdrawableBalance),`${t.qrBalance}: ${money(payoutBalance)}`,<Wallet size={16}/>)}
+        {kpi(t.commissionDue,money(commissionDue),t.commissionOutstanding,<BadgeDollarSign size={16}/>)}
+        {kpi(t.platformCommissionDue,money(platformCommissionDue),t.platformFee,<Percent size={16}/>)}
         {kpi(t.topupFunded,money(fundedTopups),t.fundedStatus,<ArrowDownToLine size={16}/>)}
         {kpi(t.withdrawalsPaid,money(withdrawals.filter(r=>statusOf(r)==='paid').reduce((s,r)=>s+num(r.amount),0)),t.paid,<ArrowUpRight size={16}/>)}
+        {kpi(t.reservedWithdrawals,money(reservedWithdrawalBalance),t.transferring,<Clock3 size={16}/>)}
       {kpi(t.uniqueCustomers,String(customerStats.length),t.customers,<Users size={16}/>)}
       </div>
       <div className="mw-grid mw-overview-grid">
@@ -572,8 +584,12 @@ export function MerchantWorkspace(props: MerchantWorkspaceProps) {
       {heading(t.wallet,t.payoutHint)}
       <div className="mw-grid" style={{gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,270px),1fr))'}}>
         <div className="mw-balance-card"><small>{t.funded}</small><strong>{money(fundedBalance)}</strong><p>{t.topupBalanceHint}</p><button className="mw-btn" onClick={()=>onNavigate('/merchant/topups')}>{t.requestTopup}</button></div>
-        <div className="mw-balance-card"><small>{t.payoutBalance}</small><strong>{money(payoutBalance)}</strong><p>{t.qrHint}</p><button className="mw-btn" onClick={()=>onNavigate('/merchant/withdrawals')}>{t.requestWithdrawal}</button></div>
+        <div className="mw-balance-card"><small>{t.qrBalance}</small><strong>{money(payoutBalance)}</strong><p>{t.commissionDue}: {money(commissionDue)} · {t.platformCommissionDue}: {money(platformCommissionDue)}</p><div className="mw-balance-split"><div><span>{t.withdrawableBalance}</span><b>{money(withdrawableBalance)}</b></div><div><span>{t.reservedWithdrawals}</span><b>{money(reservedWithdrawalBalance)}</b></div></div><button className="mw-btn" onClick={()=>onNavigate('/merchant/withdrawals')}>{t.requestWithdrawal}</button></div>
       </div>
+      <div style={{height:14}}/>
+      <section className="mw-card"><div className="mw-card-head"><div><h2>{t.commissionLedger}</h2><p>{t.commissionLedgerHint}</p></div><Percent size={18}/></div>
+        {commissionEntries.length?<div className="mw-table-wrap"><table className="mw-table"><thead><tr><th>{t.invoiceAmount}</th><th>{t.cashbackRate}</th><th>{t.platformCommissionRate}</th><th>{t.cashbackAwarded}</th><th>{t.platformFee}</th><th>{t.commissionTotal}</th><th>{t.commissionSettled}</th><th>{t.commissionOutstanding}</th><th>{t.netSale}</th></tr></thead><tbody>{commissionEntries.slice().sort((a,b)=>num(b.createdAt)-num(a.createdAt)).slice(0,50).map((entry,index)=><tr key={str(entry.id,String(index))}><td>{money(num(entry.invoiceAmount))}<small className="mw-table-secondary">{str(first(entry,'invoiceNumber','receiptId'))}</small></td><td>{num(entry.cashbackRate)}%</td><td>{num(entry.platformCommissionRate)}%</td><td>{money(num(entry.cashbackAmount))}</td><td>{money(num(entry.platformCommissionAmount))}</td><td>{money(num(entry.merchantObligationAmount))}</td><td>{money(num(entry.settledAmount))}</td><td>{money(num(entry.outstandingAmount))}</td><td>{money(num(entry.netSaleAmount))}</td></tr>)}</tbody></table></div>:<Empty title={t.noActivity} hint={t.commissionLedgerHint}/>}
+      </section>
     </>;
     if (currentPath === '/merchant/topups') return <>
       {heading(t.topups,t.topupsHint)}
@@ -598,7 +614,7 @@ export function MerchantWorkspace(props: MerchantWorkspaceProps) {
       {heading(t.withdrawals,t.withdrawalsHint)}
       <section className="mw-card"><div className="mw-card-head"><div><h2>{t.requestWithdrawal}</h2><p>{t.payoutHint}</p></div><ArrowUpRight size={18}/></div>
         <form className="mw-form-grid" onSubmit={requestWithdrawal}>
-          <Field label={t.amountLabel}><input type="number" min="0.01" max={payoutBalance || undefined} step="0.01" className="mw-input" value={form.amount ?? ''} onChange={e=>setForm({...form,amount:e.target.value})} required/></Field>
+          <Field label={t.amountLabel}><input type="number" min="0.01" max={withdrawableBalance} step="0.01" className="mw-input" value={form.amount ?? ''} onChange={e=>setForm({...form,amount:e.target.value})} required/><small>{t.withdrawableBalance}: {money(withdrawableBalance)}</small></Field>
           <Field label={t.method}><input className="mw-input" value={form.method ?? ''} onChange={e=>setForm({...form,method:e.target.value})} required/></Field>
           <Field label={t.accountDetails} wide><textarea className="mw-textarea" value={form.accountDetails ?? ''} onChange={e=>setForm({...form,accountDetails:e.target.value})} required minLength={3}/></Field>
           <button className="mw-btn mw-btn-primary" disabled={busy}>{t.submit}</button>

@@ -1,3 +1,3 @@
 - [CASH BACK Neon boundary](cashback-data-store.md) — keep legacy Firestore data untouched; the active app starts fresh on Neon with email/password auth.
 - [CASH BACK customer UI](cashback-customer-ui.md) — follow the user's mandatory mobile reference: dark ember/orange, Changa, RTL, top profile, and separate section screens.
-- [Merchant-scoped customer rewards](cashback-wallet-boundaries.md) — isolate rewards by shop; QR payments require a short-lived session and atomic transfer, with audited admin reversals.
+- [Merchant-scoped customer rewards](cashback-wallet-boundaries.md) — isolate rewards and commissions by shop; record unfunded invoice obligations and settle top-ups before withdrawals.

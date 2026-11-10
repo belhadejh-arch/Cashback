@@ -2,10 +2,10 @@ import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   getGetCashbackSessionQueryKey, useCreateCashbackAdminWithdrawalProofUpload, useDecideCashbackMerchantStoreChange,
-  useDecideCashbackMerchantTopup, useUpdateCashbackMerchantWithdrawal,
+  useDecideCashbackMerchantTopup, useUpdateCashbackMerchantCommissionRates, useUpdateCashbackMerchantWithdrawal,
   useUpdateCashbackPaymentMethods,
 } from '@workspace/api-client-react';
-import { Check, ExternalLink, Plus, Save, Settings2, X } from 'lucide-react';
+import { Check, ExternalLink, Percent, Plus, Save, Settings2, X } from 'lucide-react';
 import './merchant-workspace.css';
 
 type Lang = 'ar'|'en'|'fr';
@@ -24,6 +24,7 @@ const copy:Record<Lang,Record<string,string>> = {
   en:{
     title:'Merchant operations',hint:'Review the queues and keep merchant funding moving.',
     methods:'Top-up payment methods',methodsHint:'Configure the payment details merchants see when funding their wallet.',noMethods:'No payment methods configured.',
+    commissionTitle:'Commissions and settlement',commissionHint:'Rates apply to future approved invoices. Customer cashback, platform fees, funded balance and QR proceeds remain separate.',customerRewardsIssued:'Customer rewards issued',customerRewardBalance:'Current customer reward balances',appCommission:'Platform commission',appCommissionSettled:'Commission collected',appCommissionDue:'Commission outstanding',merchantObligation:'Total merchant obligation',merchantObligationNote:'Total obligation equals the reward plus the platform fee; do not add this total to its components.',settled:'Settled',outstanding:'Outstanding',reward:'Customer reward',platformFee:'Platform fee',netSale:'Net sale',invoiceAmount:'Invoice amount',ledger:'Commission ledger',noLedger:'No approved invoices yet.',noActiveMerchants:'No active merchants yet.',rateOverrides:'Merchant-specific rates',rateOverridesHint:'Leave a field empty to inherit the program default.',cashbackRate:'Customer cashback rate (%)',platformCommissionRate:'Platform commission rate (%)',defaultRate:'Program default',saveRates:'Save rates',totalRateError:'Combined rates cannot exceed 100%.',ratesSaved:'Merchant rates saved.',fundedSettlement:'Top-ups applied to obligations',topupAvailable:'Available funded balance',qrProceeds:'QR proceeds balance',withdrawalAvailable:'Available to withdraw',withdrawalsPaid:'Withdrawals paid',withdrawalsReserved:'Withdrawals in settlement',
     maxDzd:'Maximum top-up (DZD)',maxLyd:'Maximum top-up (LYD)',unlimited:'Leave blank for no upper limit.',
     add:'Add method',save:'Save methods',saved:'Payment methods saved.',saveError:'Could not save these methods.',
     id:'Method ID',country:'Country',name:'Bank or payment method',beneficiary:'Beneficiary',account:'Account / IBAN / CCP',
@@ -47,6 +48,7 @@ const copy:Record<Lang,Record<string,string>> = {
   fr:{
     title:'Gestion des commerces',hint:'Traitez les demandes et suivez les paiements commerçants.',
     methods:'Modes de paiement des rechargements',methodsHint:'Configurez les coordonnées affichées aux commerces.',noMethods:'Aucun mode de paiement configuré.',
+    commissionTitle:'Commissions et règlements',commissionHint:'Les taux s’appliquent aux prochaines factures approuvées. Les récompenses, commissions, fonds alimentés et recettes QR restent séparés.',customerRewardsIssued:'Récompenses accordées',customerRewardBalance:'Soldes actuels des clients',appCommission:'Commission de la plateforme',appCommissionSettled:'Commission encaissée',appCommissionDue:'Commission due',merchantObligation:'Obligation totale du commerce',merchantObligationNote:'Le total comprend la récompense et la commission ; ne l’ajoutez pas une seconde fois à ses composantes.',settled:'Réglé',outstanding:'Restant dû',reward:'Récompense client',platformFee:'Commission plateforme',netSale:'Vente nette',invoiceAmount:'Montant de la facture',ledger:'Registre des commissions',noLedger:'Aucune facture approuvée.',noActiveMerchants:'Aucun commerce actif.',rateOverrides:'Taux par commerce',rateOverridesHint:'Laissez un champ vide pour utiliser le taux par défaut.',cashbackRate:'Taux de récompense client (%)',platformCommissionRate:'Commission plateforme (%)',defaultRate:'Taux par défaut',saveRates:'Enregistrer les taux',totalRateError:'La somme des taux ne peut pas dépasser 100%.',ratesSaved:'Taux du commerce enregistrés.',fundedSettlement:'Rechargements affectés aux obligations',topupAvailable:'Solde alimenté disponible',qrProceeds:'Solde des recettes QR',withdrawalAvailable:'Montant retirable',withdrawalsPaid:'Retraits payés',withdrawalsReserved:'Retraits en règlement',
     maxDzd:'Plafond de recharge (DZD)',maxLyd:'Plafond de recharge (LYD)',unlimited:'Laisser vide pour ne pas fixer de plafond.',
     add:'Ajouter',save:'Enregistrer les modes',saved:'Modes de paiement enregistrés.',saveError:'Impossible d’enregistrer.',
     id:'Identifiant',country:'Pays',name:'Banque ou moyen de paiement',beneficiary:'Bénéficiaire',account:'Compte / IBAN / CCP',
@@ -70,6 +72,7 @@ const copy:Record<Lang,Record<string,string>> = {
   ar:{
     title:'إدارة التجار',hint:'راجع الطلبات وتابع عمليات تمويل التجار.',
     methods:'وسائل دفع التمويل',methodsHint:'أدر تفاصيل الدفع التي تظهر للتاجر عند تمويل محفظته.',noMethods:'لم تتم إضافة وسائل دفع بعد.',
+    commissionTitle:'العمولات والتسوية',commissionHint:'تُطبق النسب على الفواتير المقبولة لاحقاً. مكافآت الزبائن وعمولات التطبيق والرصيد الممول وعائدات QR حسابات منفصلة.',customerRewardsIssued:'مكافآت الزبائن الممنوحة',customerRewardBalance:'أرصدة الزبائن الحالية',appCommission:'عمولة التطبيق',appCommissionSettled:'العمولة المحصلة',appCommissionDue:'العمولة المستحقة',merchantObligation:'إجمالي التزام التاجر',merchantObligationNote:'الإجمالي يساوي المكافأة مضافاً إليها العمولة؛ لا تجمعه مرة ثانية مع مكوناته.',settled:'تمت تسويته',outstanding:'مستحق',reward:'مكافأة الزبون',platformFee:'عمولة التطبيق',netSale:'صافي البيع',invoiceAmount:'قيمة الفاتورة',ledger:'سجل العمولات',noLedger:'لا توجد فواتير مقبولة بعد.',noActiveMerchants:'لا توجد متاجر نشطة بعد.',rateOverrides:'نسب خاصة بالتجار',rateOverridesHint:'اترك الخانة فارغة لاستخدام النسبة الافتراضية.',cashbackRate:'مكافأة الزبون (%)',platformCommissionRate:'عمولة التطبيق (%)',defaultRate:'النسبة الافتراضية',saveRates:'حفظ النسب',totalRateError:'مجموع النسب لا يمكن أن يتجاوز 100%.',ratesSaved:'تم حفظ نسب التاجر.',fundedSettlement:'التمويل المخصص لتسوية الالتزامات',topupAvailable:'الرصيد الممول المتاح',qrProceeds:'رصيد عائدات QR',withdrawalAvailable:'الرصيد القابل للسحب',withdrawalsPaid:'السحوبات المنفذة',withdrawalsReserved:'السحوبات قيد التسوية',
     maxDzd:'الحد الأقصى للشحن (دج)',maxLyd:'الحد الأقصى للشحن (د.ل)',unlimited:'اتركه فارغاً لعدم تحديد سقف أعلى.',
     add:'إضافة وسيلة',save:'حفظ وسائل الدفع',saved:'تم حفظ وسائل الدفع.',saveError:'تعذر حفظ وسائل الدفع.',
     id:'معرّف الوسيلة',country:'الدولة',name:'البنك أو وسيلة الدفع',beneficiary:'المستفيد',account:'رقم الحساب أو IBAN أو CCP',
@@ -117,17 +120,30 @@ export function MerchantAdminPanel({state,merchants,lang,onRefresh}:MerchantAdmi
   const decideTopup = useDecideCashbackMerchantTopup();
   const updateWithdrawal = useUpdateCashbackMerchantWithdrawal();
   const createWithdrawalProofUpload = useCreateCashbackAdminWithdrawalProofUpload();
+  const updateCommissionRates = useUpdateCashbackMerchantCommissionRates();
   const saveMethods = useUpdateCashbackPaymentMethods();
   const [methods,setMethods] = useState<PaymentMethod[]>([]);
   const [reasons,setReasons] = useState<Record<string,string>>({});
   const [references,setReferences] = useState<Record<string,string>>({});
   const [proofFiles,setProofFiles] = useState<Record<string,File>>({});
+  const [commissionRateOverrides,setCommissionRateOverrides] = useState<Record<string,{cashback:string;platformCommission:string}>>({});
   const [message,setMessage] = useState('');
   const [busy,setBusy] = useState(false);
   const [maxTopupAmountDzd,setMaxTopupAmountDzd] = useState('');
   const [maxTopupAmountLyd,setMaxTopupAmountLyd] = useState('');
   const settings = stateRecord.settings && typeof stateRecord.settings==='object' ? stateRecord.settings as Row : {};
+  const globalCashbackRate = Number(value(settings,'cashback') ?? 4);
+  const globalPlatformCommissionRate = Number(value(settings,'platformCommission') ?? 2);
+  const commissionLedger = rows(value(stateRecord,'merchantCommissionLedger'));
+  const commissionSettlements = rows(value(stateRecord,'merchantCommissionSettlements'));
+  const rateSignature = merchantRows.map(merchant=>`${text(merchant.id)}:${text(merchant.cashbackRate)}:${text(merchant.platformCommissionRate)}`).join('|');
   const serverMethods = rows(settings.paymentMethods) as PaymentMethod[];
+  useEffect(()=>{
+    setCommissionRateOverrides(Object.fromEntries(merchantRows.map(merchant=>[
+      text(merchant.id),
+      {cashback:merchant.cashbackRate==null?'':text(merchant.cashbackRate),platformCommission:merchant.platformCommissionRate==null?'':text(merchant.platformCommissionRate)},
+    ])));
+  },[rateSignature]);
   useEffect(()=>{
     setMethods(serverMethods.map(m=>({...m})));
     setMaxTopupAmountDzd(value(settings,'maxTopupAmountDzd') == null ? '' : text(settings.maxTopupAmountDzd));
@@ -136,11 +152,45 @@ export function MerchantAdminPanel({state,merchants,lang,onRefresh}:MerchantAdmi
   const storeChanges = rows(value(stateRecord,'merchantStoreChangeRequests','storeChangeRequests')).filter(r=>stateOf(r)==='pending');
   const topups = rows(value(stateRecord,'merchantTopups','topups')).filter(r=>stateOf(r)==='pending');
   const withdrawals = rows(value(stateRecord,'merchantWithdrawals','withdrawals')).filter(r=>!['paid','rejected'].includes(stateOf(r)));
+  const activeMerchants = merchantRows.filter(merchant=>stateOf(merchant)==='active');
+  const sumField=(list:Row[],field:string)=>list.reduce((sum,row)=>sum+Number(value(row,field)??0),0);
+  const customers=rows(value(stateRecord,'customers'));
+  const allWithdrawals=rows(value(stateRecord,'merchantWithdrawals','withdrawals'));
+  const currencyTotals=[{currency:'DZD',country:'Algeria'},{currency:'LYD',country:'Libya'}].map(({currency,country})=>{
+    const merchantIds=new Set(merchantRows.filter(merchant=>normalizeCountry(value(merchant,'country'))===country).map(merchant=>text(merchant.id)));
+    const ledger=commissionLedger.filter(entry=>merchantIds.has(text(entry.merchantId)));
+    const settlements=commissionSettlements.filter(entry=>merchantIds.has(text(entry.merchantId)));
+    const currencyWithdrawals=allWithdrawals.filter(entry=>merchantIds.has(text(entry.merchantId)));
+    const customerRewardBalance=customers.reduce((total,customer)=>{
+      const balances=customer.cbm&&typeof customer.cbm==='object'?customer.cbm as Record<string,unknown>:{};
+      return total+[...merchantIds].reduce((sum,id)=>sum+Number(balances[id]??0),0);
+    },0);
+    return {
+      currency,ledger,customerRewardBalance,
+      rewardsIssued:sumField(ledger,'cashbackAmount'),
+      appCommission:sumField(ledger,'platformCommissionAmount'),
+      appCommissionSettled:sumField(ledger,'settledPlatformCommission'),
+      appCommissionDue:sumField(ledger,'platformCommissionOutstanding'),
+      merchantObligation:sumField(ledger,'merchantObligationAmount'),
+      merchantObligationDue:sumField(ledger,'outstandingAmount'),
+      topupAvailable:merchantRows.filter(merchant=>merchantIds.has(text(merchant.id))).reduce((sum,merchant)=>sum+Number(value(merchant,'topupBalance')??0),0),
+      qrProceeds:merchantRows.filter(merchant=>merchantIds.has(text(merchant.id))).reduce((sum,merchant)=>sum+Number(value(merchant,'payoutBalance')??0),0),
+      withdrawalAvailable:merchantRows.filter(merchant=>merchantIds.has(text(merchant.id))).reduce((sum,merchant)=>{
+        const due=ledger.filter(entry=>text(entry.merchantId)===text(merchant.id)).reduce((subtotal,entry)=>subtotal+Number(value(entry,'outstandingAmount')??0),0);
+        return sum+Math.max(0,Number(value(merchant,'payoutBalance')??0)-due);
+      },0),
+      topupSettled:sumField(settlements,'amount'),
+      withdrawalsReserved:merchantRows.filter(merchant=>merchantIds.has(text(merchant.id))).reduce((sum,merchant)=>sum+Number(value(merchant,'reservedWithdrawalBalance')??0),0),
+      withdrawalsPaid:currencyWithdrawals.filter(entry=>stateOf(entry)==='paid').reduce((sum,entry)=>sum+amountOf(entry),0),
+    };
+  });
+  const formatCurrency=(amount:number,currency:string)=>new Intl.NumberFormat(lang==='ar'?'ar-DZ':lang==='fr'?'fr-FR':'en',{style:'currency',currency}).format(amount);
   const statusLabel=(status:string) => {
     const key:Record<string,string> = {
       pending:'pendingStatus',submitted:'pendingStatus',approved:'approvedStatus',accepted:'approvedStatus',
       rejected:'rejectedStatus',declined:'rejectedStatus',transferring:'transferringStatus',
       paid:'paidStatus',funded:'fundedStatus',done:'doneStatus',complete:'doneStatus',completed:'doneStatus',
+      due:'outstanding',partially_settled:'outstanding',settled:'settled',
       reviewed:'reviewedStatus',in_review:'pendingStatus',under_review:'pendingStatus',
     };
     return t[key[status.toLowerCase().replace(/[\s-]+/g,'_')] ?? 'unknown'];
@@ -168,6 +218,28 @@ export function MerchantAdminPanel({state,merchants,lang,onRefresh}:MerchantAdmi
     return Number.isNaN(date.getTime())?t.unknown:date.toLocaleString(lang==='ar'?'ar-DZ':lang==='fr'?'fr-FR':'en');
   };
   const persist = () => { void client.invalidateQueries({queryKey:getGetCashbackSessionQueryKey()}); onRefresh(); };
+  const saveCommissionRates = async (merchant:Row) => {
+    const id=text(merchant.id);
+    const override=commissionRateOverrides[id]??{
+      cashback:merchant.cashbackRate==null?'':text(merchant.cashbackRate),
+      platformCommission:merchant.platformCommissionRate==null?'':text(merchant.platformCommissionRate),
+    };
+    const cashbackRate=override.cashback.trim()===''?null:Number(override.cashback);
+    const platformCommissionRate=override.platformCommission.trim()===''?null:Number(override.platformCommission);
+    const effectiveCashback=cashbackRate??globalCashbackRate;
+    const effectiveCommission=platformCommissionRate??globalPlatformCommissionRate;
+    if((cashbackRate!==null&&(!Number.isFinite(cashbackRate)||cashbackRate<0||cashbackRate>100))||
+      (platformCommissionRate!==null&&(!Number.isFinite(platformCommissionRate)||platformCommissionRate<0||platformCommissionRate>100))){
+      setMessage(t.totalRateError);return;
+    }
+    if(effectiveCashback+effectiveCommission>100){setMessage(t.totalRateError);return}
+    setBusy(true);setMessage('');
+    try{
+      await updateCommissionRates.mutateAsync({id,data:{cashbackRate,platformCommissionRate}});
+      setCommissionRateOverrides(current=>({...current,[id]:{cashback:cashbackRate===null?'':String(cashbackRate),platformCommission:platformCommissionRate===null?'':String(platformCommissionRate)}}));
+      persist();setMessage(t.ratesSaved);
+    }catch{setMessage(t.error)}finally{setBusy(false)}
+  };
   const changeMethod = (index:number,key:keyof PaymentMethod,val:string|boolean) => setMethods(existing=>existing.map((m,i)=>i===index?{...m,[key]:val}:m));
   const savePaymentMethods = async (event:FormEvent) => {
     event.preventDefault(); setBusy(true);setMessage('');
@@ -232,6 +304,61 @@ export function MerchantAdminPanel({state,merchants,lang,onRefresh}:MerchantAdmi
       <div className="mw-page-heading"><div><div className="mw-kicker">{t.title}</div><h1>{t.title}</h1><p>{t.hint}</p></div><button className="mw-btn" onClick={onRefresh}>{t.refresh}</button></div>
       {busy&&!message?<div className="mw-loading-line" role="status"><span className="mw-skeleton"/>{t.loading}</div>:message?<div className={message===t.error||message===t.reasonNeeded||message===t.saveError?'mw-notice':'mw-banner'} role="status">{message}</div>:null}
       <div className="mw-admin-grid">
+        {section(t.commissionTitle,t.commissionHint,<div className="mw-grid">
+          <div className="mw-grid" style={{gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,300px),1fr))'}}>
+            {currencyTotals.map(summary=><article className="mw-card" key={summary.currency}>
+              <div className="mw-card-head"><h3>{summary.currency}</h3><Percent size={18}/></div>
+              <div className="mw-balance-split">
+                <div><span>{t.customerRewardsIssued}</span><b>{formatCurrency(summary.rewardsIssued,summary.currency)}</b></div>
+                <div><span>{t.customerRewardBalance}</span><b>{formatCurrency(summary.customerRewardBalance,summary.currency)}</b></div>
+                <div><span>{t.appCommission}</span><b>{formatCurrency(summary.appCommission,summary.currency)}</b></div>
+                <div><span>{t.appCommissionSettled}</span><b>{formatCurrency(summary.appCommissionSettled,summary.currency)}</b></div>
+                <div><span>{t.appCommissionDue}</span><b>{formatCurrency(summary.appCommissionDue,summary.currency)}</b></div>
+                <div><span>{t.merchantObligation}</span><b>{formatCurrency(summary.merchantObligation,summary.currency)}</b></div>
+                <div><span>{t.outstanding} · {t.merchantObligation}</span><b>{formatCurrency(summary.merchantObligationDue,summary.currency)}</b></div>
+                <div><span>{t.fundedSettlement}</span><b>{formatCurrency(summary.topupSettled,summary.currency)}</b></div>
+                <div><span>{t.topupAvailable}</span><b>{formatCurrency(summary.topupAvailable,summary.currency)}</b></div>
+                <div><span>{t.qrProceeds}</span><b>{formatCurrency(summary.qrProceeds,summary.currency)}</b></div>
+                <div><span>{t.withdrawalAvailable}</span><b>{formatCurrency(summary.withdrawalAvailable,summary.currency)}</b></div>
+                <div><span>{t.withdrawalsReserved}</span><b>{formatCurrency(summary.withdrawalsReserved,summary.currency)}</b></div>
+                <div><span>{t.withdrawalsPaid}</span><b>{formatCurrency(summary.withdrawalsPaid,summary.currency)}</b></div>
+              </div>
+            </article>)}
+          </div>
+          <p className="mw-banner">{t.merchantObligationNote}</p>
+          <div>
+            <div className="mw-card-head"><div><h3>{t.rateOverrides}</h3><p>{t.rateOverridesHint} {t.defaultRate}: {globalCashbackRate}% + {globalPlatformCommissionRate}%</p></div></div>
+            {activeMerchants.length?<div className="mw-grid">{activeMerchants.map(merchant=>{
+              const id=text(merchant.id);
+              const override=commissionRateOverrides[id]??{cashback:merchant.cashbackRate==null?'':text(merchant.cashbackRate),platformCommission:merchant.platformCommissionRate==null?'':text(merchant.platformCommissionRate)};
+              return <article className="mw-card" key={id}>
+                <div className="mw-row"><div className="mw-row-copy"><strong>{text(merchant.name,t.unknown)}</strong><small>{countryLabel(value(merchant,'country'))} · {id}</small></div><Percent size={17}/></div>
+                <div className="mw-form-grid">
+                  <label className="mw-field"><span>{t.cashbackRate} · {t.defaultRate} {globalCashbackRate}%</span><input type="number" min="0" max="100" step="0.1" className="mw-input" value={override.cashback} onChange={e=>setCommissionRateOverrides(current=>({...current,[id]:{...override,cashback:e.target.value}}))} data-testid={`input-cashback-rate-${id}`}/></label>
+                  <label className="mw-field"><span>{t.platformCommissionRate} · {t.defaultRate} {globalPlatformCommissionRate}%</span><input type="number" min="0" max="100" step="0.1" className="mw-input" value={override.platformCommission} onChange={e=>setCommissionRateOverrides(current=>({...current,[id]:{...override,platformCommission:e.target.value}}))} data-testid={`input-platform-rate-${id}`}/></label>
+                  <button type="button" className="mw-btn mw-btn-primary" onClick={()=>void saveCommissionRates(merchant)} disabled={busy}>{t.saveRates}</button>
+                </div>
+              </article>;
+            })}</div>:empty(t.noActiveMerchants)}
+          </div>
+          <div>
+            <div className="mw-card-head"><div><h3>{t.ledger}</h3><p>{t.merchantObligationNote}</p></div></div>
+            {commissionLedger.length?<div className="mw-table-wrap"><table className="mw-table">
+              <thead><tr><th>{t.merchant}</th><th>{t.invoiceAmount}</th><th>{t.reward}</th><th>{t.platformFee}</th><th>{t.merchantObligation}</th><th>{t.settled}</th><th>{t.outstanding}</th><th>{t.status}</th></tr></thead>
+              <tbody>{commissionLedger.slice().sort((a,b)=>Number(b.createdAt??0)-Number(a.createdAt??0)).slice(0,40).map((entry,index)=>{
+                const currency=text(value(entry,'currency'),'DZD');
+                const invoiceValue=Number(value(entry,'invoiceAmount')??0);
+                const amount=(field:string)=>formatCurrency(Number(value(entry,field)??0),currency);
+                return <tr key={text(entry.id,String(index))}>
+                  <td>{merchantName(entry)}<small className="mw-table-secondary">{text(value(entry,'invoiceNumber','receiptId'))}</small></td>
+                  <td>{formatCurrency(invoiceValue,currency)}</td><td>{amount('cashbackAmount')}</td><td>{amount('platformCommissionAmount')}</td>
+                  <td>{amount('merchantObligationAmount')}<small className="mw-table-secondary">{t.netSale}: {amount('netSaleAmount')}</small></td>
+                  <td>{amount('settledAmount')}</td><td>{amount('outstandingAmount')}</td><td>{statusLabel(stateOf(entry))}</td>
+                </tr>;
+              })}</tbody>
+            </table></div>:empty(t.noLedger)}
+          </div>
+        </div>)}
         {section(t.methods,t.methodsHint,<form onSubmit={savePaymentMethods}>
           {methods.length===0&&empty(t.noMethods)}
           <div className="mw-form-grid mw-limit-grid">
