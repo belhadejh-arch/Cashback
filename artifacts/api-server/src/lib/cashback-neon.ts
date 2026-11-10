@@ -6,6 +6,7 @@ import {
 } from "node:crypto";
 import type { Request } from "express";
 import { pool } from "@workspace/db";
+import { syncCashbackRelationalState } from "./cashback-relational-sync";
 export {
   getMerchantCommissionDue,
   settleMerchantCommissionObligations,
@@ -275,6 +276,46 @@ export async function commit(writes: any[]): Promise<boolean> {
           return false;
         }
       }
+    }
+
+    const stateWriteEntry = writes.find(
+      (write) => write?.update?.name === `${DOCUMENT_ROOT}/cashback/state`,
+    );
+    const authDocumentChanged = writes.some((write) => {
+      if (typeof write?.update?.name !== "string") return false;
+      const path = relativePath(write.update.name);
+      return path.startsWith("users/") || path.startsWith("accounts/");
+    });
+    const relationalProjectionEnabled =
+      process.env.NODE_ENV !== "production" ||
+      process.env.CASHBACK_RELATIONAL_SYNC_ENABLED === "true";
+    if (relationalProjectionEnabled && (stateWriteEntry || authDocumentChanged)) {
+      let state: CashbackState | null = null;
+      if (stateWriteEntry) {
+        const raw = stateWriteEntry.update.fields?.json?.stringValue;
+        if (typeof raw !== "string") throw new CashbackError(500, "STATE_DATA_INVALID");
+        try {
+          state = JSON.parse(raw) as CashbackState;
+        } catch {
+          throw new CashbackError(500, "STATE_DATA_INVALID");
+        }
+      } else {
+        const result = await client.query<{ body: any }>(
+          "SELECT body FROM cashback_documents WHERE path = $1",
+          ["cashback/state"],
+        );
+        const raw = result.rows[0]?.body?.fields?.json?.stringValue;
+        if (typeof raw === "string") {
+          try {
+            state = JSON.parse(raw) as CashbackState;
+          } catch {
+            throw new CashbackError(500, "STATE_DATA_INVALID");
+          }
+        } else {
+          state = emptyState();
+        }
+      }
+      await syncCashbackRelationalState(client, state);
     }
     await client.query("COMMIT");
     return true;

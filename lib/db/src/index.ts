@@ -4,11 +4,16 @@ import * as schema from "./schema";
 
 const { Pool } = pg;
 
-const neonDatabaseUrl = process.env.NEON_DATABASE_URL;
+const neonDatabaseUrl =
+  process.env.NODE_ENV === "production"
+    ? process.env.NEON_DATABASE_URL
+    : process.env.NEON_DEV_DATABASE_URL;
 
 if (!neonDatabaseUrl) {
   throw new Error(
-    "NEON_DATABASE_URL must be set to use the configured Neon database.",
+    process.env.NODE_ENV === "production"
+      ? "NEON_DATABASE_URL must be set for the production database."
+      : "NEON_DEV_DATABASE_URL must be set for the development database.",
   );
 }
 

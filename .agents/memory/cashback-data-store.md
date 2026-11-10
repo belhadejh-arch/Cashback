@@ -16,3 +16,9 @@ New receipt photos go to private App Storage through a short-lived owner-bound u
 **Why:** Receipt image bytes are larger than transactional data and should not grow the Neon JSON document store; existing receipts must remain readable.
 
 **How to apply:** Verify uploaded receipt size and actual image type on the server, store only the object path and metadata in Neon, and preserve backward-compatible reads for previously stored images. Do not bulk-migrate old records unless requested.
+
+Keep `cashback_documents` as the compatibility source while relational tables are transactionally synchronized as projections. Development schema changes use `NEON_DEV_DATABASE_URL`; production projection remains disabled until its schema is applied separately.
+
+**Why:** The user authorized development-only schema changes and chose Neon-managed backups; retaining the existing source prevents data loss and keeps production isolated.
+
+**How to apply:** Backfill and validate relational projections in development before switching reads. Never use the development migration command against production or enable production projection before its schema is ready.

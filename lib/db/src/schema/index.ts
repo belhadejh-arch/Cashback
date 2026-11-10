@@ -18,3 +18,8 @@
 //   export type Post = typeof postsTable.$inferSelect;
 
 export * from "./cashback-documents";
+export * from "./cashback-users";
+export * from "./cashback-merchants";
+export * from "./cashback-invoices";
+export * from "./cashback-finance";
+export * from "./cashback-operations";
