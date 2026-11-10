@@ -638,8 +638,8 @@ function AppInner() {
         <Camera size={30} aria-hidden="true"/>
         {receiptCameraStarting&&<p role="status" className="subtle">{t('cameraStarting')}</p>}
         {receiptCameraError&&<p role="alert" className="subtle">{receiptCameraError}</p>}
-        <button type="button" className="btn btn-primary" onClick={()=>void startReceiptCamera()} disabled={receiptCameraStarting} data-testid="button-start-live-camera"><Camera size={17}/>{lang==='ar'?'فتح الكاميرا':lang==='fr'?'Ouvrir la caméra':'Open camera'}</button>
-        <button type="button" className="btn btn-outline" onClick={openReceiptDeviceCamera} data-testid="button-open-device-camera"><Camera size={17}/>{t('cameraFallback')}</button>
+        <button type="button" className="btn btn-primary" onClick={openReceiptDeviceCamera} data-testid="button-open-device-camera"><Camera size={17}/>{t('cameraFallback')}</button>
+        <button type="button" className="btn btn-outline" onClick={()=>void startReceiptCamera()} disabled={receiptCameraStarting} data-testid="button-start-live-camera"><Camera size={17}/>{lang==='ar'?'تجربة الكاميرا المباشرة':lang==='fr'?'Essayer la caméra en direct':'Try live camera'}</button>
         <input ref={receiptPhotoInputRef} type="file" accept="image/*" capture="environment" aria-label={t('captureReceipt')} className="camera-file-input" data-testid="input-receipt-photo" onChange={e=>{const file=e.target.files?.[0];e.target.value='';void handleReceiptPhotoFile(file);}}/>
       </div>}
     </section>
