@@ -50,7 +50,18 @@ const allowedCategories = new Set([
 
 async function authenticateMerchantRoutes(req: any, res: Response, next: NextFunction) {
   try {
-    (req as AuthenticatedRequest).cashbackProfile = await authenticateRequest(req);
+    const profile = await authenticateRequest(req);
+    if (profile.role === "merchant") {
+      const { state } = await getState();
+      const merchant = (state.merchants ?? []).find(
+        (entry: any) => entry.id === profile.eid,
+      );
+      if (!merchant) throw new CashbackError(403, "PROFILE_INCOMPLETE");
+      if (merchant.status !== "active") {
+        throw new CashbackError(403, "MERCHANT_NOT_ACTIVE");
+      }
+    }
+    (req as AuthenticatedRequest).cashbackProfile = profile;
     next();
   } catch (error) {
     respondError(res, error);
