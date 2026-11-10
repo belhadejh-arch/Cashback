@@ -362,7 +362,6 @@ export const DecideCashbackMerchantStoreChangeResponse = zod.record(zod.string()
  * @summary Submit a merchant balance top-up request
  */
 export const createCashbackMerchantTopupBodyAmountExclusiveMin = 0;
-export const createCashbackMerchantTopupBodyAmountMax = 100000000;
 
 export const createCashbackMerchantTopupBodyPaymentMethodIdMax = 100;
 
@@ -375,7 +374,7 @@ export const createCashbackMerchantTopupBodyObjectPathMax = 500;
 
 
 export const CreateCashbackMerchantTopupBody = zod.object({
-  "amount": zod.number().gt(createCashbackMerchantTopupBodyAmountExclusiveMin).max(createCashbackMerchantTopupBodyAmountMax),
+  "amount": zod.number().gt(createCashbackMerchantTopupBodyAmountExclusiveMin),
   "paymentMethodId": zod.string().min(1).max(createCashbackMerchantTopupBodyPaymentMethodIdMax),
   "payerReference": zod.string().max(createCashbackMerchantTopupBodyPayerReferenceMax).optional(),
   "uploadId": zod.string().min(1).max(createCashbackMerchantTopupBodyUploadIdMax),
@@ -473,6 +472,10 @@ export const updateCashbackPaymentMethodsBodyMethodsItemInstructionsMax = 1000;
 
 export const updateCashbackPaymentMethodsBodyMethodsMax = 30;
 
+export const updateCashbackPaymentMethodsBodyMaxTopupAmountDzdMin = 1000;
+
+export const updateCashbackPaymentMethodsBodyMaxTopupAmountLydMin = 10;
+
 
 
 export const UpdateCashbackPaymentMethodsBody = zod.object({
@@ -485,7 +488,9 @@ export const UpdateCashbackPaymentMethodsBody = zod.object({
   "phone": zod.string().max(updateCashbackPaymentMethodsBodyMethodsItemPhoneMax).optional(),
   "instructions": zod.string().min(1).max(updateCashbackPaymentMethodsBodyMethodsItemInstructionsMax),
   "active": zod.boolean()
-})).max(updateCashbackPaymentMethodsBodyMethodsMax)
+})).max(updateCashbackPaymentMethodsBodyMethodsMax),
+  "maxTopupAmountDzd": zod.number().min(updateCashbackPaymentMethodsBodyMaxTopupAmountDzdMin).nullish(),
+  "maxTopupAmountLyd": zod.number().min(updateCashbackPaymentMethodsBodyMaxTopupAmountLydMin).nullish()
 })
 
 export const UpdateCashbackPaymentMethodsResponse = zod.record(zod.string(), zod.unknown())

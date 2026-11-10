@@ -7,10 +7,7 @@
  */
 
 export interface CashbackMerchantTopupInput {
-  /**
-     * @maximum 100000000
-     * @exclusiveMinimum 0
-     */
+  /** @exclusiveMinimum 0 */
   amount: number;
   /**
      * @minLength 1

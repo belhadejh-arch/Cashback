@@ -293,10 +293,7 @@ export interface CashbackMerchantSensitiveChangeDecision {
 }
 
 export interface CashbackMerchantTopupInput {
-  /**
-     * @maximum 100000000
-     * @exclusiveMinimum 0
-     */
+  /** @exclusiveMinimum 0 */
   amount: number;
   /**
      * @minLength 1
@@ -408,6 +405,16 @@ export interface CashbackPaymentMethod {
 export interface CashbackPaymentMethodsUpdate {
   /** @maxItems 30 */
   methods: CashbackPaymentMethod[];
+  /**
+     * @minimum 1000
+     * @nullable
+     */
+  maxTopupAmountDzd?: number | null;
+  /**
+     * @minimum 10
+     * @nullable
+     */
+  maxTopupAmountLyd?: number | null;
 }
 
 export type CashbackCategoriesUpdateCategoriesItem = typeof CashbackCategoriesUpdateCategoriesItem[keyof typeof CashbackCategoriesUpdateCategoriesItem];

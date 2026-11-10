@@ -24,8 +24,9 @@ const copy:Record<Lang,Record<string,string>> = {
   en:{
     title:'Merchant operations',hint:'Review the queues and keep merchant funding moving.',
     methods:'Top-up payment methods',methodsHint:'Configure the payment details merchants see when funding their wallet.',noMethods:'No payment methods configured.',
+    maxDzd:'Maximum top-up (DZD)',maxLyd:'Maximum top-up (LYD)',unlimited:'Leave blank for no upper limit.',
     add:'Add method',save:'Save methods',saved:'Payment methods saved.',saveError:'Could not save these methods.',
-    id:'Method ID',country:'Country',name:'Display name',beneficiary:'Beneficiary',account:'Account / IBAN',
+    id:'Method ID',country:'Country',name:'Bank or payment method',beneficiary:'Beneficiary',account:'Account / IBAN / CCP',
     phone:'Phone (optional)',instructions:'Instructions',active:'Active',remove:'Remove',
     profiles:'Pending profile changes',profilesHint:'Review requested legal profile updates.',
     topups:'Pending top-ups',topupsHint:'Verify payment proof before approving funds.',
@@ -46,8 +47,9 @@ const copy:Record<Lang,Record<string,string>> = {
   fr:{
     title:'Gestion des commerces',hint:'Traitez les demandes et suivez les paiements commerçants.',
     methods:'Modes de paiement des rechargements',methodsHint:'Configurez les coordonnées affichées aux commerces.',noMethods:'Aucun mode de paiement configuré.',
+    maxDzd:'Plafond de recharge (DZD)',maxLyd:'Plafond de recharge (LYD)',unlimited:'Laisser vide pour ne pas fixer de plafond.',
     add:'Ajouter',save:'Enregistrer les modes',saved:'Modes de paiement enregistrés.',saveError:'Impossible d’enregistrer.',
-    id:'Identifiant',country:'Pays',name:'Nom affiché',beneficiary:'Bénéficiaire',account:'Compte / IBAN',
+    id:'Identifiant',country:'Pays',name:'Banque ou moyen de paiement',beneficiary:'Bénéficiaire',account:'Compte / IBAN / CCP',
     phone:'Téléphone (facultatif)',instructions:'Instructions',active:'Actif',remove:'Supprimer',
     profiles:'Modifications de profil en attente',profilesHint:'Examinez les changements légaux demandés.',
     topups:'Rechargements en attente',topupsHint:'Vérifiez la preuve avant d’approuver les fonds.',
@@ -68,8 +70,9 @@ const copy:Record<Lang,Record<string,string>> = {
   ar:{
     title:'إدارة التجار',hint:'راجع الطلبات وتابع عمليات تمويل التجار.',
     methods:'وسائل دفع التمويل',methodsHint:'أدر تفاصيل الدفع التي تظهر للتاجر عند تمويل محفظته.',noMethods:'لم تتم إضافة وسائل دفع بعد.',
+    maxDzd:'الحد الأقصى للشحن (دج)',maxLyd:'الحد الأقصى للشحن (د.ل)',unlimited:'اتركه فارغاً لعدم تحديد سقف أعلى.',
     add:'إضافة وسيلة',save:'حفظ وسائل الدفع',saved:'تم حفظ وسائل الدفع.',saveError:'تعذر حفظ وسائل الدفع.',
-    id:'معرّف الوسيلة',country:'الدولة',name:'الاسم الظاهر',beneficiary:'المستفيد',account:'الحساب / IBAN',
+    id:'معرّف الوسيلة',country:'الدولة',name:'البنك أو وسيلة الدفع',beneficiary:'المستفيد',account:'رقم الحساب أو IBAN أو CCP',
     phone:'الهاتف (اختياري)',instructions:'التعليمات',active:'نشط',remove:'حذف',
     profiles:'طلبات تعديل بيانات المتجر',profilesHint:'راجع التعديلات القانونية المطلوبة.',
     topups:'طلبات التمويل المعلقة',topupsHint:'تحقق من إثبات الدفع قبل قبول التمويل.',
@@ -119,9 +122,15 @@ export function MerchantAdminPanel({state,merchants,lang,onRefresh}:MerchantAdmi
   const [references,setReferences] = useState<Record<string,string>>({});
   const [message,setMessage] = useState('');
   const [busy,setBusy] = useState(false);
+  const [maxTopupAmountDzd,setMaxTopupAmountDzd] = useState('');
+  const [maxTopupAmountLyd,setMaxTopupAmountLyd] = useState('');
   const settings = stateRecord.settings && typeof stateRecord.settings==='object' ? stateRecord.settings as Row : {};
   const serverMethods = rows(settings.paymentMethods) as PaymentMethod[];
-  useEffect(()=>{ setMethods(serverMethods.map(m=>({...m}))); },[stateRecord]);
+  useEffect(()=>{
+    setMethods(serverMethods.map(m=>({...m})));
+    setMaxTopupAmountDzd(value(settings,'maxTopupAmountDzd') == null ? '' : text(settings.maxTopupAmountDzd));
+    setMaxTopupAmountLyd(value(settings,'maxTopupAmountLyd') == null ? '' : text(settings.maxTopupAmountLyd));
+  },[stateRecord]);
   const storeChanges = rows(value(stateRecord,'merchantStoreChangeRequests','storeChangeRequests')).filter(r=>stateOf(r)==='pending');
   const topups = rows(value(stateRecord,'merchantTopups','topups')).filter(r=>stateOf(r)==='pending');
   const withdrawals = rows(value(stateRecord,'merchantWithdrawals','withdrawals')).filter(r=>!['paid','rejected'].includes(stateOf(r)));
@@ -151,12 +160,21 @@ export function MerchantAdminPanel({state,merchants,lang,onRefresh}:MerchantAdmi
     const currency=merchantCountry(r)==='Libya'?'LYD':'DZD';
     return new Intl.NumberFormat(lang==='ar'?'ar':lang==='fr'?'fr-FR':'en',{style:'currency',currency,maximumFractionDigits:2}).format(amountOf(r));
   };
+  const dateLabel=(r:Row) => {
+    const raw=value(r,'createdAt','created','date');
+    const date=typeof raw==='number'?new Date(raw):new Date(text(raw));
+    return Number.isNaN(date.getTime())?t.unknown:date.toLocaleString(lang==='ar'?'ar-DZ':lang==='fr'?'fr-FR':'en');
+  };
   const persist = () => { void client.invalidateQueries({queryKey:getGetCashbackSessionQueryKey()}); onRefresh(); };
   const changeMethod = (index:number,key:keyof PaymentMethod,val:string|boolean) => setMethods(existing=>existing.map((m,i)=>i===index?{...m,[key]:val}:m));
   const savePaymentMethods = async (event:FormEvent) => {
     event.preventDefault(); setBusy(true);setMessage('');
     try {
-      await saveMethods.mutateAsync({data:{methods}});
+      await saveMethods.mutateAsync({data:{
+        methods,
+        maxTopupAmountDzd:maxTopupAmountDzd.trim() ? Number(maxTopupAmountDzd) : null,
+        maxTopupAmountLyd:maxTopupAmountLyd.trim() ? Number(maxTopupAmountLyd) : null,
+      }});
       persist();setMessage(t.saved);
     } catch { setMessage(t.saveError); } finally { setBusy(false); }
   };
@@ -199,6 +217,11 @@ export function MerchantAdminPanel({state,merchants,lang,onRefresh}:MerchantAdmi
       <div className="mw-admin-grid">
         {section(t.methods,t.methodsHint,<form onSubmit={savePaymentMethods}>
           {methods.length===0&&empty(t.noMethods)}
+          <div className="mw-form-grid mw-limit-grid">
+            <label className="mw-field"><span>{t.maxDzd}</span><input type="number" min="1000" step="0.01" className="mw-input" value={maxTopupAmountDzd} onChange={e=>setMaxTopupAmountDzd(e.target.value)}/></label>
+            <label className="mw-field"><span>{t.maxLyd}</span><input type="number" min="10" step="0.01" className="mw-input" value={maxTopupAmountLyd} onChange={e=>setMaxTopupAmountLyd(e.target.value)}/></label>
+            <small className="mw-limit-hint">{t.unlimited}</small>
+          </div>
           <div className="mw-grid">{methods.map((method,index)=><div className="mw-admin-method" key={`${method.id}-${index}`}>
             <label className="mw-field"><span>{t.id}</span><input className="mw-input" value={method.id} required onChange={e=>changeMethod(index,'id',e.target.value)}/></label>
             <label className="mw-field"><span>{t.country}</span><select className="mw-select" value={method.country} onChange={e=>changeMethod(index,'country',e.target.value)}><option value="Algeria">{t.algeria}</option><option value="Libya">{t.libya}</option></select></label>
@@ -224,7 +247,7 @@ export function MerchantAdminPanel({state,merchants,lang,onRefresh}:MerchantAdmi
         })}</div>:empty(t.noProfiles))}
         {section(t.topups,t.topupsHint,topups.length?<div className="mw-grid">{topups.map((r,i)=>{
           const proofId=text(value(r,'proofId','mediaId','objectId')); const proofUrl=proofId?`/api/cashback/media/${encodeURIComponent(proofId)}`:'';
-          return <article className="mw-card" key={text(r.id,String(i))}><div className="mw-row"><div className="mw-row-copy"><strong>{merchantName(r)}</strong><small>{t.amount}: {formatAmount(r)}</small></div><span className={`mw-status is-${stateOf(r)}`}>{statusLabel(stateOf(r))}</span></div>
+          return <article className="mw-card" key={text(r.id,String(i))}><div className="mw-row"><div className="mw-row-copy"><strong>{merchantName(r)}</strong><small>{countryLabel(value(r,'country'))} · {formatAmount(r)} · {dateLabel(r)}</small></div><span className={`mw-status is-${stateOf(r)}`}>{statusLabel(stateOf(r))}</span></div>
             <div className="mw-row"><div className="mw-row-copy"><strong>{text(value(r,'paymentMethodName'),t.method)}</strong><small>{text(value(r,'payerReference','reference'))}</small></div></div>
             {proofUrl ? <a href={proofUrl} target="_blank" rel="noreferrer"><img className="mw-proof" src={proofUrl} alt={t.proof}/><span className="mw-card-actions"><ExternalLink size={14}/>{t.openProof}</span></a> : <div className="mw-banner">{t.proof}: —</div>}
             {queueActions('topup',r)}

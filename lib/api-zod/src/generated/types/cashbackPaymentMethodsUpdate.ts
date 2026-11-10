@@ -10,4 +10,14 @@ import type { CashbackPaymentMethod } from './cashbackPaymentMethod';
 export interface CashbackPaymentMethodsUpdate {
   /** @maxItems 30 */
   methods: CashbackPaymentMethod[];
+  /**
+     * @minimum 1000
+     * @nullable
+     */
+  maxTopupAmountDzd?: number | null;
+  /**
+     * @minimum 10
+     * @nullable
+     */
+  maxTopupAmountLyd?: number | null;
 }

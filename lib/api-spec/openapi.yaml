@@ -737,7 +737,7 @@ components:
       type: object
       required: [amount, paymentMethodId, uploadId, objectPath]
       properties:
-        amount: { type: number, exclusiveMinimum: 0, maximum: 100000000 }
+        amount: { type: number, exclusiveMinimum: 0 }
         paymentMethodId: { type: string, minLength: 1, maxLength: 100 }
         payerReference: { type: string, maxLength: 120 }
         uploadId: { type: string, minLength: 1, maxLength: 100 }
@@ -782,6 +782,8 @@ components:
           type: array
           maxItems: 30
           items: { $ref: "#/components/schemas/CashbackPaymentMethod" }
+        maxTopupAmountDzd: { type: ["number", "null"], minimum: 1000 }
+        maxTopupAmountLyd: { type: ["number", "null"], minimum: 10 }
     CashbackCategoriesUpdate:
       type: object
       required: [categories]

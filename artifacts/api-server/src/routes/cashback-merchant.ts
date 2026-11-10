@@ -347,7 +347,20 @@ router.post("/cashback/merchant/topups", async (req, res) => {
     if (!merchant || merchant.status !== "active") throw new CashbackError(403, "MERCHANT_NOT_ACTIVE");
     const minimum = merchant.country === "Libya" ? 10 : 1000;
     const amount = roundMoney(parsed.data.amount);
+    if (!Number.isFinite(amount) || !Number.isSafeInteger(Math.round(amount * 100))) {
+      throw new CashbackError(400, "INVALID_TOPUP_AMOUNT");
+    }
     if (amount < minimum) throw new CashbackError(400, "TOPUP_BELOW_MINIMUM");
+    const configuredMaximum = merchant.country === "Libya"
+      ? state.settings?.maxTopupAmountLyd
+      : state.settings?.maxTopupAmountDzd;
+    if (configuredMaximum !== null && configuredMaximum !== undefined) {
+      const maximum = roundMoney(Number(configuredMaximum));
+      if (!Number.isFinite(maximum) || maximum < minimum) {
+        throw new CashbackError(500, "INVALID_TOPUP_LIMIT");
+      }
+      if (amount > maximum) throw new CashbackError(400, "TOPUP_EXCEEDS_ADMIN_LIMIT");
+    }
     const method = (state.settings?.paymentMethods ?? []).find(
       (entry: any) => entry.id === parsed.data.paymentMethodId &&
         entry.country === merchant.country && entry.active === true,
@@ -359,17 +372,38 @@ router.post("/cashback/merchant/topups", async (req, res) => {
     const requestId = `top_${randomUUID().replaceAll("-", "").slice(0, 20)}`;
     const reference = `TOP-${randomUUID().replaceAll("-", "").slice(0, 14).toUpperCase()}`;
     await mutateCashbackState((state) => {
+      const currentMerchant = (state.merchants ?? []).find((entry: any) => entry.id === profile.eid);
+      if (!currentMerchant || currentMerchant.status !== "active") {
+        throw new CashbackError(403, "MERCHANT_NOT_ACTIVE");
+      }
+      const currentMinimum = currentMerchant.country === "Libya" ? 10 : 1000;
+      if (amount < currentMinimum) throw new CashbackError(400, "TOPUP_BELOW_MINIMUM");
+      const currentMaximumRaw = currentMerchant.country === "Libya"
+        ? state.settings?.maxTopupAmountLyd
+        : state.settings?.maxTopupAmountDzd;
+      if (currentMaximumRaw !== null && currentMaximumRaw !== undefined) {
+        const currentMaximum = roundMoney(Number(currentMaximumRaw));
+        if (!Number.isFinite(currentMaximum) || currentMaximum < currentMinimum) {
+          throw new CashbackError(500, "INVALID_TOPUP_LIMIT");
+        }
+        if (amount > currentMaximum) throw new CashbackError(400, "TOPUP_EXCEEDS_ADMIN_LIMIT");
+      }
+      const currentMethod = (state.settings?.paymentMethods ?? []).find(
+        (entry: any) => entry.id === parsed.data.paymentMethodId &&
+          entry.country === currentMerchant.country && entry.active === true,
+      );
+      if (!currentMethod) throw new CashbackError(400, "PAYMENT_METHOD_UNAVAILABLE");
       state.merchantTopups ??= [];
       const request = {
         id: requestId,
         reference,
         merchantId: profile.eid,
         merchantUid: profile.uid,
-        country: merchant.country,
+        country: currentMerchant.country,
         amount,
-        currency: merchant.country === "Libya" ? "LYD" : "DZD",
-        paymentMethodId: method.id,
-        paymentMethodName: method.name,
+        currency: currentMerchant.country === "Libya" ? "LYD" : "DZD",
+        paymentMethodId: currentMethod.id,
+        paymentMethodName: currentMethod.name,
         payerReference: fieldString(parsed.data.payerReference),
         proofId: proof.photoId,
         proofObjectPath: parsed.data.objectPath,
@@ -377,7 +411,7 @@ router.post("/cashback/merchant/topups", async (req, res) => {
         createdAt: Date.now(),
       };
       state.merchantTopups.unshift(request);
-      addNote(state, "admin", `طلب ${merchant.name} شحن رصيد بمبلغ ${amount} ${request.currency}`);
+      addNote(state, "admin", `طلب ${currentMerchant.name} شحن رصيد بمبلغ ${amount} ${request.currency}`);
       addNote(state, profile.eid, "تم إرسال طلب شحن الرصيد إلى الإدارة للمراجعة");
       return {
         result: { id: requestId, reference, status: "pending" },
@@ -561,6 +595,16 @@ router.patch("/cashback/settings/payment-methods", async (req, res) => {
         phone: method.phone?.trim() ?? "",
         instructions: method.instructions.trim(),
       }));
+      if (parsed.data.maxTopupAmountDzd !== undefined) {
+        state.settings.maxTopupAmountDzd = parsed.data.maxTopupAmountDzd === null
+          ? null
+          : roundMoney(parsed.data.maxTopupAmountDzd);
+      }
+      if (parsed.data.maxTopupAmountLyd !== undefined) {
+        state.settings.maxTopupAmountLyd = parsed.data.maxTopupAmountLyd === null
+          ? null
+          : roundMoney(parsed.data.maxTopupAmountLyd);
+      }
       return { result: { ok: true, count: state.settings.paymentMethods.length } };
     });
     res.json({ ok: true, count: parsed.data.methods.length });

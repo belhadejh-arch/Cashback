@@ -81,10 +81,12 @@ const words: Record<Lang, Copy> = {
     catMalls:'Shopping centers',catGroceries:'Groceries',catPerfume:'Perfume',catGifts:'Gifts',catShops:'Other shops',catOther:'Other',
     legalNameLabel:'Legal name',registrationLabel:'Registration number',taxLabel:'Tax number',
     topupMinimum:'Minimum top-up',minimumError:'The amount is below the minimum for this country.',
+    topupMaximumLabel:'Maximum top-up',noMaximum:'No fixed maximum',maximumError:'The amount exceeds the limit set by the administrator.',
+    rejectionReason:'Rejection reason',
     withdrawalLimitError:'The withdrawal amount exceeds your available QR proceeds.',
     methodUnavailableError:'This payment method is no longer available.',
     sensitiveRequests:'Sensitive change requests',noSensitiveRequests:'No sensitive profile changes submitted.',
-    reviewed:'Reviewed',requestedChanges:'Requested changes',beneficiary:'Beneficiary',instructions:'Payment instructions',
+    reviewed:'Reviewed',requestedChanges:'Requested changes',beneficiary:'Beneficiary',account:'Account / IBAN / CCP',instructions:'Payment instructions',
   },
   fr: {
     overview:'Vue d’ensemble', store:'Profil du commerce', qr:'Paiements QR', invoices:'Factures', customers:'Clients',
@@ -135,10 +137,12 @@ const words: Record<Lang, Copy> = {
     catMalls:'Centres commerciaux',catGroceries:'Épicerie',catPerfume:'Parfumerie',catGifts:'Cadeaux',catShops:'Autres commerces',catOther:'Autre',
     legalNameLabel:'Raison sociale',registrationLabel:'Numéro d’enregistrement',taxLabel:'Numéro fiscal',
     topupMinimum:'Rechargement minimum',minimumError:'Le montant est inférieur au minimum requis.',
+    topupMaximumLabel:'Plafond de recharge',noMaximum:'Aucun plafond fixe',maximumError:'Le montant dépasse la limite définie par l’administration.',
+    rejectionReason:'Motif du refus',
     withdrawalLimitError:'Le retrait dépasse vos recettes QR disponibles.',
     methodUnavailableError:'Ce mode de paiement n’est plus disponible.',
     sensitiveRequests:'Demandes de modification sensibles',noSensitiveRequests:'Aucune demande de modification sensible.',
-    reviewed:'Examiné',requestedChanges:'Modifications demandées',beneficiary:'Bénéficiaire',instructions:'Instructions de paiement',
+    reviewed:'Examiné',requestedChanges:'Modifications demandées',beneficiary:'Bénéficiaire',account:'Compte / IBAN / CCP',instructions:'Instructions de paiement',
   },
   ar: {
     overview:'نظرة عامة', store:'ملف المتجر', qr:'مدفوعات QR', invoices:'الفواتير', customers:'الزبائن',
@@ -188,11 +192,13 @@ const words: Record<Lang, Copy> = {
     catRestaurants:'مطاعم',catCafes:'مقاهٍ',catClothing:'ملابس',catElectronics:'إلكترونيات',
     catMalls:'مراكز تجارية',catGroceries:'مواد غذائية',catPerfume:'عطور',catGifts:'هدايا',catShops:'محلات أخرى',catOther:'أخرى',
     legalNameLabel:'الاسم القانوني',registrationLabel:'رقم التسجيل',taxLabel:'الرقم الضريبي',
-    topupMinimum:'الحد الأدنى للتمويل',minimumError:'المبلغ أقل من الحد الأدنى لهذا البلد.',
+    topupMinimum:'الحد الأدنى للشحن',minimumError:'المبلغ أقل من الحد الأدنى لهذا البلد.',
+    topupMaximumLabel:'الحد الأقصى للشحن',noMaximum:'لا يوجد سقف ثابت',maximumError:'المبلغ يتجاوز الحد الذي حددته الإدارة.',
+    rejectionReason:'سبب الرفض',
     withdrawalLimitError:'مبلغ السحب يتجاوز عائدات QR المتاحة.',
     methodUnavailableError:'وسيلة الدفع هذه لم تعد متاحة.',
     sensitiveRequests:'طلبات تعديل البيانات الحساسة',noSensitiveRequests:'لا توجد طلبات تعديل حساسة.',
-    reviewed:'تمت المراجعة',requestedChanges:'التعديلات المطلوبة',beneficiary:'المستفيد',instructions:'تعليمات الدفع',
+    reviewed:'تمت المراجعة',requestedChanges:'التعديلات المطلوبة',beneficiary:'المستفيد',account:'رقم الحساب أو IBAN أو CCP',instructions:'تعليمات الدفع',
   },
 };
 
@@ -269,6 +275,10 @@ export function MerchantWorkspace(props: MerchantWorkspaceProps) {
   const [proof, setProof] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const merchantCountry = countryCode(shop.country);
+  const settingsRecord = state.settings && typeof state.settings === 'object' ? state.settings as RecordLike : {};
+  const topupMinimum = merchantCountry === 'Libya' ? 10 : 1000;
+  const topupMaximumRaw = settingsRecord[merchantCountry === 'Libya' ? 'maxTopupAmountLyd' : 'maxTopupAmountDzd'];
+  const topupMaximum = topupMaximumRaw == null ? undefined : num(topupMaximumRaw);
   const currency = str(first(shop, 'currency'), merchantCountry === 'Libya' ? 'LYD' : 'DZD');
   const money = (v: number) => new Intl.NumberFormat(lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr-FR' : 'en', { style:'currency', currency, maximumFractionDigits:2 }).format(v);
   const claims = asRows(state.claims).filter(r => str(first(r, 'mid', 'merchantId', 'shopId')) === str(shop.id));
@@ -359,6 +369,7 @@ export function MerchantWorkspace(props: MerchantWorkspaceProps) {
   const friendlyApiError = (error: unknown) => {
     const raw = error instanceof Error ? error.message : typeof error === 'string' ? error : JSON.stringify(error) ?? '';
     if (raw.includes('TOPUP_BELOW_MINIMUM')) return t.minimumError;
+    if (raw.includes('TOPUP_EXCEEDS_ADMIN_LIMIT')) return t.maximumError;
     if (raw.includes('WITHDRAWAL_EXCEEDS_AVAILABLE')) return t.withdrawalLimitError;
     if (raw.includes('PAYMENT_METHOD_UNAVAILABLE')) return t.methodUnavailableError;
     return t.requestError;
@@ -406,15 +417,19 @@ export function MerchantWorkspace(props: MerchantWorkspaceProps) {
   };
   const requestTopup = async (event: FormEvent) => {
     event.preventDefault(); setBusy(true); setMessage('');
-    const minimum = merchantCountry === 'Libya' ? 10 : 1000;
     if (!num(form.amount) || !form.paymentMethodId || !proof) {
       setBusy(false);
       setMessage(!proof ? t.requiredImage : t.formError);
       return;
     }
-    if (num(form.amount) < minimum) {
+    if (num(form.amount) < topupMinimum) {
       setBusy(false);
       setMessage(t.minimumError);
+      return;
+    }
+    if (topupMaximum !== undefined && num(form.amount) > topupMaximum) {
+      setBusy(false);
+      setMessage(t.maximumError);
       return;
     }
     try {
@@ -423,7 +438,7 @@ export function MerchantWorkspace(props: MerchantWorkspaceProps) {
       invalidating(); setForm({}); setProof(null); setMessage(t.submitted);
     } catch (error) { setMessage(friendlyApiError(error)); } finally { setBusy(false); }
   };
-  const methods = asRows((state.settings as RecordLike | undefined)?.paymentMethods)
+  const methods = asRows(settingsRecord.paymentMethods)
     .filter(r => r.active !== false && countryCode(r.country) === merchantCountry);
   const selectedMethod = methods.find(method => str(method.id) === form.paymentMethodId);
   const recordRows = useMemo(() => {
@@ -477,7 +492,7 @@ export function MerchantWorkspace(props: MerchantWorkspaceProps) {
         <td>{str(first(r,'invoiceNumber','reference','id'), '—')}</td>
         <td>{kind === 'invoice' ? <span>{resolvedCustomerName}{customerRecord?.phone ? <small className="mw-table-secondary">{str(customerRecord.phone)}</small> : null}</span> : str(first(r,'method','paymentMethodName','payerReference'), kind === 'qr' ? t.QR : t.method)}</td>
         <td>{dateOf(r)}</td><td>{money(num(first(r,'amount','total')))}</td>
-        {kind === 'invoice' && <td>{money(num(first(r,'cashback','rewardAmount')))}</td>}<td>{statusPill(status)}</td>
+        {kind === 'invoice' && <td>{money(num(first(r,'cashback','rewardAmount')))}</td>}<td>{statusPill(status)}{kind === 'topup' && status === 'rejected' && str(first(r,'reason')) && <small className="mw-table-secondary">{t.rejectionReason}: {str(r.reason)}</small>}</td>
       </tr>;
     })}</tbody></table></div>;
   };
@@ -563,7 +578,7 @@ export function MerchantWorkspace(props: MerchantWorkspaceProps) {
       {heading(t.topups,t.topupsHint)}
       <section className="mw-card"><div className="mw-card-head"><div><h2>{t.requestTopup}</h2><p>{t.topupBalanceHint}</p></div><ArrowDownToLine size={18}/></div>
         {!methods.length ? <div className="mw-banner">{t.noMethods}</div> : <form className="mw-form-grid" onSubmit={requestTopup}>
-          <Field label={t.amountLabel}><input type="number" min={merchantCountry==='Libya'?10:1000} step="0.01" className="mw-input" value={form.amount ?? ''} onChange={e=>setForm({...form,amount:e.target.value})} required/><small>{t.topupMinimum}: {money(merchantCountry==='Libya'?10:1000)}</small></Field>
+          <Field label={t.amountLabel}><input type="number" min={topupMinimum} max={topupMaximum} step="0.01" className="mw-input" value={form.amount ?? ''} onChange={e=>setForm({...form,amount:e.target.value})} required/><small>{t.topupMinimum}: {money(topupMinimum)} · {topupMaximum === undefined ? t.noMaximum : `${t.topupMaximumLabel}: ${money(topupMaximum)}`}</small></Field>
           <Field label={t.paymentMethod}><select className="mw-select" value={form.paymentMethodId ?? ''} onChange={e=>setForm({...form,paymentMethodId:e.target.value})} required><option value="">—</option>{methods.map(m=><option key={str(m.id)} value={str(m.id)}>{str(m.name)} · {countryLabel(m.country)}</option>)}</select></Field>
           {selectedMethod && <div className="mw-payment-instructions span-2">
             <div><span>{t.beneficiary}</span><strong>{str(selectedMethod.beneficiary,t.unknown)}</strong></div>

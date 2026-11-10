@@ -37,7 +37,14 @@ export class CashbackError extends Error {
 }
 
 const emptyState = (): CashbackState => ({
-  settings: { cashback: 4, platformCommission: 2, claimHours: 720, paymentMethods: [] },
+  settings: {
+    cashback: 4,
+    platformCommission: 2,
+    claimHours: 720,
+    paymentMethods: [],
+    maxTopupAmountDzd: null,
+    maxTopupAmountLyd: null,
+  },
   categories: ["restaurants", "cafes", "clothing", "electronics", "malls", "groceries", "perfume", "gifts", "shops"],
   merchants: [],
   customers: [],
@@ -56,6 +63,8 @@ function normalizeState(state: CashbackState): CashbackState {
   state.settings.platformCommission ??= 2;
   state.settings.claimHours ??= 720;
   state.settings.paymentMethods ??= [];
+  state.settings.maxTopupAmountDzd ??= null;
+  state.settings.maxTopupAmountLyd ??= null;
   for (const key of ["merchants", "customers", "claims", "ratings", "txns", "cbpays", "paymentSessions", "notes", "audit", "merchantTopups", "merchantWithdrawals", "merchantStoreChangeRequests"]) {
     if (!Array.isArray(state[key])) state[key] = [];
   }
