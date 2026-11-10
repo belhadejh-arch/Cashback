@@ -10,9 +10,9 @@ import {
 import { notificationCopy } from '@/components/notifications/notification-copy';
 import {
   Activity, ArrowDownToLine, ArrowLeftRight, ArrowUpRight, BadgeDollarSign,
-  Bell, Check, CircleDollarSign, Download,
+  Bell, Check, ChevronLeft, ChevronRight, CircleDollarSign, Download,
   Clock3, FileText, Gift, Home, MapPin, Menu, Percent, QrCode, ReceiptText, RefreshCw,
-  Settings, Store, SunMoon, Users, Wallet, X,
+  MoreHorizontal, Settings, Store, SunMoon, Users, Wallet, X,
 } from 'lucide-react';
 import './merchant-workspace.css';
 
@@ -35,7 +35,7 @@ export type MerchantWorkspaceProps = {
 type Copy = Record<string, string>;
 const words: Record<Lang, Copy> = {
   en: {
-    overview:'Overview', store:'Store profile', qr:'QR payments', invoices:'Invoices', customers:'Customers',
+    overview:'Overview', store:'Store profile', qr:'QR payments', navQr:'QR & payments', invoices:'Invoices', customers:'Customers',
     rewards:'Cashback earned', payments:'QR payments', wallet:'Payout balances', topups:'Fund wallet',
     withdrawals:'Withdrawals', transfers:'Transfers', reports:'Reports', notifications:'Notifications',
     settings:'Settings', workspace:'MERCHANT WORKSPACE', welcome:'Your shop, at a glance',
@@ -76,7 +76,7 @@ const words: Record<Lang, Copy> = {
     storeLocation:'Store location', openMap:'Open map', noStoreInfo:'Store information has not been completed.',
     recent:'Recent', net:'Net', unknown:'Unknown', error:'Something went wrong. Please try again.',
     invoiceCount:'Invoices',allStatuses:'All statuses',invoiceSales:'Sales from approved invoices', read:'Read', unread:'Unread', fromShop:'At this shop',
-    amountCurrency:'Amount', profileSaved:'Store profile updated.', more:'More',
+    amountCurrency:'Amount', profileSaved:'Store profile updated.', more:'More', moreHint:'Other tools for managing your shop.',
     algeria:'Algeria',libya:'Libya',statusApproved:'Approved',statusPending:'Pending',statusRejected:'Rejected',
     statusPaid:'Paid',statusTransferring:'Transferring',statusFunded:'Funded',statusDone:'Completed',
     statusReversed:'Reversed',statusCancelled:'Cancelled',statusProcessing:'Processing',statusReview:'In review',
@@ -92,7 +92,7 @@ const words: Record<Lang, Copy> = {
     reviewed:'Reviewed',requestedChanges:'Requested changes',beneficiary:'Beneficiary',account:'Account / IBAN / CCP',instructions:'Payment instructions',
   },
   fr: {
-    overview:'Vue d’ensemble', store:'Profil du commerce', qr:'Paiements QR', invoices:'Factures', customers:'Clients',
+    overview:'Vue d’ensemble', store:'Profil du commerce', qr:'Paiements QR', navQr:'QR et paiements', invoices:'Factures', customers:'Clients',
     rewards:'Cashback gagné', payments:'Paiements QR', wallet:'Soldes de paiement', topups:'Alimenter le solde',
     withdrawals:'Retraits', transfers:'Virements', reports:'Rapports', notifications:'Notifications',
     settings:'Paramètres', workspace:'ESPACE COMMERÇANT', welcome:'Votre commerce en un coup d’œil',
@@ -133,7 +133,7 @@ const words: Record<Lang, Copy> = {
     storeLocation:'Adresse du commerce', openMap:'Ouvrir la carte', noStoreInfo:'Les informations du commerce sont incomplètes.',
     recent:'Récent', net:'Net', unknown:'Inconnu', error:'Une erreur est survenue. Réessayez.',
     invoiceCount:'Factures',allStatuses:'Tous les statuts',invoiceSales:'Ventes des factures approuvées', read:'Lue', unread:'Non lue', fromShop:'Dans ce commerce',
-    amountCurrency:'Montant', profileSaved:'Profil du commerce mis à jour.', more:'Plus',
+    amountCurrency:'Montant', profileSaved:'Profil du commerce mis à jour.', more:'Plus', moreHint:'Autres outils de gestion de votre commerce.',
     algeria:'Algérie',libya:'Libye',statusApproved:'Approuvé',statusPending:'En attente',statusRejected:'Refusé',
     statusPaid:'Payé',statusTransferring:'En transfert',statusFunded:'Financé',statusDone:'Terminé',
     statusReversed:'Annulé',statusCancelled:'Annulé',statusProcessing:'En cours',statusReview:'En vérification',
@@ -149,7 +149,7 @@ const words: Record<Lang, Copy> = {
     reviewed:'Examiné',requestedChanges:'Modifications demandées',beneficiary:'Bénéficiaire',account:'Compte / IBAN / CCP',instructions:'Instructions de paiement',
   },
   ar: {
-    overview:'نظرة عامة', store:'ملف المتجر', qr:'مدفوعات QR', invoices:'الفواتير', customers:'الزبائن',
+    overview:'نظرة عامة', store:'ملف المتجر', qr:'مدفوعات QR', navQr:'QR والدفع', invoices:'الفواتير', customers:'الزبائن',
     rewards:'المكافآت المكتسبة', payments:'مدفوعات QR', wallet:'أرصدة السحب', topups:'تمويل الرصيد',
     withdrawals:'طلبات السحب', transfers:'التحويلات', reports:'التقارير', notifications:'الإشعارات',
     settings:'الإعدادات', workspace:'مساحة التاجر', welcome:'متجرك في لمحة',
@@ -190,7 +190,7 @@ const words: Record<Lang, Copy> = {
     storeLocation:'موقع المتجر', openMap:'فتح الخريطة', noStoreInfo:'لم تكتمل معلومات المتجر بعد.',
     recent:'الأحدث', net:'الصافي', unknown:'غير معروف', error:'حدث خطأ. حاول مجدداً.',
     invoiceCount:'الفواتير',allStatuses:'بكل الحالات',invoiceSales:'مبيعات الفواتير المقبولة', read:'مقروء', unread:'غير مقروء', fromShop:'في هذا المتجر',
-    amountCurrency:'المبلغ', profileSaved:'تم تحديث ملف المتجر.', more:'المزيد',
+    amountCurrency:'المبلغ', profileSaved:'تم تحديث ملف المتجر.', more:'المزيد', moreHint:'الوصول إلى بقية أدوات المتجر.',
     algeria:'الجزائر',libya:'ليبيا',statusApproved:'مقبول',statusPending:'قيد المراجعة',statusRejected:'مرفوض',
     statusPaid:'مدفوع',statusTransferring:'قيد التحويل',statusFunded:'تم التمويل',statusDone:'مكتمل',
     statusReversed:'معكوس',statusCancelled:'ملغى',statusProcessing:'قيد التنفيذ',statusReview:'قيد المراجعة',
@@ -216,6 +216,13 @@ const navItems = [
   { path:'/merchant/transfers', key:'transfers', icon:ArrowLeftRight }, { path:'/merchant/reports', key:'reports', icon:FileText },
   { path:'/merchant/notifications', key:'notifications', icon:Bell }, { path:'/merchant/settings', key:'settings', icon:Settings },
 ];
+const merchantMobileNav = [
+  { path:'/merchant', key:'overview', icon:Home },
+  { path:'/merchant/invoices', key:'invoices', icon:ReceiptText },
+  { path:'/merchant/qr', key:'navQr', icon:QrCode },
+  { path:'/merchant/wallet', key:'wallet', icon:Wallet },
+  { path:'/merchant/more', key:'more', icon:MoreHorizontal },
+] as const;
 const asRows = (value: unknown): RecordLike[] => Array.isArray(value) ? value.filter((v): v is RecordLike => !!v && typeof v === 'object') : [];
 const str = (v: unknown, fallback = ''): string => typeof v === 'string' || typeof v === 'number' ? String(v) : fallback;
 const num = (v: unknown): number => Number.isFinite(Number(v)) ? Number(v) : 0;
@@ -354,7 +361,7 @@ export function MerchantWorkspace(props: MerchantWorkspaceProps) {
     return [...map.values()];
   }, [approvedClaims, cbpays, customerById, shop.id]);
   const activeNav = navItems.find(item => item.path === currentPath) ?? navItems[0];
-  const currentTitle = t[activeNav.key];
+  const currentTitle = currentPath === '/merchant/more' ? t.more : t[activeNav.key];
   const invalidating = () => {
     void queryClient.invalidateQueries({ queryKey:getGetCashbackSessionQueryKey() });
     void queryClient.invalidateQueries({ queryKey:getGetCashbackNotificationsQueryKey() });
@@ -591,7 +598,38 @@ export function MerchantWorkspace(props: MerchantWorkspaceProps) {
         </section>
       </div>
     </>;
-    if (currentPath === '/merchant/qr') return <>{heading(t.qr,t.qrHint)}<section className="mw-card">{qrPanel ?? <Empty title={t.noQr} hint={t.qrHint}/>}</section></>;
+    if (currentPath === '/merchant/qr') return <>
+      {heading(t.navQr,t.qrHint)}
+      <section className="mw-card">{qrPanel ?? <Empty title={t.noQr} hint={t.qrHint}/>}</section>
+      <section className="mw-card">
+        <div className="mw-card-head">
+          <div><h2>{t.payments}</h2><p>{t.qrHint}</p></div>
+          <button className="mw-link-button" onClick={()=>onNavigate('/merchant/payments')} data-testid="button-view-all-qr-payments">{t.viewAll}</button>
+        </div>
+        {renderTable(filteredRecords.slice(0,5),'qr')}
+      </section>
+    </>;
+    if (currentPath === '/merchant/more') {
+      const moreItems = navItems.filter(({path}) =>
+        !['/merchant','/merchant/invoices','/merchant/qr','/merchant/payments','/merchant/wallet'].includes(path),
+      );
+      return <>
+        {heading(t.more,t.moreHint)}
+        <div className="mw-grid mw-more-grid">
+          {moreItems.map(({path,key,icon:Icon})=><button
+            type="button"
+            key={path}
+            className="mw-more-card"
+            onClick={()=>onNavigate(path)}
+            data-testid={`merchant-more-${key}`}
+          >
+            <span className="mw-more-card-icon"><Icon size={19}/></span>
+            <strong>{t[key]}</strong>
+            {rtl?<ChevronLeft size={17}/>:<ChevronRight size={17}/>}
+          </button>)}
+        </div>
+      </>;
+    }
     if (currentPath === '/merchant/customers') return <>
       {heading(t.customers,t.customerHint)}
       {customerStats.length ? <div className="mw-table-wrap"><table className="mw-table"><thead><tr><th>{t.customer}</th><th>{t.phone}</th><th>{t.customerBalance}</th><th>{t.visits}</th><th>{t.lastPurchase}</th></tr></thead><tbody>{customerStats.map(({row,visits,balance,last},i)=><tr key={str(row.id,String(i))}><td>{str(row.name,t.unknown)}</td><td>{str(row.phone,'—')}</td><td>{money(balance)}</td><td>{visits}</td><td>{last ? dateOf({at:last}) : '—'}</td></tr>)}</tbody></table></div> : <Empty title={t.noCustomers} hint={t.customerHint}/>}
@@ -665,7 +703,8 @@ export function MerchantWorkspace(props: MerchantWorkspaceProps) {
     }
     return <>{heading(t.overview,t.overviewHint)}<div className="mw-notice">{t.loadError}</div></>;
   };
-  const mobilePaths = ['/merchant','/merchant/invoices','/merchant/customers','/merchant/wallet','/merchant/settings'];
+  const primaryMerchantPaths = ['/merchant','/merchant/invoices','/merchant/qr','/merchant/payments','/merchant/wallet'];
+  const moreIsActive = currentPath === '/merchant/more' || !primaryMerchantPaths.includes(currentPath);
   return <div className="merchant-workspace" data-theme={theme} dir={rtl?'rtl':'ltr'}>
     <div className={`mw-mobile-shade ${menuOpen?'is-open':''}`} onClick={()=>setMenuOpen(false)} aria-hidden="true"/>
     <div className="mw-shell">
@@ -683,7 +722,12 @@ export function MerchantWorkspace(props: MerchantWorkspaceProps) {
         </main>
       </div>
     </div>
-    <nav className="mw-mobile-nav" aria-label={t.workspace}>{mobilePaths.map(path=>{const item=navItems.find(n=>n.path===path)!;const Icon=item.icon;return <button key={path} className={currentPath===path?'is-active':''} onClick={()=>onNavigate(path)}><Icon/><span>{t[item.key]}</span></button>})}<button onClick={()=>setMenuOpen(true)}><Menu/><span>{t.more}</span></button></nav>
+    <nav className="mw-mobile-nav" aria-label={t.workspace}>{merchantMobileNav.map(({path,key,icon:Icon})=>{
+      const active = path === currentPath ||
+        (path === '/merchant/qr' && currentPath === '/merchant/payments') ||
+        (path === '/merchant/more' && moreIsActive);
+      return <button type="button" key={path} className={active?'is-active':''} onClick={()=>onNavigate(path)} aria-current={active?'page':undefined} data-testid={`merchant-tab-${key}`}><Icon/><span>{t[key]}</span></button>;
+    })}</nav>
   </div>;
 }
 
