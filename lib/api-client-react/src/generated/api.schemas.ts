@@ -113,6 +113,40 @@ export interface CashbackRegistration {
   logoData?: string;
 }
 
+export interface CashbackAdminBootstrapInput {
+  /**
+     * @minLength 2
+     * @maxLength 100
+     */
+  name: string;
+  /** @maxLength 254 */
+  email: string;
+  /**
+     * @minLength 12
+     * @maxLength 128
+     */
+  password: string;
+}
+
+export interface CashbackAdminBootstrapStatus {
+  available: boolean;
+}
+
+export type CashbackAdminBootstrapResultRole = typeof CashbackAdminBootstrapResultRole[keyof typeof CashbackAdminBootstrapResultRole];
+
+
+export const CashbackAdminBootstrapResultRole = {
+  admin: 'admin',
+} as const;
+
+export interface CashbackAdminBootstrapResult {
+  uid: string;
+  role: CashbackAdminBootstrapResultRole;
+  eid: string;
+  name: string;
+  email: string;
+}
+
 /**
  * Expected account type
  */

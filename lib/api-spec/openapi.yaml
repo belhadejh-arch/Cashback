@@ -74,6 +74,47 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CashbackProfile"
+  /cashback/first-admin/status:
+    get:
+      operationId: cashbackAdminBootstrapStatus
+      tags: [cashback]
+      summary: Report whether the first administrator can be initialized
+      responses:
+        "200":
+          description: First-administrator setup availability
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CashbackAdminBootstrapStatus"
+  /cashback/first-admin/bootstrap:
+    post:
+      operationId: bootstrapCashbackAdmin
+      tags: [cashback]
+      summary: Create the first administrator using a one-time setup token
+      parameters:
+        - in: header
+          name: x-cashback-admin-bootstrap-token
+          required: true
+          schema: { type: string, minLength: 32 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CashbackAdminBootstrapInput"
+      responses:
+        "201":
+          description: First administrator created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CashbackAdminBootstrapResult"
+        "403":
+          description: Invalid one-time setup token
+        "409":
+          description: An administrator is already initialized
+        "503":
+          description: Setup token is not configured
   /cashback/auth/login:
     post:
       operationId: loginCashback
@@ -851,6 +892,27 @@ components:
         mapsUrl: { type: string, maxLength: 500 }
         category: { type: string, maxLength: 40 }
         logoData: { type: string, maxLength: 650000 }
+    CashbackAdminBootstrapInput:
+      type: object
+      required: [name, email, password]
+      properties:
+        name: { type: string, minLength: 2, maxLength: 100 }
+        email: { type: string, format: email, maxLength: 254 }
+        password: { type: string, minLength: 12, maxLength: 128 }
+    CashbackAdminBootstrapStatus:
+      type: object
+      required: [available]
+      properties:
+        available: { type: boolean }
+    CashbackAdminBootstrapResult:
+      type: object
+      required: [uid, role, eid, name, email]
+      properties:
+        uid: { type: string }
+        role: { type: string, enum: [admin] }
+        eid: { type: string }
+        name: { type: string }
+        email: { type: string, format: email }
     CashbackLogin:
       type: object
       required: [password]

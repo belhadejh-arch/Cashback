@@ -95,6 +95,50 @@ export const RegisterCashbackProfileResponse = zod.object({
 
 
 /**
+ * @summary Report whether the first administrator can be initialized
+ */
+export const CashbackAdminBootstrapStatusResponse = zod.object({
+  "available": zod.boolean()
+})
+
+
+/**
+ * @summary Create the first administrator using a one-time setup token
+ */
+export const bootstrapCashbackAdminHeaderXCashbackAdminBootstrapTokenMin = 32;
+
+
+
+export const BootstrapCashbackAdminHeader = zod.object({
+  "x-cashback-admin-bootstrap-token": zod.string().min(bootstrapCashbackAdminHeaderXCashbackAdminBootstrapTokenMin)
+})
+
+export const bootstrapCashbackAdminBodyNameMin = 2;
+export const bootstrapCashbackAdminBodyNameMax = 100;
+
+export const bootstrapCashbackAdminBodyEmailMax = 254;
+
+export const bootstrapCashbackAdminBodyPasswordMin = 12;
+export const bootstrapCashbackAdminBodyPasswordMax = 128;
+
+
+
+export const BootstrapCashbackAdminBody = zod.object({
+  "name": zod.string().min(bootstrapCashbackAdminBodyNameMin).max(bootstrapCashbackAdminBodyNameMax),
+  "email": zod.string().email().max(bootstrapCashbackAdminBodyEmailMax),
+  "password": zod.string().min(bootstrapCashbackAdminBodyPasswordMin).max(bootstrapCashbackAdminBodyPasswordMax)
+})
+
+export const BootstrapCashbackAdminResponse = zod.object({
+  "uid": zod.string(),
+  "role": zod.enum(['admin']),
+  "eid": zod.string(),
+  "name": zod.string(),
+  "email": zod.string().email()
+})
+
+
+/**
  * @summary Sign in with an email address or verified phone and password
  */
 export const loginCashbackBodyIdentifierMax = 254;

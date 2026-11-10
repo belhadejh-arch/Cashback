@@ -170,6 +170,18 @@ export async function getDocument(path: string): Promise<any | null> {
   return result.rows[0]?.body ?? null;
 }
 
+export async function hasCashbackAdminAccount(): Promise<boolean> {
+  const result = await pool.query<{ found: boolean }>(
+    `SELECT EXISTS (
+       SELECT 1
+       FROM cashback_documents
+       WHERE path LIKE 'users/%'
+         AND body #>> '{fields,role,stringValue}' = 'admin'
+     ) AS found`,
+  );
+  return result.rows[0]?.found === true;
+}
+
 export async function getState(): Promise<{
   state: CashbackState;
   updateTime?: string;

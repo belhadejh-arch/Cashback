@@ -1,4 +1,4 @@
-import { randomUUID, createHash } from "node:crypto";
+import { randomUUID, createHash, timingSafeEqual } from "node:crypto";
 import { Router, type IRouter, type Response, type NextFunction } from "express";
 import {
   LoginCashbackBody,
@@ -35,6 +35,7 @@ import {
   documentWrite,
   emailLookupId,
   getDocument,
+  hasCashbackAdminAccount,
   settleMerchantCommissionObligations,
   getState,
   hashPassword,
@@ -156,6 +157,105 @@ router.get("/cashback/health", async (_req, res) => {
     const code = error instanceof CashbackError ? error.code : "DATABASE_INTERNAL_ERROR";
     _req.log.warn({ code }, "CASH BACK Neon health check failed");
     res.status(503).json({ status: "unavailable" });
+  }
+});
+
+router.get("/cashback/first-admin/status", async (_req, res) => {
+  try {
+    res.json({ available: !(await hasCashbackAdminAccount()) });
+  } catch (error) {
+    respondError(res, error);
+  }
+});
+
+router.post("/cashback/first-admin/bootstrap", async (req, res) => {
+  try {
+    const bootstrapSecretKey =
+      process.env.NODE_ENV === "production"
+        ? "CASHBACK_ADMIN_BOOTSTRAP_TOKEN"
+        : "CASHBACK_DEV_ADMIN_BOOTSTRAP_TOKEN";
+    const expectedToken = process.env[bootstrapSecretKey]?.trim() ?? "";
+    const suppliedToken = req.get("x-cashback-admin-bootstrap-token") ?? "";
+    if (Buffer.byteLength(expectedToken) < 32) {
+      throw new CashbackError(503, "ADMIN_BOOTSTRAP_NOT_CONFIGURED");
+    }
+    const expectedBytes = Buffer.from(expectedToken);
+    const suppliedBytes = Buffer.from(suppliedToken);
+    if (
+      expectedBytes.length !== suppliedBytes.length ||
+      !timingSafeEqual(expectedBytes, suppliedBytes)
+    ) {
+      throw new CashbackError(403, "INVALID_ADMIN_BOOTSTRAP_TOKEN");
+    }
+
+    const input = req.body && typeof req.body === "object" ? req.body : {};
+    const name = typeof input.name === "string" ? input.name.trim() : "";
+    const email = typeof input.email === "string" ? input.email.trim().toLowerCase() : "";
+    const password = typeof input.password === "string" ? input.password : "";
+    if (
+      name.length < 2 ||
+      name.length > 100 ||
+      email.length > 254 ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ||
+      password.length < 12 ||
+      password.length > 128
+    ) {
+      throw new CashbackError(400, "INVALID_ADMIN_BOOTSTRAP_INPUT");
+    }
+
+    if (await hasCashbackAdminAccount()) {
+      throw new CashbackError(409, "ADMIN_ALREADY_INITIALIZED");
+    }
+    if (await getDocument(`account_emails/${emailLookupId(email)}`)) {
+      throw new CashbackError(409, "EMAIL_ALREADY_REGISTERED");
+    }
+
+    const id = `a_${randomUUID().replaceAll("-", "").slice(0, 16)}`;
+    const uid = `u_${randomUUID().replaceAll("-", "").slice(0, 24)}`;
+    const passwordHash = hashPassword(password);
+    const profile = {
+      uid,
+      role: "admin" as const,
+      eid: id,
+      name,
+      email,
+      preferences: { language: "ar", theme: "dark" },
+    };
+    await mutateCashbackState((state) => {
+      if (state.adminBootstrapComplete) {
+        throw new CashbackError(409, "ADMIN_ALREADY_INITIALIZED");
+      }
+      state.adminBootstrapComplete = true;
+      state.audit ??= [];
+      state.audit.unshift({
+        id: `audit_${randomUUID().replaceAll("-", "").slice(0, 18)}`,
+        action: "first_admin_bootstrapped",
+        adminUid: uid,
+        at: Date.now(),
+      });
+      return {
+        result: profile,
+        extraWrites: [
+          documentWrite("account_emails", emailLookupId(email), { uid }, false),
+          documentWrite("accounts", uid, {
+            email,
+            passwordSalt: passwordHash.salt,
+            passwordHash: passwordHash.hash,
+            createdAt: Date.now(),
+          }, false),
+          documentWrite("users", uid, {
+            role: profile.role,
+            eid: id,
+            name,
+            email,
+            preferences: profile.preferences,
+          }, false),
+        ],
+      };
+    });
+    res.status(201).json(profile);
+  } catch (error) {
+    respondError(res, error);
   }
 });
 

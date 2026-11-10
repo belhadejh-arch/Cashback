@@ -22,6 +22,9 @@ import type {
 import type {
   ActionResult,
   CashbackAccountStatusUpdate,
+  CashbackAdminBootstrapInput,
+  CashbackAdminBootstrapResult,
+  CashbackAdminBootstrapStatus,
   CashbackCategoriesUpdate,
   CashbackLogin,
   CashbackMerchantAssetUpload,
@@ -408,6 +411,171 @@ export const useRegisterCashbackProfile = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getRegisterCashbackProfileMutationOptions(options));
+    }
+
+export const getCashbackAdminBootstrapStatusUrl = () => {
+
+
+
+
+  return `/api/cashback/first-admin/status`
+}
+
+/**
+ * @summary Report whether the first administrator can be initialized
+ */
+export const cashbackAdminBootstrapStatus = async ( options?: Parameters<typeof customFetch>[1]): Promise<CashbackAdminBootstrapStatus> => {
+
+  return customFetch<CashbackAdminBootstrapStatus>(getCashbackAdminBootstrapStatusUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getCashbackAdminBootstrapStatusQueryKey = () => {
+    return [
+    `/api/cashback/first-admin/status`
+    ] as const;
+    }
+
+
+export const getCashbackAdminBootstrapStatusQueryOptions = <TData = Awaited<ReturnType<typeof cashbackAdminBootstrapStatus>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof cashbackAdminBootstrapStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getCashbackAdminBootstrapStatusQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof cashbackAdminBootstrapStatus>>> = ({ signal }) => cashbackAdminBootstrapStatus({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof cashbackAdminBootstrapStatus>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type CashbackAdminBootstrapStatusQueryResult = NonNullable<Awaited<ReturnType<typeof cashbackAdminBootstrapStatus>>>
+export type CashbackAdminBootstrapStatusQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Report whether the first administrator can be initialized
+ */
+
+export function useCashbackAdminBootstrapStatus<TData = Awaited<ReturnType<typeof cashbackAdminBootstrapStatus>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof cashbackAdminBootstrapStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getCashbackAdminBootstrapStatusQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getBootstrapCashbackAdminUrl = () => {
+
+
+
+
+  return `/api/cashback/first-admin/bootstrap`
+}
+
+/**
+ * @summary Create the first administrator using a one-time setup token
+ */
+export const bootstrapCashbackAdmin = async (cashbackAdminBootstrapInput: CashbackAdminBootstrapInput, options?: Parameters<typeof customFetch>[1]): Promise<CashbackAdminBootstrapResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<CashbackAdminBootstrapResult>(getBootstrapCashbackAdminUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(cashbackAdminBootstrapInput)
+  }
+);}
+
+
+
+
+
+export const getBootstrapCashbackAdminMutationKey = () => ['bootstrapCashbackAdmin'] as const;
+
+export const getBootstrapCashbackAdminMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bootstrapCashbackAdmin>>, TError,BootstrapCashbackAdminMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof bootstrapCashbackAdmin>>, TError,BootstrapCashbackAdminMutationVariables, TContext> => {
+
+const mutationKey = getBootstrapCashbackAdminMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof bootstrapCashbackAdmin>>, BootstrapCashbackAdminMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  bootstrapCashbackAdmin(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BootstrapCashbackAdminMutationResult = NonNullable<Awaited<ReturnType<typeof bootstrapCashbackAdmin>>>
+    export type BootstrapCashbackAdminMutationBody = BodyType<CashbackAdminBootstrapInput>
+    export type BootstrapCashbackAdminMutationError = ErrorType<void>
+    export type BootstrapCashbackAdminMutationVariables = {data: BodyType<CashbackAdminBootstrapInput>}
+
+    /**
+ * @summary Create the first administrator using a one-time setup token
+ */
+export const useBootstrapCashbackAdmin = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bootstrapCashbackAdmin>>, TError,BootstrapCashbackAdminMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof bootstrapCashbackAdmin>>,
+        TError,
+        BootstrapCashbackAdminMutationVariables,
+        TContext
+      > => {
+      return useMutation(getBootstrapCashbackAdminMutationOptions(options));
     }
 
 export const getLoginCashbackUrl = () => {

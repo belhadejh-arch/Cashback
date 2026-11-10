@@ -184,6 +184,48 @@ function MediaImage({ id, alt, style }: { id?: string; alt: string; style?: Reac
   return src ? <img src={src} alt={alt} style={style} /> : <div aria-label={alt} style={{ ...style, display:'grid', placeItems:'center', background:'hsl(var(--muted))', color:'hsl(var(--muted-foreground))' }}><Store size={24}/></div>;
 }
 
+const adminBootstrapTranslations: Record<Lang, Dict> = {
+  en: {
+    setupFirstAdmin:'Set up first administrator', adminSetupTitle:'Secure administrator setup',
+    adminSetupDescription:'This one-time setup is available only before the first administrator is created.',
+    adminSetupToken:'One-time setup token', adminSetupName:'Administrator name',
+    adminSetupEmail:'Administrator email', adminSetupPassword:'Password (at least 12 characters)',
+    adminSetupConfirm:'Confirm password', adminSetupSubmit:'Create administrator',
+    adminSetupBack:'Back to sign in', adminSetupSuccess:'Administrator created. Sign in with the email and password you set.',
+    adminSetupSecretMissing:'The server setup secret is not configured.',
+    adminSetupTokenInvalid:'The one-time setup token is invalid.',
+    adminSetupAlreadyDone:'An administrator has already been initialized.',
+    adminSetupEmailExists:'This email is already registered.',
+    adminSetupWeakPassword:'Use a password with at least 12 characters.',
+  },
+  fr: {
+    setupFirstAdmin:'Configurer le premier administrateur', adminSetupTitle:'Configuration sécurisée de l’administrateur',
+    adminSetupDescription:'Cette configuration unique est disponible uniquement avant la création du premier administrateur.',
+    adminSetupToken:'Jeton de configuration à usage unique', adminSetupName:'Nom de l’administrateur',
+    adminSetupEmail:'E-mail de l’administrateur', adminSetupPassword:'Mot de passe (12 caractères minimum)',
+    adminSetupConfirm:'Confirmer le mot de passe', adminSetupSubmit:'Créer l’administrateur',
+    adminSetupBack:'Retour à la connexion', adminSetupSuccess:'Administrateur créé. Connectez-vous avec l’e-mail et le mot de passe définis.',
+    adminSetupSecretMissing:'Le secret de configuration du serveur n’est pas configuré.',
+    adminSetupTokenInvalid:'Le jeton de configuration est invalide.',
+    adminSetupAlreadyDone:'Un administrateur a déjà été initialisé.',
+    adminSetupEmailExists:'Cette adresse e-mail est déjà utilisée.',
+    adminSetupWeakPassword:'Utilisez un mot de passe de 12 caractères minimum.',
+  },
+  ar: {
+    setupFirstAdmin:'إعداد أول حساب إدارة', adminSetupTitle:'إعداد آمن لحساب الإدارة',
+    adminSetupDescription:'هذا الإعداد لمرة واحدة، ويظهر فقط قبل إنشاء أول حساب إدارة.',
+    adminSetupToken:'رمز الإعداد لمرة واحدة', adminSetupName:'اسم مدير الحساب',
+    adminSetupEmail:'البريد الإلكتروني للمدير', adminSetupPassword:'كلمة المرور (12 حرفاً على الأقل)',
+    adminSetupConfirm:'تأكيد كلمة المرور', adminSetupSubmit:'إنشاء حساب الإدارة',
+    adminSetupBack:'العودة إلى تسجيل الدخول', adminSetupSuccess:'تم إنشاء حساب الإدارة. سجّل الدخول بالبريد وكلمة المرور اللذين أدخلتهما.',
+    adminSetupSecretMissing:'لم يتم إعداد سرّ التهيئة في الخادم.',
+    adminSetupTokenInvalid:'رمز الإعداد لمرة واحدة غير صحيح.',
+    adminSetupAlreadyDone:'تم إعداد حساب إدارة من قبل.',
+    adminSetupEmailExists:'هذا البريد الإلكتروني مسجل مسبقاً.',
+    adminSetupWeakPassword:'استخدم كلمة مرور من 12 حرفاً على الأقل.',
+  },
+};
+
 function AppInner() {
   const client = useQueryClient();
   const [location, setLocation] = useLocation();
@@ -191,7 +233,13 @@ function AppInner() {
   const [theme, setTheme] = useState<Theme>('dark');
   const [authReady, setAuthReady] = useState(false);
   const [splash, setSplash] = useState(true);
-  const [authMode, setAuthMode] = useState<'login'|'register'|'reset'>('login');
+  const [authMode, setAuthMode] = useState<'login'|'register'|'reset'|'admin-bootstrap'>('login');
+  const [adminBootstrapAvailable, setAdminBootstrapAvailable] = useState(false);
+  const [adminBootstrapToken, setAdminBootstrapToken] = useState('');
+  const [adminBootstrapName, setAdminBootstrapName] = useState('');
+  const [adminBootstrapEmail, setAdminBootstrapEmail] = useState('');
+  const [adminBootstrapPassword, setAdminBootstrapPassword] = useState('');
+  const [adminBootstrapConfirm, setAdminBootstrapConfirm] = useState('');
   const [registerRole, setRegisterRole] = useState<'customer'|'merchant'>('customer');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -212,7 +260,7 @@ function AppInner() {
   const receiptCameraRequestRef = useRef(0);
   const [receiptMerchantId, setReceiptMerchantId] = useState(''); const [receiptFile, setReceiptFile] = useState(''); const [invoice, setInvoice] = useState(''); const [purchaseAmount, setPurchaseAmount] = useState(''); const [purchaseDate, setPurchaseDate] = useState(new Date().toISOString().slice(0,10));
   const [reason, setReason] = useState(''); const [rateValue, setRateValue] = useState(''); const [platformCommissionValue, setPlatformCommissionValue] = useState('');
-   const t = (key: string) => paymentTranslations[lang][key] || homeNavTranslations[lang][key] || cameraTranslations[lang][key] || authStatusTranslations[lang][key] || featureTranslations[lang][key] || extraTranslations[lang][key] || dictionaries[lang][key] || (key.startsWith('cat_') ? key.slice(4) : key);
+    const t = (key: string) => adminBootstrapTranslations[lang][key] || paymentTranslations[lang][key] || homeNavTranslations[lang][key] || cameraTranslations[lang][key] || authStatusTranslations[lang][key] || featureTranslations[lang][key] || extraTranslations[lang][key] || dictionaries[lang][key] || (key.startsWith('cat_') ? key.slice(4) : key);
   const { data: session, isLoading, isError, error: queryError, refetch } = useGetCashbackSession({ query: { queryKey: getGetCashbackSessionQueryKey(), enabled: authReady, retry: false, refetchOnWindowFocus: false } });
   const sessionHttpStatus = getHttpStatus(queryError);
    const register = useRegisterCashbackProfile(); const submitReceipt = useSubmitCashbackReceipt(); const receiptPhotoUpload = useCreateCashbackReceiptPhotoUpload(); const cancelReceiptRequest = useCancelCashbackReceipt(); const decideReceipt = useDecideCashbackReceipt();
@@ -225,6 +273,14 @@ function AppInner() {
   const state = user?.state || {};
   const merchants = state.merchants || []; const claims = state.claims || []; const txns = state.txns || [];
   const profile = user?.profile;
+  useEffect(() => {
+    let active = true;
+    void fetch('/api/cashback/first-admin/status', { headers: { Accept: 'application/json' } })
+      .then(response => response.ok ? response.json() : null)
+      .then(result => { if (active) setAdminBootstrapAvailable(result?.available === true); })
+      .catch(() => { if (active) setAdminBootstrapAvailable(false); });
+    return () => { active = false; };
+  }, []);
   const notificationsQuery = useGetCashbackNotifications({ query: {
     queryKey: getGetCashbackNotificationsQueryKey(),
     enabled: Boolean(profile),
@@ -348,6 +404,47 @@ function AppInner() {
     clearMessages();
     try { await login.mutateAsync({ data: { identifier: loginIdentifier.trim(), password, role: registerRole } }); client.clear(); await refetch(); setLocation('/'); }
     catch (e) { showErr(e); }
+  }
+  async function bootstrapFirstAdmin() {
+    clearMessages();
+    if (adminBootstrapPassword.length < 12) { setError(t('adminSetupWeakPassword')); return; }
+    if (adminBootstrapPassword !== adminBootstrapConfirm) { setError(t('passwordsDiffer')); return; }
+    try {
+      const response = await fetch('/api/cashback/first-admin/bootstrap', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-cashback-admin-bootstrap-token': adminBootstrapToken,
+        },
+        body: JSON.stringify({
+          name: adminBootstrapName.trim(),
+          email: adminBootstrapEmail.trim(),
+          password: adminBootstrapPassword,
+        }),
+      });
+      const result = await response.json().catch(() => ({})) as { error?: string };
+      if (!response.ok) {
+        const messages: Record<string, string> = {
+          ADMIN_BOOTSTRAP_NOT_CONFIGURED: t('adminSetupSecretMissing'),
+          INVALID_ADMIN_BOOTSTRAP_TOKEN: t('adminSetupTokenInvalid'),
+          ADMIN_ALREADY_INITIALIZED: t('adminSetupAlreadyDone'),
+          EMAIL_ALREADY_REGISTERED: t('adminSetupEmailExists'),
+        };
+        throw new Error(messages[result.error || ''] || t('genericError'));
+      }
+      setAdminBootstrapAvailable(false);
+      setLoginIdentifier(adminBootstrapEmail.trim());
+      setAuthMode('login');
+      setNotice(t('adminSetupSuccess'));
+      setAdminBootstrapName('');
+      setAdminBootstrapEmail('');
+      setAdminBootstrapPassword('');
+      setAdminBootstrapConfirm('');
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : t('genericError'));
+    } finally {
+      setAdminBootstrapToken('');
+    }
   }
   async function beginRegistration() {
     clearMessages();
@@ -665,7 +762,7 @@ function AppInner() {
   if (profile && isError) return shell(<div style={{ maxWidth:540, margin:'50px auto' }}>{noticeBox(t('loadError'),true)}<button className="btn btn-primary" onClick={()=>void refetch()} data-testid="button-retry">{t('retryLoad')} <RefreshCw size={16}/></button></div>);
 
   if (!profile) {
-    const activeAuth = authMode==='register' ? t('createAccount') : authMode==='reset' ? t('reset') : t('login');
+    const activeAuth = authMode==='admin-bootstrap' ? t('adminSetupTitle') : authMode==='register' ? t('createAccount') : authMode==='reset' ? t('reset') : t('login');
     return <div className="app-shell grain" dir={isRtl?'rtl':'ltr'}>
       {header(false)}
       <main style={{ maxWidth:1040, margin:'0 auto', padding:'24px 18px 60px', display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,360px),1fr))', gap:24, alignItems:'stretch' }}>
@@ -675,13 +772,21 @@ function AppInner() {
           <div className="auth-callout" style={{ position:'relative', display:'flex', gap:13, alignItems:'center', marginTop:34 }}><div className="auth-callout-icon" style={{ width:46,height:46,borderRadius:15,display:'grid',placeItems:'center' }}><Wallet size={23}/></div><div><strong style={{ display:'block' }}>{t('separationNudge')}</strong><span className="auth-hint" style={{fontSize:13}}>{t('separationHint')}</span></div></div>
         </section>
         <section className="surface" style={{ padding:'clamp(22px,4vw,36px)', borderRadius:26, alignSelf:'center' }}>
-          <div style={{ display:'flex',gap:6, padding:4, borderRadius:13,background:'hsl(var(--muted))',marginBottom:24 }}>
+          {authMode!=='admin-bootstrap' && <div style={{ display:'flex',gap:6, padding:4, borderRadius:13,background:'hsl(var(--muted))',marginBottom:24 }}>
             <button className={`btn ${registerRole==='customer'?'btn-primary':''}`} style={{ flex:1,background:registerRole==='customer'?undefined:'transparent' }} onClick={()=>{setRegisterRole('customer');setAuthMode('login');clearMessages()}} data-testid="tab-customer"><UserRound size={16}/>{t('customer')}</button>
             <button className={`btn ${registerRole==='merchant'?'btn-primary':''}`} style={{ flex:1,background:registerRole==='merchant'?undefined:'transparent' }} onClick={()=>{setRegisterRole('merchant');setAuthMode('login');clearMessages()}} data-testid="tab-merchant"><Store size={16}/>{t('merchant')}</button>
-          </div>
-          <div style={{ display:'flex',alignItems:'center',gap:12,marginBottom:18 }}><div style={{ width:42,height:42,borderRadius:13,background:'hsl(var(--primary) / .16)',color:'hsl(var(--primary))',display:'grid',placeItems:'center' }}>{registerRole==='merchant'?<Store size={20}/>:<Wallet size={20}/>}</div><div><h2 style={{ margin:0,fontSize:24 }}>{activeAuth}</h2><span className="subtle" style={{ fontSize:13 }}>{t('welcome')}</span></div></div>
+          </div>}
+          <div style={{ display:'flex',alignItems:'center',gap:12,marginBottom:18 }}><div style={{ width:42,height:42,borderRadius:13,background:'hsl(var(--primary) / .16)',color:'hsl(var(--primary))',display:'grid',placeItems:'center' }}>{authMode==='admin-bootstrap'?<LockKeyhole size={20}/>:registerRole==='merchant'?<Store size={20}/>:<Wallet size={20}/>}</div><div><h2 style={{ margin:0,fontSize:24 }}>{activeAuth}</h2><span className="subtle" style={{ fontSize:13 }}>{authMode==='admin-bootstrap'?t('adminSetupDescription'):t('welcome')}</span></div></div>
           {error && noticeBox(error,true)}{notice && noticeBox(notice)}
-          {authMode==='register' ? <form onSubmit={e=>{e.preventDefault();void beginRegistration();}} style={{ display:'grid',gap:13 }}>
+          {authMode==='admin-bootstrap' ? <form onSubmit={e=>{e.preventDefault();void bootstrapFirstAdmin();}} style={{ display:'grid',gap:13 }}>
+            <Field label={t('adminSetupToken')} value={adminBootstrapToken} onChange={setAdminBootstrapToken} testId="input-admin-bootstrap-token" type="password" autoComplete="off" required/>
+            <Field label={t('adminSetupName')} value={adminBootstrapName} onChange={setAdminBootstrapName} testId="input-admin-bootstrap-name" autoComplete="name" required/>
+            <Field label={t('adminSetupEmail')} value={adminBootstrapEmail} onChange={setAdminBootstrapEmail} testId="input-admin-bootstrap-email" type="email" autoComplete="email" required/>
+            <Field label={t('adminSetupPassword')} value={adminBootstrapPassword} onChange={setAdminBootstrapPassword} testId="input-admin-bootstrap-password" type="password" autoComplete="new-password" required/>
+            <Field label={t('adminSetupConfirm')} value={adminBootstrapConfirm} onChange={setAdminBootstrapConfirm} testId="input-admin-bootstrap-confirm" type="password" autoComplete="new-password" required/>
+            <button type="submit" className="btn btn-primary" data-testid="button-admin-bootstrap">{t('adminSetupSubmit')} <ArrowRight size={17}/></button>
+            <button type="button" className="btn btn-outline" onClick={()=>{setAuthMode('login');setAdminBootstrapToken('');setAdminBootstrapPassword('');setAdminBootstrapConfirm('');clearMessages()}} data-testid="button-admin-bootstrap-back">{t('adminSetupBack')}</button>
+          </form> : authMode==='register' ? <form onSubmit={e=>{e.preventDefault();void beginRegistration();}} style={{ display:'grid',gap:13 }}>
             <Field label={registerRole==='merchant'?t('shopName'):t('name')} value={name} onChange={setName} testId="input-name" required/>
             <Field label={t('phone')} value={phone} onChange={setPhone} testId="input-phone" type="tel" required={registerRole==='merchant'} placeholder="+213 …"/><small className="subtle">{t('phoneSignupHint')}</small>
             <Field label={t('email')} value={email} onChange={setEmail} testId="input-email" type="email" required/>
@@ -706,6 +811,7 @@ function AppInner() {
             <button type="submit" className="btn btn-primary" data-testid="button-login">{t('login')} <ArrowRight size={17}/></button>
             <div style={{ textAlign:'center', color:'hsl(var(--muted-foreground))',fontSize:14 }}>{t('noAccount')} <button type="button" onClick={()=>{setAuthMode('register');clearMessages()}} style={{ border:0,background:'transparent',color:'hsl(var(--primary))',fontWeight:700,cursor:'pointer' }} data-testid="button-create-account">{t('createAccount')}</button></div>
           </form>}
+          {authMode==='login' && adminBootstrapAvailable && <button type="button" className="btn btn-outline" style={{ width:'100%',marginTop:14 }} onClick={()=>{setAuthMode('admin-bootstrap');clearMessages()}} data-testid="button-admin-bootstrap-open"><LockKeyhole size={16}/>{t('setupFirstAdmin')}</button>}
         </section>
       </main>
       <div style={{ maxWidth:1040,margin:'0 auto',padding:'0 18px 30px',textAlign:'center' }}><button className="btn btn-outline" onClick={()=>{setRegisterRole('merchant');setAuthMode('register')}} data-testid="button-merchant-apply"><Store size={17}/>{t('applyShop')}</button><p className="subtle" style={{ fontSize:12,marginTop:14 }}>{t('tagline')}</p></div>
