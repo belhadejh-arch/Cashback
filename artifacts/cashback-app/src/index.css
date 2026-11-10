@@ -396,8 +396,8 @@ button, input, select, textarea { font: inherit; }
 .surface { border: 1px solid hsl(var(--card-border)); background: hsl(var(--card)); border-radius: 18px; }
 .subtle { color: hsl(var(--muted-foreground)); }
 .status-pill { display: inline-flex; border-radius: 999px; padding: 4px 10px; font-size: 12px; font-weight: 700; background: hsl(var(--muted)); color: hsl(var(--foreground)); }
-.splash { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; background: hsl(var(--background)); animation: splashOut .45s ease 1.8s forwards; }
-.splash img { width: min(72vw, 330px); height: min(72vh, 640px); object-fit: contain; animation: arrive .55s ease-out both; }
+.splash { position: fixed; inset: 0; z-index: 9999; width: 100%; height: 100vh; height: 100dvh; overflow: hidden; background: #080301; animation: splashOut .45s ease 1.8s forwards; }
+.splash img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center; }
 @keyframes splashOut { to { opacity: 0; visibility: hidden; } }
 .dialog-backdrop { position: fixed; inset: 0; z-index: 50; display: grid; place-items: end center; background: rgba(16,9,4,.58); padding: 12px; }
 .dialog-panel { width: min(100%, 520px); max-height: 92dvh; overflow: auto; border-radius: 22px; background: hsl(var(--card)); border: 1px solid hsl(var(--border)); padding: 22px; }

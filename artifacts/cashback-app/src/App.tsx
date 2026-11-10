@@ -758,7 +758,7 @@ function AppInner() {
   const statusLabel = (s:string) => s==='approved'?t('approved'):s==='rejected'?t('rejected'):s==='cancelled'?t('cancelled'):t('pending');
   const statusPill = (s:string) => <span className="status-pill" data-testid={`status-${s}`}>{statusLabel(s)}</span>;
 
-  if (splash) return <div className="splash"><img src="/splash.png" alt="CASH BACK" /></div>;
+  if (splash) return <div className="splash"><img src={`${import.meta.env.BASE_URL}splash.png`} alt="CASH BACK" /></div>;
   if (isLoading && !profile) return <div className="app-shell" style={{ minHeight:'100dvh', display:'grid', placeItems:'center', padding:22 }}><div className="surface" style={{ width:'min(100%,420px)', padding:30, textAlign:'center' }}><div style={{ width:52,height:52,borderRadius:16,background:'hsl(var(--muted))',margin:'0 auto 14px' }} /><div style={{ height:15,width:'60%',borderRadius:8,background:'hsl(var(--muted))',margin:'0 auto 9px' }}/><p className="subtle">{t('loading')}</p></div></div>;
   if (profile && isError) return shell(<div style={{ maxWidth:540, margin:'50px auto' }}>{noticeBox(t('loadError'),true)}<button className="btn btn-primary" onClick={()=>void refetch()} data-testid="button-retry">{t('retryLoad')} <RefreshCw size={16}/></button></div>);
 
