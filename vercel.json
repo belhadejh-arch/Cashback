@@ -1,0 +1,15 @@
+{
+  "installCommand": "pnpm install --frozen-lockfile",
+  "buildCommand": "PORT=3000 BASE_PATH=/ pnpm --filter @workspace/cashback-app run build",
+  "outputDirectory": "artifacts/cashback-app/dist/public",
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://cashback-api.onrender.com/api/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}

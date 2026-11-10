@@ -164,7 +164,14 @@ router.post("/cashback/merchant/assets/upload-url", async (req, res) => {
     const merchant = (state.merchants ?? []).find((entry: any) => entry.id === profile.eid);
     if (!merchant || merchant.status !== "active") throw new CashbackError(403, "MERCHANT_NOT_ACTIVE");
     const uploadId = `merchant_asset_${randomUUID().replaceAll("-", "")}`;
-    const upload = await createMerchantAssetUpload(profile.uid, profile.eid, parsed.data.asset, uploadId);
+    const upload = await createMerchantAssetUpload(
+      profile.uid,
+      profile.eid,
+      parsed.data.asset,
+      uploadId,
+      parsed.data.contentType,
+      parsed.data.size,
+    );
     const createdAt = Date.now();
     const stored = await commit([
       documentWrite("merchant_asset_uploads", uploadId, {
@@ -713,6 +720,9 @@ router.post("/cashback/admin/withdrawals/:id/proof-upload-url", async (req, res)
       merchant.id,
       "withdrawal-proof",
       uploadId,
+      parsed.data.contentType,
+      parsed.data.size,
+      profile.uid,
     );
     const createdAt = Date.now();
     const stored = await commit([

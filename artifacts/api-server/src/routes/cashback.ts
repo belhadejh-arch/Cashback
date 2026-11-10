@@ -60,6 +60,7 @@ import {
   readPrivateImage,
   readProfilePhoto,
 } from "../lib/profilePhotoStorage";
+import { receiveRenderDiskUpload } from "../lib/renderDiskStorage";
 import { calculateCommissionAmounts } from "../lib/commission-ledger";
 import { addCashbackNotification } from "../lib/cashback-notifications";
 
@@ -276,6 +277,29 @@ router.use(async (req, res, next: NextFunction) => {
     }
     (req as AuthenticatedRequest).cashbackProfile = profile;
     next();
+  } catch (error) {
+    respondError(res, error);
+  }
+});
+
+router.put("/cashback/storage/uploads/:token", async (req, res) => {
+  try {
+    const profile = (req as unknown as AuthenticatedRequest).cashbackProfile;
+    const result = await receiveRenderDiskUpload(
+      String(req.params.token ?? ""),
+      profile.uid,
+      String(req.get("content-type") ?? "").split(";", 1)[0].trim().toLowerCase(),
+      req,
+    );
+    if (!result) {
+      res.status(404).json({ error: "UPLOAD_NOT_FOUND" });
+      return;
+    }
+    if (!result.ok) {
+      res.status(result.status).json({ error: result.error });
+      return;
+    }
+    res.status(201).json({ ok: true });
   } catch (error) {
     respondError(res, error);
   }
@@ -748,7 +772,12 @@ router.post("/cashback/receipts/upload-url", async (req, res) => {
     throw new CashbackError(400, "INVALID_RECEIPT_IMAGE");
   }
   const uploadId = `receipt_${randomUUID()}`;
-  const upload = await createReceiptPhotoUpload(profile.uid, uploadId);
+  const upload = await createReceiptPhotoUpload(
+    profile.uid,
+    uploadId,
+    parsed.data.contentType,
+    parsed.data.size,
+  );
   const saved = await commit([
     documentWrite(
       "receipt_uploads",
@@ -1593,7 +1622,11 @@ router.post("/cashback/profile/photo/upload-url", async (req, res) => {
     const parsed = CreateCashbackProfilePhotoUploadBody.safeParse(req.body);
     if (!parsed.success) throw new CashbackError(400, "INVALID_REQUEST");
     const uploadId = `avatar_${randomUUID().replaceAll("-", "")}`;
-    const { uploadURL, objectPath } = await createProfilePhotoUpload(profile.uid);
+    const { uploadURL, objectPath } = await createProfilePhotoUpload(
+      profile.uid,
+      parsed.data.contentType,
+      parsed.data.size,
+    );
     const createdAt = Date.now();
     const stored = await commit([
       documentWrite("profile_photo_uploads", uploadId, {

@@ -1,8 +1,15 @@
 import { randomUUID } from "node:crypto";
 import { Readable } from "node:stream";
 import { Storage, type File } from "@google-cloud/storage";
+import { createRenderDiskUploadUrl, getRenderDiskObjectFile } from "./renderDiskStorage";
 
 const SIDECAR = "http://127.0.0.1:1106";
+export type PrivateMediaFile = {
+  getMetadata(): Promise<[{ contentType?: unknown; size?: unknown }]>;
+  download(): Promise<[Buffer]>;
+  createReadStream(): Readable;
+};
+
 const storage = new Storage({
   credentials: {
     audience: "replit",
@@ -50,14 +57,27 @@ async function signUpload(bucketName: string, objectName: string): Promise<strin
   return result.signed_url;
 }
 
-export async function createProfilePhotoUpload(uid: string): Promise<{
+function createUploadUrl(
+  uploaderUid: string,
+  objectName: string,
+  contentType: string,
+  size: number,
+): Promise<string> {
+  if (process.env.APP_STORAGE_DRIVER === "render-disk") {
+    return Promise.resolve(createRenderDiskUploadUrl(uploaderUid, objectName, contentType, size));
+  }
+  const fullPath = `${bucketPrefix()}/${objectName}`;
+  const { bucketName, objectName: storageObjectName } = parseStoragePath(fullPath);
+  return signUpload(bucketName, storageObjectName);
+}
+
+export async function createProfilePhotoUpload(uid: string, contentType: string, size: number): Promise<{
   uploadURL: string;
   objectPath: string;
 }> {
-  const fullPath = `${bucketPrefix()}/profile-photos/${uid}/${randomUUID()}`;
-  const { bucketName, objectName } = parseStoragePath(fullPath);
+  const objectName = `profile-photos/${uid}/${randomUUID()}`;
   return {
-    uploadURL: await signUpload(bucketName, objectName),
+    uploadURL: await createUploadUrl(uid, objectName, contentType, size),
     objectPath: `/objects/${objectName}`,
   };
 }
@@ -65,11 +85,12 @@ export async function createProfilePhotoUpload(uid: string): Promise<{
 export async function createReceiptPhotoUpload(
   uid: string,
   uploadId: string,
+  contentType: string,
+  size: number,
 ): Promise<{ uploadURL: string; objectPath: string }> {
-  const fullPath = `${bucketPrefix()}/receipt-images/${uid}/${uploadId}`;
-  const { bucketName, objectName } = parseStoragePath(fullPath);
+  const objectName = `receipt-images/${uid}/${uploadId}`;
   return {
-    uploadURL: await signUpload(bucketName, objectName),
+    uploadURL: await createUploadUrl(uid, objectName, contentType, size),
     objectPath: `/objects/${objectName}`,
   };
 }
@@ -79,24 +100,41 @@ export async function createMerchantAssetUpload(
   merchantId: string,
   asset: "logo" | "cover" | "topup-proof" | "withdrawal-proof",
   uploadId: string,
+  contentType: string,
+  size: number,
+  uploaderUid = uid,
 ): Promise<{ uploadURL: string; objectPath: string }> {
-  const fullPath = `${bucketPrefix()}/merchant-assets/${merchantId}/${asset}/${uid}/${uploadId}`;
-  const { bucketName, objectName } = parseStoragePath(fullPath);
+  const objectName = `merchant-assets/${merchantId}/${asset}/${uid}/${uploadId}`;
   return {
-    uploadURL: await signUpload(bucketName, objectName),
+    uploadURL: await createUploadUrl(uploaderUid, objectName, contentType, size),
     objectPath: `/objects/${objectName}`,
   };
 }
 
-export async function getProfilePhotoFile(objectPath: string): Promise<File> {
+export async function getProfilePhotoFile(objectPath: string): Promise<PrivateMediaFile> {
   if (!objectPath.startsWith("/objects/")) throw new Error("Invalid object path");
+  if (process.env.APP_STORAGE_DRIVER === "render-disk") {
+    return getRenderDiskObjectFile(objectPath);
+  }
   const { bucketName, objectName } = parseStoragePath(
     `${bucketPrefix()}/${objectPath.slice("/objects/".length)}`,
   );
   const file = storage.bucket(bucketName).file(objectName);
   const [exists] = await file.exists();
   if (!exists) throw new Error("Profile photo not found");
-  return file;
+  return {
+    async getMetadata() {
+      const [metadata] = await file.getMetadata();
+      return [metadata as { contentType?: unknown; size?: unknown }];
+    },
+    async download() {
+      const [buffer] = await file.download();
+      return [buffer];
+    },
+    createReadStream() {
+      return file.createReadStream();
+    },
+  };
 }
 
 export async function readPrivateImage(
@@ -154,7 +192,7 @@ export async function readProfilePhoto(
 }
 
 export async function profilePhotoMatchesType(
-  file: File,
+  file: PrivateMediaFile,
   contentType: string,
 ): Promise<boolean> {
   const [buffer] = await file.download();
