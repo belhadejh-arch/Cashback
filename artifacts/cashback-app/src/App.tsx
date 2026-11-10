@@ -36,6 +36,27 @@ type Txn = { id: string; t?: string; mid: string; cid: string; amount: number; c
 type CashbackNote = { id: string; to?: string; text: string; t?: number; read?: boolean };
 type Session = { profile: { uid: string; role: string; eid: string; name: string; phone?: string; email?: string; avatarUpdatedAt?: number; preferences?: { language?: Lang; theme?: Theme }; status?: string; rejectionReason?: string }; state: { settings?: { cashback?: number; platformCommission?: number; claimHours?: number; minimumTopupDzd?: number; minimumTopupLyd?: number; enabledCurrencies?: ('DZD'|'LYD')[]; enabledLanguages?: Lang[]; notificationsEnabled?: boolean; paymentMethods?: Record<string, unknown>[] }; categories?: string[]; merchants?: Merchant[]; customers?: { id: string; name: string; phone?: string; email?: string; status?: string; cbm?: Record<string, number> }[]; claims?: Claim[]; merchantCommissionLedger?: Record<string, unknown>[]; merchantCommissionSettlements?: Record<string, unknown>[]; txns?: Txn[]; cbpays?: { id: string; cid: string; mid: string; amount: number; status: string; at?: string|number; reference?: string; method?: string; reversalReason?: string }[]; merchantTopups?: Record<string, unknown>[]; merchantWithdrawals?: Record<string, unknown>[]; merchantStoreChangeRequests?: Record<string, unknown>[]; notes?: CashbackNote[] } };
 type Dict = Record<string, string>;
+const CAMERA_REQUEST_TIMEOUT_MS = 15000;
+function requestCameraStream(): Promise<MediaStream> {
+  if (!window.isSecureContext) return Promise.reject(new Error('CAMERA_REQUIRES_HTTPS'));
+  const mediaDevices = navigator.mediaDevices;
+  if (!mediaDevices?.getUserMedia) return Promise.reject(new Error('CAMERA_UNAVAILABLE'));
+  const request = mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: 'environment' } } });
+  let timedOut = false;
+  let timer: number | undefined;
+  const timeout = new Promise<MediaStream>((_resolve, reject) => {
+    timer = window.setTimeout(() => {
+      timedOut = true;
+      reject(new Error('CAMERA_TIMEOUT'));
+    }, CAMERA_REQUEST_TIMEOUT_MS);
+  });
+  void request.then(stream => {
+    if (timedOut) stream.getTracks().forEach(track => track.stop());
+  }).catch(() => undefined);
+  return Promise.race([request, timeout]).finally(() => {
+    if (timer !== undefined) window.clearTimeout(timer);
+  });
+}
 const dictionaries: Record<Lang, Dict> = {
   en: {
     tagline:'A little back, right where you shop.', algeria:'Algeria', libya:'Libya', localTag:'LOCAL REWARDS · NORTH AFRICA', separationNudge:'One shop. One balance.', separationHint:'Rewards stay with their shop.', welcome:'Good to see you.', login:'Sign in', createAccount:'Create account', customer:'Customer', merchant:'Shop owner', admin:'Administrator',
@@ -505,10 +526,7 @@ function AppInner() {
     const requestId = ++receiptCameraRequestRef.current;
     setReceiptCameraStarting(true);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: false,
-        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
-      });
+      const stream = await requestCameraStream();
       if (receiptCameraRequestRef.current !== requestId) {
         stream.getTracks().forEach(track => track.stop());
         return;
@@ -520,6 +538,11 @@ function AppInner() {
     } finally {
       if (receiptCameraRequestRef.current === requestId) setReceiptCameraStarting(false);
     }
+  }
+  function openReceiptDeviceCamera() {
+    stopReceiptCamera();
+    setReceiptCameraError('');
+    receiptPhotoInputRef.current?.click();
   }
   useEffect(() => {
     if (!(customer && location === '/capture-receipt') && (receiptCameraActive || receiptCameraStarting || receiptCameraStreamRef.current)) {
@@ -612,13 +635,12 @@ function AppInner() {
           <button type="button" className="btn btn-primary" onClick={()=>void captureReceiptPhoto()} data-testid="button-capture-receipt"><Camera size={18}/>{t('takeReceiptPhoto')}</button>
         </div>
       </div> : <div className="receipt-camera-fallback">
-        {receiptCameraStarting ? <p role="status" className="subtle">{t('cameraStarting')}</p> : <>
-          <Camera size={30} aria-hidden="true"/>
-          {receiptCameraError&&<p role="alert" className="subtle">{receiptCameraError}</p>}
-          <button type="button" className="btn btn-primary" onClick={()=>void startReceiptCamera()} data-testid="button-start-live-camera"><Camera size={17}/>{lang==='ar'?'فتح الكاميرا':lang==='fr'?'Ouvrir la caméra':'Open camera'}</button>
-          <button type="button" className="btn btn-outline" onClick={()=>receiptPhotoInputRef.current?.click()} data-testid="button-open-device-camera"><Camera size={17}/>{t('cameraFallback')}</button>
-          <input ref={receiptPhotoInputRef} type="file" accept="image/*" capture="environment" aria-label={t('captureReceipt')} className="camera-file-input" data-testid="input-receipt-photo" onChange={e=>{const file=e.target.files?.[0];e.target.value='';void handleReceiptPhotoFile(file);}}/>
-        </>}
+        <Camera size={30} aria-hidden="true"/>
+        {receiptCameraStarting&&<p role="status" className="subtle">{t('cameraStarting')}</p>}
+        {receiptCameraError&&<p role="alert" className="subtle">{receiptCameraError}</p>}
+        <button type="button" className="btn btn-primary" onClick={()=>void startReceiptCamera()} disabled={receiptCameraStarting} data-testid="button-start-live-camera"><Camera size={17}/>{lang==='ar'?'فتح الكاميرا':lang==='fr'?'Ouvrir la caméra':'Open camera'}</button>
+        <button type="button" className="btn btn-outline" onClick={openReceiptDeviceCamera} data-testid="button-open-device-camera"><Camera size={17}/>{t('cameraFallback')}</button>
+        <input ref={receiptPhotoInputRef} type="file" accept="image/*" capture="environment" aria-label={t('captureReceipt')} className="camera-file-input" data-testid="input-receipt-photo" onChange={e=>{const file=e.target.files?.[0];e.target.value='';void handleReceiptPhotoFile(file);}}/>
       </div>}
     </section>
     <div className="capture-receipt-fields">
