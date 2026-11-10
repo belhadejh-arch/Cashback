@@ -868,7 +868,7 @@ components:
       type: object
       required: [uploadURL, objectPath, uploadId]
       properties:
-        uploadURL: { type: string, format: uri }
+        uploadURL: { type: string, format: uri-reference } # Render disk uploads use relative /api URLs through the Vercel proxy.
         objectPath: { type: string }
         uploadId: { type: string }
     CashbackSession:
@@ -947,7 +947,7 @@ components:
       type: object
       required: [uploadURL, objectPath, uploadId]
       properties:
-        uploadURL: { type: string, format: uri }
+        uploadURL: { type: string, format: uri-reference } # Render disk uploads use relative /api URLs through the Vercel proxy.
         objectPath: { type: string }
         uploadId: { type: string }
     CashbackMerchantStoreUpdate:
@@ -1120,7 +1120,7 @@ components:
       type: object
       required: [uploadURL, objectPath, uploadId]
       properties:
-        uploadURL: { type: string, format: uri }
+        uploadURL: { type: string, format: uri-reference } # Render disk uploads use relative /api URLs through the Vercel proxy.
         objectPath: { type: string }
         uploadId: { type: string }
     ProfilePhotoFinalizeInput:

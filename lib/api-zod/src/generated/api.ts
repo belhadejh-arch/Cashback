@@ -215,7 +215,7 @@ export const CreateCashbackReceiptPhotoUploadBody = zod.object({
 })
 
 export const CreateCashbackReceiptPhotoUploadResponse = zod.object({
-  "uploadURL": zod.string().url(),
+  "uploadURL": zod.string(),
   "objectPath": zod.string(),
   "uploadId": zod.string()
 })
@@ -301,7 +301,7 @@ export const CreateCashbackMerchantAssetUploadBody = zod.object({
 })
 
 export const CreateCashbackMerchantAssetUploadResponse = zod.object({
-  "uploadURL": zod.string().url(),
+  "uploadURL": zod.string(),
   "objectPath": zod.string(),
   "uploadId": zod.string()
 })
@@ -526,7 +526,7 @@ export const CreateCashbackAdminWithdrawalProofUploadBody = zod.object({
 })
 
 export const CreateCashbackAdminWithdrawalProofUploadResponse = zod.object({
-  "uploadURL": zod.string().url(),
+  "uploadURL": zod.string(),
   "objectPath": zod.string(),
   "uploadId": zod.string()
 })
@@ -706,7 +706,7 @@ export const CreateCashbackProfilePhotoUploadBody = zod.object({
 })
 
 export const CreateCashbackProfilePhotoUploadResponse = zod.object({
-  "uploadURL": zod.string().url(),
+  "uploadURL": zod.string(),
   "objectPath": zod.string(),
   "uploadId": zod.string()
 })
