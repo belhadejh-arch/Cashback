@@ -20,6 +20,7 @@ import {
   X, RefreshCw, LockKeyhole, Percent, LocateFixed, MoreHorizontal, Shirt, ShoppingBag, Star, Tag, Utensils, Download, Printer, ScanLine, RotateCcw, FileDown, CheckCheck,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { deliverFile } from '@/lib/fileDelivery';
 import { Route, Switch, Router as WouterRouter } from 'wouter';
 import NotFound from '@/pages/not-found';
 import { MerchantWorkspace } from '@/components/merchant-workspace/MerchantWorkspace';
@@ -947,8 +948,8 @@ function AppInner() {
         <span className="qr-eyebrow">{t('merchantActive')}</span><strong>{t('qrCode')}</strong>
         <div className="subtle">{t('merchantId')}: {shop.publicId||'—'}</div>
         <div className="merchant-qr-controls">
-          <button className="btn btn-outline" type="button" onClick={()=>void downloadMerchantQr('png',t,shop.name,shop.publicId||'')} disabled={!shop.qrValue}><Download size={16}/>{t('qrDownloadPng')}</button>
-          <button className="btn btn-outline" type="button" onClick={()=>void downloadMerchantQr('pdf',t,shop.name,shop.publicId||'')} disabled={!shop.qrValue}><FileDown size={16}/>{t('qrDownloadPdf')}</button>
+          <button className="btn btn-outline" type="button" onClick={()=>void downloadMerchantQr('png',t,shop.name,shop.publicId||'')} disabled={!shop.qrValue}><Download size={16}/>{qrFileActionLabel(lang,'png')}</button>
+          <button className="btn btn-outline" type="button" onClick={()=>void downloadMerchantQr('pdf',t,shop.name,shop.publicId||'')} disabled={!shop.qrValue}><FileDown size={16}/>{qrFileActionLabel(lang,'pdf')}</button>
           <button className="btn btn-outline" type="button" onClick={()=>printMerchantQr(t,shop.name,shop.publicId||'')} disabled={!shop.qrValue}><Printer size={16}/>{t('qrPrint')}</button>
         </div>
       </div>
@@ -1237,8 +1238,8 @@ function MerchantDashboard({shop,state,claims,t,lang,notice,error,onRefresh}:{sh
         <span className="qr-eyebrow">{t('merchantActive')}</span><strong>{t('qrCode')}</strong>
         <div className="subtle">{t('merchantId')}: {shop?.publicId||'—'}</div>
         <div className="merchant-qr-controls">
-          <button className="btn btn-outline" type="button" onClick={()=>void downloadMerchantQr('png',t,shop?.name||'',shop?.publicId||'')} disabled={!shop?.qrValue}><Download size={16}/>{t('qrDownloadPng')}</button>
-          <button className="btn btn-outline" type="button" onClick={()=>void downloadMerchantQr('pdf',t,shop?.name||'',shop?.publicId||'')} disabled={!shop?.qrValue}><FileDown size={16}/>{t('qrDownloadPdf')}</button>
+          <button className="btn btn-outline" type="button" onClick={()=>void downloadMerchantQr('png',t,shop?.name||'',shop?.publicId||'')} disabled={!shop?.qrValue}><Download size={16}/>{qrFileActionLabel(lang,'png')}</button>
+          <button className="btn btn-outline" type="button" onClick={()=>void downloadMerchantQr('pdf',t,shop?.name||'',shop?.publicId||'')} disabled={!shop?.qrValue}><FileDown size={16}/>{qrFileActionLabel(lang,'pdf')}</button>
           <button className="btn btn-outline" type="button" onClick={()=>printMerchantQr(t,shop?.name||'',shop?.publicId||'')} disabled={!shop?.qrValue}><Printer size={16}/>{t('qrPrint')}</button>
         </div>
       </div>
@@ -1260,6 +1261,12 @@ function MerchantDashboard({shop,state,claims,t,lang,notice,error,onRefresh}:{sh
   </div>;
 }
 function readMerchantQrSvg() { return document.querySelector<SVGSVGElement>('#merchant-payment-qr svg'); }
+function qrFileActionLabel(lang:Lang,format:'png'|'pdf') {
+  const type=format.toUpperCase();
+  if(lang==='ar')return `مشاركة أو تنزيل ${type}`;
+  if(lang==='fr')return `Partager ou télécharger ${type}`;
+  return `Share or download ${type}`;
+}
 async function downloadMerchantQr(kind:'png'|'pdf',t:(key:string)=>string,shopName:string,shopId:string):Promise<void> {
   try {
     const svg=readMerchantQrSvg();
@@ -1287,14 +1294,32 @@ async function downloadMerchantQr(kind:'png'|'pdf',t:(key:string)=>string,shopNa
       pdf.addImage(nameCanvas.toDataURL('image/png'),'PNG',60,365,475,43);
       pdf.setFontSize(12);
       pdf.text(`${t('merchantId')}: ${shopId}`,595.28/2,430,{align:'center'});
-      pdf.save('cashback-shop-qr.pdf');
+      await deliverFile(pdf.output('blob'),'cashback-shop-qr.pdf');
       return;
     }
     const blob=new Blob([markup],{type:'image/svg+xml;charset=utf-8'});
     const url=URL.createObjectURL(blob);
-    const image=new Image();
-    image.onload=()=>{const canvas=document.createElement('canvas');canvas.width=1200;canvas.height=1200;const context=canvas.getContext('2d');if(!context){URL.revokeObjectURL(url);alert(t('qrExportError'));return;}context.fillStyle='#ffffff';context.fillRect(0,0,canvas.width,canvas.height);context.drawImage(image,0,0,canvas.width,canvas.height);URL.revokeObjectURL(url);canvas.toBlob(png=>{if(!png){alert(t('qrExportError'));return;}const downloadUrl=URL.createObjectURL(png);const link=document.createElement('a');link.href=downloadUrl;link.download='cashback-shop-qr.png';link.click();window.setTimeout(()=>URL.revokeObjectURL(downloadUrl),1000);},'image/png');};
-    image.onerror=()=>{URL.revokeObjectURL(url);alert(t('qrExportError'));};image.src=url;
+    const png=await new Promise<Blob>((resolve,reject)=>{
+      const image=new Image();
+      image.onload=()=>{
+        const canvas=document.createElement('canvas');
+        canvas.width=1200;
+        canvas.height=1200;
+        const context=canvas.getContext('2d');
+        if(!context){URL.revokeObjectURL(url);reject(new Error('QR_CANVAS_FAILED'));return;}
+        context.fillStyle='#ffffff';
+        context.fillRect(0,0,canvas.width,canvas.height);
+        context.drawImage(image,0,0,canvas.width,canvas.height);
+        canvas.toBlob(result=>{
+          URL.revokeObjectURL(url);
+          if(!result)reject(new Error('QR_PNG_FAILED'));
+          else resolve(result);
+        },'image/png');
+      };
+      image.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('QR_SVG_FAILED'));};
+      image.src=url;
+    });
+    await deliverFile(png,'cashback-shop-qr.png');
   } catch { alert(t('qrExportError')); }
 }
 function printMerchantQr(t:(key:string)=>string,shopName:string,shopId:string) {

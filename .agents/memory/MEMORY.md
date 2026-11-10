@@ -1,3 +1,4 @@
 - [CASH BACK Neon boundary](cashback-data-store.md) — keep legacy Firestore data untouched; the active app starts fresh on Neon with email/password auth.
 - [CASH BACK role navigation](cashback-customer-ui.md) — preserve the customer design reference and give active merchants their own five-tab mobile navigation.
 - [Merchant-scoped customer rewards](cashback-wallet-boundaries.md) — isolate rewards and commissions by shop; record unfunded invoice obligations and settle top-ups before withdrawals.
+- [CASH BACK file delivery](cashback-file-delivery.md) — share generated files through Web Share when supported, with a download fallback for Median WebView.

@@ -14,6 +14,7 @@ import {
   Clock3, FileText, Gift, Home, MapPin, Menu, Percent, QrCode, ReceiptText, RefreshCw,
   MoreHorizontal, Settings, Store, SunMoon, Users, Wallet, X,
 } from 'lucide-react';
+import { deliverFile } from '../../lib/fileDelivery';
 import './merchant-workspace.css';
 
 type Lang = 'ar' | 'en' | 'fr';
@@ -68,7 +69,7 @@ const words: Record<Lang, Copy> = {
     formError:'Complete all required fields.', requestError:'Request could not be submitted.', submitted:'Request submitted.',
     withdrawalsHint:'Track each payout request from review through payment.', topupsHint:'Funding requests and their review status.',
     transfersHint:'Payout transfer records for this shop.', reportTitle:'Business reports', reportHint:'Export the current merchant ledger as a CSV file.',
-    exportCsv:'Export CSV', exported:'Report downloaded', noReport:'There is no activity to export.',
+    exportCsv:'Export CSV', exported:'File shared or downloaded', noReport:'There is no activity to export.',
     readAll:'Mark all as read', markedRead:'Notifications marked as read.', noNotifications:'You are all caught up.',
     settingsHint:'Choose how your workspace looks and reads.', appearance:'Appearance', language:'Language',
     dark:'Dark', light:'Light', english:'English', french:'Français', arabic:'العربية',
@@ -125,7 +126,7 @@ const words: Record<Lang, Copy> = {
     formError:'Veuillez remplir les champs obligatoires.', requestError:'La demande n’a pas pu être envoyée.', submitted:'Demande envoyée.',
     withdrawalsHint:'Suivez chaque retrait, de la vérification au paiement.', topupsHint:'Demandes de financement et leur statut.',
     transfersHint:'Historique des virements de ce commerce.', reportTitle:'Rapports d’activité', reportHint:'Exportez le registre du commerce au format CSV.',
-    exportCsv:'Exporter CSV', exported:'Rapport téléchargé', noReport:'Aucune activité à exporter.',
+    exportCsv:'Exporter CSV', exported:'Fichier partagé ou téléchargé', noReport:'Aucune activité à exporter.',
     readAll:'Tout marquer comme lu', markedRead:'Notifications marquées comme lues.', noNotifications:'Tout est à jour.',
     settingsHint:'Personnalisez la langue et l’apparence de votre espace.', appearance:'Apparence', language:'Langue',
     dark:'Sombre', light:'Clair', english:'English', french:'Français', arabic:'العربية',
@@ -182,7 +183,7 @@ const words: Record<Lang, Copy> = {
     formError:'أكمل جميع الحقول المطلوبة.', requestError:'تعذر إرسال الطلب.', submitted:'تم إرسال الطلب.',
     withdrawalsHint:'تابع طلبات السحب من المراجعة إلى الدفع.', topupsHint:'طلبات التمويل وحالة مراجعتها.',
     transfersHint:'سجل تحويلات هذا المتجر.', reportTitle:'تقارير النشاط', reportHint:'صدّر سجل المتجر الحالي بصيغة CSV.',
-    exportCsv:'تصدير CSV', exported:'تم تنزيل التقرير', noReport:'لا يوجد نشاط لتصديره.',
+    exportCsv:'تصدير CSV', exported:'تمت مشاركة الملف أو تنزيله', noReport:'لا يوجد نشاط لتصديره.',
     readAll:'تحديد الكل كمقروء', markedRead:'تم تحديد الإشعارات كمقروءة.', noNotifications:'أنت على اطلاع بكل شيء.',
     settingsHint:'اختر مظهر مساحة العمل ولغتها.', appearance:'المظهر', language:'اللغة',
     dark:'داكن', light:'فاتح', english:'English', french:'Français', arabic:'العربية',
@@ -496,7 +497,7 @@ export function MerchantWorkspace(props: MerchantWorkspaceProps) {
     ...topups.map(r=>({...r,__kind:'topup'})),
     ...withdrawals.map(r=>({...r,__kind:'withdrawal'})),
   ].sort((a,b)=>timeOf(b)-timeOf(a)).slice(0,6);
-  const exportCsv = () => {
+  const exportCsv = async () => {
     const rows = [
       ['type','id','date','status','amount','customer_or_reference'],
       ...[
@@ -508,7 +509,8 @@ export function MerchantWorkspace(props: MerchantWorkspaceProps) {
     ];
     if (rows.length === 1) { setMessage(t.noReport); return; }
     const blob = new Blob([rows.map(row => row.join(',')).join('\r\n')], { type:'text/csv;charset=utf-8' });
-    const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'cashback-merchant-report.csv'; a.click(); URL.revokeObjectURL(url); setMessage(t.exported);
+    const delivery = await deliverFile(blob, 'cashback-merchant-report.csv');
+    if (delivery !== 'cancelled') setMessage(t.exported);
   };
   const renderTable = (data: RecordLike[], kind: 'invoice'|'qr'|'topup'|'withdrawal') => {
     if (!data.length) return <Empty title={t.emptyTitle} hint={kind === 'qr' ? t.noQr : t.emptyHint} />;

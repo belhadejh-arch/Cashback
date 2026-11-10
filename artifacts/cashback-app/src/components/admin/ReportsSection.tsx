@@ -3,6 +3,7 @@ import {
   Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts';
 import { FileSpreadsheet, FileText, Filter, TrendingUp } from 'lucide-react';
+import { deliverFile } from '../../lib/fileDelivery';
 import './cashback-reports.css';
 
 type Lang = 'ar' | 'en' | 'fr';
@@ -44,7 +45,7 @@ const words: Record<Lang, Record<string, string>> = {
     events: 'تفاصيل العمليات', eventDate: 'التاريخ والوقت', type: 'النوع', status: 'الحالة',
     reference: 'المرجع', amount: 'المبلغ', noRows: 'لا توجد عمليات مطابقة للفلاتر.',
     noRanking: 'لا توجد بيانات خلال الفترة المحددة.', downloadPdf: 'تصدير PDF', downloadExcel: 'تصدير Excel',
-    preparing: 'جارٍ تجهيز الملف…', exportFailed: 'تعذر إنشاء الملف. حاول مجدداً.',
+    preparing: 'جارٍ تجهيز الملف…', exportComplete: 'تم تجهيز الملف للمشاركة أو التنزيل.', exportFailed: 'تعذر إنشاء الملف. حاول مجدداً.',
     invoiceAmount: 'قيمة الفواتير', topupAmount: 'قيمة الشحن', withdrawalAmount: 'قيمة السحب',
     registered: 'مسجل', pending: 'قيد المراجعة', approved: 'مقبول', rejectedStatus: 'مرفوض',
     completed: 'مكتمل', reversed: 'معكوس', due: 'مستحق', settled: 'مسدد', active: 'نشط',
@@ -74,7 +75,7 @@ const words: Record<Lang, Record<string, string>> = {
     events: 'Operation details', eventDate: 'Date and time', type: 'Type', status: 'Status',
     reference: 'Reference', amount: 'Amount', noRows: 'No operations match these filters.',
     noRanking: 'No data in the selected period.', downloadPdf: 'Export PDF', downloadExcel: 'Export Excel',
-    preparing: 'Preparing file…', exportFailed: 'Could not create the file. Try again.',
+    preparing: 'Preparing file…', exportComplete: 'File shared or downloaded.', exportFailed: 'Could not create the file. Try again.',
     invoiceAmount: 'Invoice value', topupAmount: 'Top-up value', withdrawalAmount: 'Withdrawal value',
     registered: 'Recorded', pending: 'Under review', approved: 'Approved', rejectedStatus: 'Rejected',
     completed: 'Completed', reversed: 'Reversed', due: 'Due', settled: 'Settled', active: 'Active',
@@ -104,7 +105,7 @@ const words: Record<Lang, Record<string, string>> = {
     events: 'Détail des opérations', eventDate: 'Date et heure', type: 'Type', status: 'Statut',
     reference: 'Référence', amount: 'Montant', noRows: 'Aucune opération ne correspond aux filtres.',
     noRanking: 'Aucune donnée pour la période choisie.', downloadPdf: 'Exporter PDF', downloadExcel: 'Exporter Excel',
-    preparing: 'Préparation du fichier…', exportFailed: 'Impossible de créer le fichier. Réessayez.',
+    preparing: 'Préparation du fichier…', exportComplete: 'Fichier partagé ou téléchargé.', exportFailed: 'Impossible de créer le fichier. Réessayez.',
     invoiceAmount: 'Valeur des factures', topupAmount: 'Montant des recharges', withdrawalAmount: 'Montant des retraits',
     registered: 'Enregistré', pending: 'En attente', approved: 'Approuvé', rejectedStatus: 'Refusé',
     completed: 'Terminé', reversed: 'Annulé', due: 'Dû', settled: 'Réglé', active: 'Actif',
@@ -505,8 +506,12 @@ export function ReportsSection({ state, merchants, claims, lang }: Props) {
         })));
         XLSX.utils.book_append_sheet(workbook, usageSheet, lang === 'ar' ? 'استخدام QR' : lang === 'fr' ? 'Usage QR' : 'QR usage');
       }
-      XLSX.writeFile(workbook, `${fileBase}.xlsx`);
-      setExportMessage(lang === 'ar' ? 'تم تنزيل تقرير Excel.' : lang === 'fr' ? 'Rapport Excel téléchargé.' : 'Excel report downloaded.');
+      const workbookBytes = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+      const workbookBlob = new Blob([workbookBytes], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
+      const delivery = await deliverFile(workbookBlob, `${fileBase}.xlsx`);
+      if (delivery !== 'cancelled') setExportMessage(tr.exportComplete);
     } catch {
       setExportMessage(tr.exportFailed);
     } finally {
@@ -536,8 +541,12 @@ export function ReportsSection({ state, merchants, claims, lang }: Props) {
               if (settled) return;
               settled = true;
               window.clearTimeout(timeout);
-              document.save(`${fileBase}.pdf`);
-              resolve();
+              void deliverFile(document.output('blob'), `${fileBase}.pdf`)
+                .then(delivery => {
+                  if (delivery !== 'cancelled') setExportMessage(tr.exportComplete);
+                  resolve();
+                })
+                .catch(reject);
             },
           });
         } catch (error) {
@@ -546,7 +555,6 @@ export function ReportsSection({ state, merchants, claims, lang }: Props) {
           reject(error);
         }
       });
-      setExportMessage(lang === 'ar' ? 'تم تنزيل تقرير PDF.' : lang === 'fr' ? 'Rapport PDF téléchargé.' : 'PDF report downloaded.');
     } catch {
       setExportMessage(tr.exportFailed);
     } finally {
