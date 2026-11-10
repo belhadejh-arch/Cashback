@@ -1132,6 +1132,7 @@ function PaymentDialog({shop,balance,lang,t,createSession,confirmPayment,close}:
   const [result,setResult]=useState<PaymentResult|null>(null);
   const [now,setNow]=useState(Date.now());
   const videoRef=useRef<HTMLVideoElement>(null);
+  const scanQrPhotoRef=useRef<HTMLInputElement>(null);
   const scanStreamRef=useRef<MediaStream|null>(null);
   const scanRequestRef=useRef(0);
   const scanTextRef=useRef<(text:string)=>void>(()=>undefined);
@@ -1181,9 +1182,7 @@ function PaymentDialog({shop,balance,lang,t,createSession,confirmPayment,close}:
     const requestId=++scanRequestRef.current;
     setScanStarting(true);
     try{
-      const mediaDevices=navigator.mediaDevices;
-      if(!mediaDevices?.getUserMedia)throw new Error('CAMERA_UNAVAILABLE');
-      const stream=await mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'}}});
+      const stream=await requestCameraStream();
       if(scanRequestRef.current!==requestId){stream.getTracks().forEach(track=>track.stop());return;}
       scanStreamRef.current=stream;
       setScanning(true);
@@ -1191,6 +1190,31 @@ function PaymentDialog({shop,balance,lang,t,createSession,confirmPayment,close}:
       if(scanRequestRef.current===requestId)setError(t('scanError'));
     }finally{
       if(scanRequestRef.current===requestId)setScanStarting(false);
+    }
+  };
+  const openQrDeviceCamera=()=>{
+    scanRequestRef.current+=1;
+    setScanStarting(false);
+    setScanning(false);
+    scanStreamRef.current?.getTracks().forEach(track=>track.stop());
+    scanStreamRef.current=null;
+    scanQrPhotoRef.current?.click();
+  };
+  const handleQrPhotoFile=async(file?:File)=>{
+    if(!file)return;
+    setError('');
+    setScanStarting(true);
+    const imageUrl=URL.createObjectURL(file);
+    try{
+      const {BrowserQRCodeReader}=await import('@zxing/browser');
+      const reader=new BrowserQRCodeReader();
+      const decoded=await reader.decodeFromImageUrl(imageUrl);
+      scanTextRef.current(decoded.getText());
+    }catch{
+      setError(lang==='ar'?'تعذر قراءة رمز QR في الصورة. التقط صورة واضحة للرمز وحاول مجدداً.':lang==='fr'?'Impossible de lire le QR sur la photo. Prenez une photo nette et réessayez.':'Could not read a QR code in that photo. Take a clear photo and try again.');
+    }finally{
+      URL.revokeObjectURL(imageUrl);
+      setScanStarting(false);
     }
   };
   const submit=async()=>{
@@ -1210,7 +1234,13 @@ function PaymentDialog({shop,balance,lang,t,createSession,confirmPayment,close}:
       <header className="qr-dialog-header"><div><span className="qr-eyebrow">{t('wallet')}</span><h2 id="qr-payment-title">{t('scanPaymentQr')}</h2></div><button type="button" className="qr-close" onClick={close} aria-label={t('close')}><X size={20}/></button></header>
       {result?<div className="qr-success-state" role="status"><span className="qr-success-mark"><Check size={27}/></span><h3>{t('paymentSuccess')}</h3><p>{shop.name} · {formatMoney(result.amount,shop.country)}</p><div className="qr-result-row"><span>{t('paymentReference')}</span><strong dir="ltr">{result.reference}</strong></div><div className="qr-result-row"><span>{t('remainingBalance')}</span><strong>{formatMoney(result.remainingBalance,shop.country)}</strong></div><button type="button" className="btn btn-primary" onClick={close}>{t('closePayment')}</button></div>:
       <div className="qr-payment-body">
-        {!session&&!busy&&<><p className="subtle qr-scan-hint">{t('scanHint')}</p><div className={`qr-camera-frame ${scanning?'is-scanning':''}`}>{scanning?<><video ref={videoRef} muted playsInline aria-label={t('scanning')}/><span className="qr-scan-corner qr-corner-one"/><span className="qr-scan-corner qr-corner-two"/><span className="qr-scan-line"/></>:<div className="qr-camera-empty"><ScanLine size={34}/><span>{t('scanSecureNote')}</span></div>}</div><button type="button" className="btn btn-primary qr-scan-button" onClick={()=>void startScan()} disabled={scanning||scanStarting}><ScanLine size={18}/>{scanning||scanStarting?t('scanning'):t('startScan')}</button></>}
+        {!session&&!busy&&<>
+          <p className="subtle qr-scan-hint">{t('scanHint')}</p>
+          <div className={`qr-camera-frame ${scanning?'is-scanning':''}`}>{scanning?<><video ref={videoRef} muted playsInline aria-label={t('scanning')}/><span className="qr-scan-corner qr-corner-one"/><span className="qr-scan-corner qr-corner-two"/><span className="qr-scan-line"/></>:<div className="qr-camera-empty"><ScanLine size={34}/><span>{t('scanSecureNote')}</span></div>}</div>
+          <button type="button" className="btn btn-primary qr-scan-button" onClick={()=>void startScan()} disabled={scanning||scanStarting}><ScanLine size={18}/>{scanning||scanStarting?t('scanning'):t('startScan')}</button>
+          <button type="button" className="btn btn-outline qr-scan-button" onClick={openQrDeviceCamera} data-testid="button-open-qr-camera"><Camera size={17}/>{t('cameraFallback')}</button>
+          <input ref={scanQrPhotoRef} type="file" accept="image/*" capture="environment" aria-label={t('scanPaymentQr')} className="camera-file-input" data-testid="input-qr-photo" onChange={event=>{const file=event.target.files?.[0];event.target.value='';void handleQrPhotoFile(file);}}/>
+        </>}
         {(busy||scanStarting)&&!session&&<div className="qr-inline-loading" role="status"><span className="qr-loading-bar"/><strong>{scanStarting?t('scanning'):t('sessionLoading')}</strong></div>}
         {session&&!expired&&<div className="qr-confirm-card"><div className="qr-accepted"><BadgeCheck size={20}/><strong>{t('scannedShop')}</strong></div><h3>{session.merchantName}</h3><div className="qr-session-balance"><span>{t('balance')}</span><strong>{formatMoney(session.balance,session.country||shop.country)}</strong></div><p className="qr-expiry">{t('expiresIn')} <strong dir="ltr">{formattedCountdown}</strong></p><label className="qr-amount-field"><span>{t('enterPaymentAmount')}</span><input className="field" inputMode="decimal" type="number" min="0.01" step="0.01" max={session.balance} value={amount} onChange={event=>setAmount(event.target.value)} placeholder="0.00" data-testid="input-qr-payment-amount"/></label><div className="qr-session-balance"><span>{t('remainingBalance')}</span><strong>{formatMoney(amountRemaining,session.country||shop.country)}</strong></div><p className="qr-review-caption">{t('paymentReview')} · {shop.name}</p><button type="button" className="btn btn-primary qr-confirm-button" onClick={()=>void submit()} disabled={busy||!amount||Number(amount)<=0||Number(amount)>session.balance} data-testid="button-confirm-qr-payment">{busy?t('paymentWorking'):t('paymentConfirm')}</button></div>}
         {expired&&<div className="qr-expired" role="alert"><Clock3 size={24}/><strong>{t('sessionExpired')}</strong><button type="button" className="btn btn-outline" onClick={startScan}>{t('scanAgain')}</button></div>}
