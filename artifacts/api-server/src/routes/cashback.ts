@@ -14,6 +14,11 @@ import {
   UpdateCashbackPreferencesBody,
   UpdateCashbackRateBody,
   UpdateCashbackCategoriesBody,
+  UpdateCashbackCustomerStatusBody,
+  UpdateCashbackMerchantStatusBody,
+  UpdateCashbackMerchantCategoryBody,
+  RotateCashbackMerchantQrParams,
+  UpdateCashbackSystemSettingsBody,
   RateCashbackMerchantBody,
   CreateCashbackReceiptPhotoUploadBody,
   CreateCashbackReceiptPhotoUploadResponse,
@@ -122,7 +127,13 @@ router.use(async (req, res, next: NextFunction) => {
       next();
       return;
     }
-    (req as AuthenticatedRequest).cashbackProfile = await authenticateRequest(req);
+    const profile = await authenticateRequest(req);
+    if (profile.role === "customer") {
+      const { state } = await getState();
+      const customer = (state.customers ?? []).find((entry: any) => entry.id === profile.eid);
+      if (customer?.status === "suspended") throw new CashbackError(403, "ACCOUNT_SUSPENDED");
+    }
+    (req as AuthenticatedRequest).cashbackProfile = profile;
     next();
   } catch (error) {
     respondError(res, error);
@@ -160,6 +171,7 @@ function validateImageData(value: string): { data: string; type: string; hash: s
 }
 
 function addNote(state: CashbackState, to: string, text: string): void {
+  if (state.settings?.notificationsEnabled === false) return;
   state.notes ??= [];
   state.notes.unshift({ id: randomUUID(), to, text, t: Date.now(), read: false });
   state.notes.length = Math.min(state.notes.length, 300);
@@ -174,6 +186,15 @@ function activeCustomerCategories(value: unknown): string[] {
       )
     : [];
   return configured.length ? configured : [...CUSTOMER_CATEGORIES];
+}
+
+function currencyForCountry(country: unknown): "DZD" | "LYD" {
+  return country === "Libya" ? "LYD" : "DZD";
+}
+
+function isCurrencyEnabled(state: CashbackState, country: unknown): boolean {
+  const enabled = state.settings?.enabledCurrencies;
+  return !Array.isArray(enabled) || enabled.includes(currencyForCountry(country));
 }
 
 function projectState(
@@ -195,6 +216,15 @@ function projectState(
   const settings = {
     cashback: Number(state.settings?.cashback ?? 4),
     claimHours: Number(state.settings?.claimHours ?? 720),
+    minimumTopupDzd: Number(state.settings?.minimumTopupDzd ?? 1000),
+    minimumTopupLyd: Number(state.settings?.minimumTopupLyd ?? 10),
+    enabledCurrencies: Array.isArray(state.settings?.enabledCurrencies)
+      ? state.settings.enabledCurrencies
+      : ["DZD", "LYD"],
+    enabledLanguages: Array.isArray(state.settings?.enabledLanguages)
+      ? state.settings.enabledLanguages
+      : ["ar", "en", "fr"],
+    notificationsEnabled: state.settings?.notificationsEnabled !== false,
   };
   const platformCommission = Number(state.settings?.platformCommission ?? 2);
 
@@ -363,8 +393,17 @@ router.post("/cashback/register", async (req, res) => {
       );
       if (duplicate) throw new CashbackError(409, "PHONE_ALREADY_REGISTERED");
       if (input.role === "customer") {
-        state.customers.push({ id, name, phone: phone || null, cbm: {} });
+        state.customers.push({
+          id,
+          profileUid: uid,
+          name,
+          phone: phone || null,
+          email,
+          cbm: {},
+          status: "active",
+        });
       } else {
+        if (!isCurrencyEnabled(state, input.country)) throw new CashbackError(400, "CURRENCY_DISABLED");
         state.merchants.push({
           id,
           profileUid: uid,
@@ -476,6 +515,11 @@ router.post("/cashback/auth/login", async (req, res) => {
     const eid = String(fields.eid ?? "");
     if (!eid || !["customer", "merchant", "admin"].includes(role)) {
       throw new CashbackError(403, "PROFILE_INCOMPLETE");
+    }
+    if (role === "customer") {
+      const { state } = await getState();
+      const customer = (state.customers ?? []).find((entry: any) => entry.id === eid);
+      if (customer?.status === "suspended") throw new CashbackError(403, "ACCOUNT_SUSPENDED");
     }
     if (parsed.data.role && role !== parsed.data.role && role !== "admin") {
       throw new CashbackError(403, "ACCOUNT_TYPE_MISMATCH");
@@ -1241,6 +1285,11 @@ router.patch("/cashback/profile/preferences", async (req, res) => {
   try {
     const parsed = UpdateCashbackPreferencesBody.safeParse(req.body);
     if (!parsed.success) throw new CashbackError(400, "INVALID_REQUEST");
+    const { state } = await getState();
+    const languages = state.settings?.enabledLanguages;
+    if (Array.isArray(languages) && !languages.includes(parsed.data.language)) {
+      throw new CashbackError(400, "LANGUAGE_UNAVAILABLE");
+    }
     res.json(await savePreferences(profile, parsed.data));
   } catch (error) {
     respondError(res, error);
@@ -1415,6 +1464,218 @@ router.patch("/cashback/settings/categories", async (req, res) => {
       return { result: { ok: true, categories } };
     });
     res.json({ ok: true, categories });
+  } catch (error) {
+    respondError(res, error);
+  }
+});
+
+router.patch("/cashback/settings/system", async (req, res) => {
+  const profile = (req as AuthenticatedRequest).cashbackProfile;
+  try {
+    requireAdmin(profile);
+    const parsed = UpdateCashbackSystemSettingsBody.safeParse(req.body);
+    if (!parsed.success || !Object.keys(parsed.data).length) {
+      throw new CashbackError(400, "INVALID_REQUEST");
+    }
+    let savedSettings: Record<string, unknown> = {};
+    await mutateState((state) => {
+      state.settings ??= {};
+      const minimumTopupDzd = parsed.data.minimumTopupDzd ?? state.settings.minimumTopupDzd ?? 1000;
+      const minimumTopupLyd = parsed.data.minimumTopupLyd ?? state.settings.minimumTopupLyd ?? 10;
+      if (state.settings.maxTopupAmountDzd != null && minimumTopupDzd > Number(state.settings.maxTopupAmountDzd)) {
+        throw new CashbackError(400, "MINIMUM_EXCEEDS_MAXIMUM");
+      }
+      if (state.settings.maxTopupAmountLyd != null && minimumTopupLyd > Number(state.settings.maxTopupAmountLyd)) {
+        throw new CashbackError(400, "MINIMUM_EXCEEDS_MAXIMUM");
+      }
+      const before = {
+        claimHours: Number(state.settings.claimHours ?? 720),
+        minimumTopupDzd: Number(state.settings.minimumTopupDzd ?? 1000),
+        minimumTopupLyd: Number(state.settings.minimumTopupLyd ?? 10),
+        enabledCurrencies: state.settings.enabledCurrencies ?? ["DZD", "LYD"],
+        enabledLanguages: state.settings.enabledLanguages ?? ["ar", "en", "fr"],
+        notificationsEnabled: state.settings.notificationsEnabled !== false,
+      };
+      if (parsed.data.claimHours !== undefined) state.settings.claimHours = parsed.data.claimHours;
+      if (parsed.data.minimumTopupDzd !== undefined) state.settings.minimumTopupDzd = parsed.data.minimumTopupDzd;
+      if (parsed.data.minimumTopupLyd !== undefined) state.settings.minimumTopupLyd = parsed.data.minimumTopupLyd;
+      if (parsed.data.enabledCurrencies !== undefined) state.settings.enabledCurrencies = parsed.data.enabledCurrencies;
+      if (parsed.data.enabledLanguages !== undefined) state.settings.enabledLanguages = parsed.data.enabledLanguages;
+      if (parsed.data.notificationsEnabled !== undefined) state.settings.notificationsEnabled = parsed.data.notificationsEnabled;
+      savedSettings = {
+        claimHours: Number(state.settings.claimHours ?? 720),
+        minimumTopupDzd: Number(state.settings.minimumTopupDzd ?? 1000),
+        minimumTopupLyd: Number(state.settings.minimumTopupLyd ?? 10),
+        enabledCurrencies: state.settings.enabledCurrencies,
+        enabledLanguages: state.settings.enabledLanguages,
+        notificationsEnabled: state.settings.notificationsEnabled !== false,
+      };
+      state.audit ??= [];
+      state.audit.unshift({
+        id: `audit_${randomUUID().replaceAll("-", "").slice(0, 18)}`,
+        action: "system_settings_updated",
+        before,
+        settings: savedSettings,
+        adminUid: profile.uid,
+        at: Date.now(),
+      });
+      return { result: savedSettings };
+    });
+    res.json({ ok: true, settings: savedSettings });
+  } catch (error) {
+    respondError(res, error);
+  }
+});
+
+router.patch("/cashback/admin/customers/:id/status", async (req, res) => {
+  const profile = (req as unknown as AuthenticatedRequest).cashbackProfile;
+  try {
+    requireAdmin(profile);
+    const id = getParamId(req);
+    const parsed = UpdateCashbackCustomerStatusBody.safeParse(req.body);
+    if (!parsed.success) throw new CashbackError(400, "INVALID_REQUEST");
+    await mutateState((state) => {
+      const customer = (state.customers ?? []).find((entry: any) => entry.id === id);
+      if (!customer) throw new CashbackError(404, "CUSTOMER_NOT_FOUND");
+      const previousStatus = customer.status ?? "active";
+      customer.status = parsed.data.status;
+      customer.statusUpdatedAt = Date.now();
+      customer.statusUpdatedBy = profile.uid;
+      state.audit ??= [];
+      state.audit.unshift({
+        id: `audit_${randomUUID().replaceAll("-", "").slice(0, 18)}`,
+        action: parsed.data.status === "suspended" ? "customer_suspended" : "customer_reactivated",
+        customerId: customer.id,
+        previousStatus,
+        status: customer.status,
+        adminUid: profile.uid,
+        at: Date.now(),
+      });
+      addNote(state, customer.id, parsed.data.status === "suspended"
+        ? "تم تعليق الحساب من الإدارة"
+        : "تمت إعادة تفعيل الحساب");
+      return { result: { id: customer.id, status: customer.status } };
+    });
+    res.json({ ok: true, status: parsed.data.status });
+  } catch (error) {
+    respondError(res, error);
+  }
+});
+
+router.patch("/cashback/admin/merchants/:id/status", async (req, res) => {
+  const profile = (req as unknown as AuthenticatedRequest).cashbackProfile;
+  try {
+    requireAdmin(profile);
+    const id = getParamId(req);
+    const parsed = UpdateCashbackMerchantStatusBody.safeParse(req.body);
+    if (!parsed.success) throw new CashbackError(400, "INVALID_REQUEST");
+    await mutateState((state) => {
+      const merchant = (state.merchants ?? []).find((entry: any) => entry.id === id);
+      if (!merchant) throw new CashbackError(404, "MERCHANT_NOT_FOUND");
+      if (!["active", "suspended"].includes(merchant.status)) {
+        throw new CashbackError(409, "MERCHANT_NOT_ACTIVATED");
+      }
+      const previousStatus = merchant.status;
+      merchant.status = parsed.data.status;
+      merchant.statusUpdatedAt = Date.now();
+      merchant.statusUpdatedBy = profile.uid;
+      state.audit ??= [];
+      state.audit.unshift({
+        id: `audit_${randomUUID().replaceAll("-", "").slice(0, 18)}`,
+        action: parsed.data.status === "suspended" ? "merchant_suspended" : "merchant_reactivated",
+        merchantId: merchant.id,
+        previousStatus,
+        status: merchant.status,
+        adminUid: profile.uid,
+        at: Date.now(),
+      });
+      addNote(state, merchant.id, parsed.data.status === "suspended"
+        ? "تم تعليق المتجر من الإدارة"
+        : "تمت إعادة تفعيل المتجر");
+      return { result: { id: merchant.id, status: merchant.status } };
+    });
+    res.json({ ok: true, status: parsed.data.status });
+  } catch (error) {
+    respondError(res, error);
+  }
+});
+
+router.patch("/cashback/admin/merchants/:id/category", async (req, res) => {
+  const profile = (req as unknown as AuthenticatedRequest).cashbackProfile;
+  try {
+    requireAdmin(profile);
+    const id = getParamId(req);
+    const parsed = UpdateCashbackMerchantCategoryBody.safeParse(req.body);
+    if (!parsed.success) throw new CashbackError(400, "INVALID_REQUEST");
+    await mutateState((state) => {
+      const merchant = (state.merchants ?? []).find((entry: any) => entry.id === id);
+      if (!merchant) throw new CashbackError(404, "MERCHANT_NOT_FOUND");
+      const categories = Array.isArray(state.categories) ? state.categories : CUSTOMER_CATEGORIES;
+      if (!categories.includes(parsed.data.category)) throw new CashbackError(400, "CATEGORY_NOT_ACTIVE");
+      const previousCategory = merchant.cat ?? "shops";
+      merchant.cat = parsed.data.category;
+      merchant.categoryUpdatedAt = Date.now();
+      merchant.categoryUpdatedBy = profile.uid;
+      state.audit ??= [];
+      state.audit.unshift({
+        id: `audit_${randomUUID().replaceAll("-", "").slice(0, 18)}`,
+        action: "merchant_category_updated",
+        merchantId: merchant.id,
+        previousCategory,
+        category: merchant.cat,
+        adminUid: profile.uid,
+        at: Date.now(),
+      });
+      return { result: { ok: true, merchantId: merchant.id, category: merchant.cat } };
+    });
+    res.json({ ok: true, category: parsed.data.category });
+  } catch (error) {
+    respondError(res, error);
+  }
+});
+
+router.post("/cashback/admin/merchants/:id/rotate-qr", async (req, res) => {
+  const profile = (req as unknown as AuthenticatedRequest).cashbackProfile;
+  try {
+    requireAdmin(profile);
+    const params = RotateCashbackMerchantQrParams.safeParse(req.params);
+    if (!params.success) throw new CashbackError(400, "INVALID_REQUEST");
+    const result = await mutateState((state) => {
+      const merchant = (state.merchants ?? []).find((entry: any) => entry.id === params.data.id);
+      if (!merchant || !["active", "suspended"].includes(merchant.status)) {
+        throw new CashbackError(404, "MERCHANT_NOT_FOUND");
+      }
+      const previousPublicId = merchant.publicId ?? null;
+      const existingIds = new Set(
+        (state.merchants ?? [])
+          .filter((entry: any) => entry.id !== merchant.id)
+          .map((entry: any) => entry.publicId)
+          .filter((value: unknown): value is string => typeof value === "string"),
+      );
+      do {
+        merchant.publicId = `CB-${randomUUID().replaceAll("-", "").slice(0, 16).toUpperCase()}`;
+      } while (existingIds.has(merchant.publicId));
+      merchant.qrValue = `cashback://merchant/${merchant.publicId}`;
+      merchant.qrRotatedAt = Date.now();
+      state.paymentSessions = (state.paymentSessions ?? []).map((session: any) =>
+        session.merchantId === merchant.id && session.status === "pending"
+          ? { ...session, status: "revoked", revokedAt: Date.now(), revokedReason: "qr_rotated" }
+          : session,
+      );
+      state.audit ??= [];
+      state.audit.unshift({
+        id: `audit_${randomUUID().replaceAll("-", "").slice(0, 18)}`,
+        action: "merchant_qr_rotated",
+        merchantId: merchant.id,
+        previousPublicId,
+        publicId: merchant.publicId,
+        adminUid: profile.uid,
+        at: Date.now(),
+      });
+      addNote(state, merchant.id, "تم إنشاء رمز QR جديد وإبطال الرمز السابق");
+      return { result: { ok: true, merchantId: merchant.id, publicId: merchant.publicId, qrValue: merchant.qrValue } };
+    });
+    res.json(result);
   } catch (error) {
     respondError(res, error);
   }

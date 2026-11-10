@@ -23,6 +23,7 @@ import { Route, Switch, Router as WouterRouter } from 'wouter';
 import NotFound from '@/pages/not-found';
 import { MerchantWorkspace } from '@/components/merchant-workspace/MerchantWorkspace';
 import { MerchantAdminPanel } from '@/components/merchant-workspace/MerchantAdminPanel';
+import { AdminConsole } from '@/components/admin/AdminConsole';
 
 type Lang = 'en' | 'fr' | 'ar';
 type Theme = 'dark' | 'light';
@@ -30,7 +31,7 @@ type Merchant = { id: string; name: string; cat?: string; status?: string; count
 type Claim = { id: string; mid: string; cid: string; invoiceNumber?: string; date?: string; amount: number; photoId?: string; status: string; created?: string; cashback?: number; cashbackRate?: number; platformCommission?: number; platformCommissionRate?: number; merchantObligation?: number; netSale?: number; commissionOutstanding?: number; commissionSettled?: number; reason?: string; submitIp?: string; submittedByUid?: string; possibleDuplicate?: boolean };
 type Txn = { id: string; t?: string; mid: string; cid: string; amount: number; cashback?: number; method?: string };
 type CashbackNote = { id: string; to?: string; text: string; t?: number; read?: boolean };
-type Session = { profile: { uid: string; role: string; eid: string; name: string; phone?: string; email?: string; avatarUpdatedAt?: number; preferences?: { language?: Lang; theme?: Theme }; status?: string; rejectionReason?: string }; state: { settings?: { cashback?: number; platformCommission?: number; claimHours?: number; paymentMethods?: Record<string, unknown>[] }; categories?: string[]; merchants?: Merchant[]; customers?: { id: string; name: string; phone?: string; cbm?: Record<string, number> }[]; claims?: Claim[]; merchantCommissionLedger?: Record<string, unknown>[]; merchantCommissionSettlements?: Record<string, unknown>[]; txns?: Txn[]; cbpays?: { id: string; cid: string; mid: string; amount: number; status: string; at?: string|number; reference?: string; method?: string; reversalReason?: string }[]; merchantTopups?: Record<string, unknown>[]; merchantWithdrawals?: Record<string, unknown>[]; merchantStoreChangeRequests?: Record<string, unknown>[]; notes?: CashbackNote[] } };
+type Session = { profile: { uid: string; role: string; eid: string; name: string; phone?: string; email?: string; avatarUpdatedAt?: number; preferences?: { language?: Lang; theme?: Theme }; status?: string; rejectionReason?: string }; state: { settings?: { cashback?: number; platformCommission?: number; claimHours?: number; minimumTopupDzd?: number; minimumTopupLyd?: number; enabledCurrencies?: ('DZD'|'LYD')[]; enabledLanguages?: Lang[]; notificationsEnabled?: boolean; paymentMethods?: Record<string, unknown>[] }; categories?: string[]; merchants?: Merchant[]; customers?: { id: string; name: string; phone?: string; email?: string; status?: string; cbm?: Record<string, number> }[]; claims?: Claim[]; merchantCommissionLedger?: Record<string, unknown>[]; merchantCommissionSettlements?: Record<string, unknown>[]; txns?: Txn[]; cbpays?: { id: string; cid: string; mid: string; amount: number; status: string; at?: string|number; reference?: string; method?: string; reversalReason?: string }[]; merchantTopups?: Record<string, unknown>[]; merchantWithdrawals?: Record<string, unknown>[]; merchantStoreChangeRequests?: Record<string, unknown>[]; notes?: CashbackNote[] } };
 type Dict = Record<string, string>;
 const dictionaries: Record<Lang, Dict> = {
   en: {
@@ -279,6 +280,10 @@ function AppInner() {
       setError(lang==='ar'?'هذا البريد الإلكتروني مسجل مسبقاً.':lang==='fr'?'Cette adresse e-mail est déjà utilisée.':'This email is already registered.');
     } else if (code === 'INVALID_CREDENTIALS') {
       setError(t('authError'));
+    } else if (code === 'ACCOUNT_SUSPENDED') {
+      setError(lang==='ar'?'هذا الحساب موقوف حالياً. تواصل مع الإدارة.':lang==='fr'?'Ce compte est suspendu. Contactez l’administration.':'This account is suspended. Contact the administration.');
+    } else if (code === 'CURRENCY_DISABLED') {
+      setError(lang==='ar'?'التسجيل في هذه العملة غير متاح حالياً.':lang==='fr'?'Les inscriptions dans cette devise sont temporairement désactivées.':'Merchant applications in this currency are currently disabled.');
     } else if (code === 'ACCOUNT_TYPE_MISMATCH') {
       setError(t('accountTypeMismatch'));
     } else if (code === 'REJECTION_REASON_REQUIRED') {
@@ -319,6 +324,11 @@ function AppInner() {
     setNotice(lang==='ar'?'استعادة كلمة المرور تتطلب إعداد خدمة بريد إلكتروني.':lang==='fr'?'La réinitialisation nécessite la configuration d’un service e-mail.':'Password reset needs an email delivery service to be configured.');
   }
   async function changePreference(nextLang: Lang, nextTheme: Theme) {
+    const enabledLanguages=state.settings?.enabledLanguages;
+    if (enabledLanguages?.length && !enabledLanguages.includes(nextLang)) {
+      setError(lang==='ar'?'هذه اللغة غير مفعلة حالياً.':lang==='fr'?'Cette langue est actuellement désactivée.':'This language is currently disabled.');
+      return;
+    }
     if (profile) {
       try { await preferences.mutateAsync({ data: { language: nextLang, theme: nextTheme } }); setLang(nextLang); setTheme(nextTheme); invalidate(); setNotice(dictionaries[nextLang].saved); }
       catch(e) { setError(t('genericError')); }
@@ -779,6 +789,7 @@ function AppInner() {
 
   if (merchant) {
     const status=profile.status || merchants.find(m=>m.id===profile.eid)?.status || 'pending';
+    if (status==='suspended') return shell(<div style={{maxWidth:670,margin:'32px auto'}}>{error&&noticeBox(error,true)}{notice&&noticeBox(notice)}<div className="surface" style={{padding:'clamp(24px,6vw,44px)',textAlign:'center'}}><div style={{width:74,height:74,borderRadius:24,margin:'0 auto 18px',display:'grid',placeItems:'center',background:'hsl(var(--destructive) / .12)',color:'hsl(var(--destructive))'}}><ShieldCheck size={34}/></div><span className="status-pill">{lang==='ar'?'موقوف':lang==='fr'?'Suspendu':'Suspended'}</span><h1 style={{fontSize:34,margin:'14px 0 8px'}}>{lang==='ar'?'الحساب التجاري موقوف':lang==='fr'?'Compte marchand suspendu':'Merchant account suspended'}</h1><p className="subtle" style={{fontSize:16,lineHeight:1.7}}>{lang==='ar'?'تم إيقاف المتجر مؤقتاً. تواصل مع الإدارة لمعرفة التفاصيل.':lang==='fr'?'Votre commerce est temporairement suspendu. Contactez l’administration pour plus de détails.':'Your store is temporarily inactive. Contact the administration for details.'}</p><button className="btn btn-outline" style={{marginTop:18}} onClick={()=>void logout()} data-testid="button-logout"><LogOut size={17}/>{t('signOut')}</button></div></div>);
     if (status==='pending' || status==='rejected') return shell(<div style={{maxWidth:670,margin:'32px auto'}}>{error&&noticeBox(error,true)}{notice&&noticeBox(notice)}<div className="surface" style={{padding:'clamp(24px,6vw,44px)',textAlign:'center'}}><div style={{width:74,height:74,borderRadius:24,margin:'0 auto 18px',display:'grid',placeItems:'center',background:status==='pending'?'hsl(var(--secondary) / .28)':'hsl(var(--destructive) / .12)',color:status==='pending'?'hsl(var(--primary))':'hsl(var(--destructive))'}}>{status==='pending'?<Clock3 size={34}/>:<ShieldCheck size={34}/>}</div><span className="status-pill">{statusLabel(status)}</span><h1 style={{fontSize:34,margin:'14px 0 8px'}}>{status==='pending'?t('statusPending'):t('statusRejected')}</h1><p className="subtle" style={{fontSize:16,lineHeight:1.7}}>{status==='pending'?t('pendingHint'):profile.rejectionReason||t('retry')}</p><button className="btn btn-outline" style={{marginTop:18}} onClick={()=>void logout()} data-testid="button-logout"><LogOut size={17}/>{t('signOut')}</button></div></div>);
     const shop=merchants.find(m=>m.id===profile.eid);
     if (!shop) return shell(<Empty icon={<Store size={28}/>} title={t('loadError')} text={t('retryLoad')}/>,false);
@@ -1168,97 +1179,12 @@ function printMerchantQr(t:(key:string)=>string,shopName:string,shopId:string) {
 }
 function Metric({label,value,icon}:{label:string;value:string;icon:ReactNode}) { return <div className="surface" style={{padding:17}}><div style={{color:'hsl(var(--primary))'}}>{icon}</div><strong style={{fontSize:27,display:'block'}}>{value}</strong><span className="subtle">{label}</span></div>; }
 function AdminDashboard({merchants,claims,state,t,lang,reason,setReason,decideShop,decideClaim,rate,setRate,platformCommissionRate,setPlatformCommissionRate,saveRate,saveCategories,reversePayment,reversalPending,notice,error,onRefresh}:{merchants:Merchant[];claims:Claim[];state:Session['state'];t:(s:string)=>string;lang:Lang;reason:string;setReason:(s:string)=>void;decideShop:(m:Merchant,a:boolean)=>void;decideClaim:(c:Claim,a:boolean)=>void;rate:string;setRate:(s:string)=>void;platformCommissionRate:string;setPlatformCommissionRate:(s:string)=>void;saveRate:()=>void;saveCategories:(categories:string[])=>void;reversePayment:(id:string,reason:string)=>Promise<void>;reversalPending:boolean;notice:string;error:string;onRefresh:()=>void}) {
-  const configuredCategories=state.categories||[...browseCategories];
-  const [selectedCategories,setSelectedCategories]=useState<string[]>(configuredCategories);
-  useEffect(()=>setSelectedCategories(configuredCategories),[configuredCategories.join('|')]);
-  const [receiptSearch,setReceiptSearch]=useState('');
-  const newMerchants=merchants.filter(m=>m.status==='pending');const newClaims=claims.filter(c=>c.status==='pending');
-  const receiptHistory=claims.slice().sort((a,b)=>timestampOf(b.created||b.date)-timestampOf(a.created||a.date)).filter(claim=>{
-    const shop=merchants.find(m=>m.id===claim.mid);
-    const customer=state.customers?.find(entry=>entry.id===claim.cid);
-    return `${claim.invoiceNumber||''} ${claim.id} ${shop?.name||''} ${customer?.name||''}`.toLowerCase().includes(receiptSearch.trim().toLowerCase());
-  });
-  return <div style={{maxWidth:1000,margin:'18px auto',display:'grid',gap:20}}>
-    {error&&<div role="alert" className="surface" style={{padding:12,color:'hsl(var(--destructive))'}}>{error}</div>}
-    {notice&&<div role="status" className="surface" style={{padding:12}}>{notice}</div>}
-    <PageTitle icon={<ShieldCheck/>} title={t('adminDashboard')} eyebrow={t('merchantQueue')}/>
-    <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(170px,1fr))',gap:12}}>
-      <Metric label={t('merchantQueue')} value={String(newMerchants.length)} icon={<Store/>}/>
-      <Metric label={t('receiptQueue')} value={String(newClaims.length)} icon={<ReceiptText/>}/>
-      <Metric label={t('customers')} value={String(state.customers?.length||0)} icon={<UserRound/>}/>
-    </div>
-    <MerchantAdminPanel state={state} merchants={merchants} lang={lang} onRefresh={onRefresh}/>
-     <PaymentReversalList payments={state.cbpays||[]} merchants={merchants} customers={state.customers||[]} lang={lang} t={t} reversePayment={reversePayment} pending={reversalPending}/>
-    <section className="surface" style={{padding:18}}>
-      <strong>{t('adminSettings')} · {t('rate')}</strong>
-      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:9,marginTop:10}}>
-        <label style={{flex:1}}><span className="subtle">{lang==='ar'?'مكافأة الزبون (%)':lang==='fr'?'Récompense client (%)':'Customer cashback (%)'}</span><input className="field" type="number" min="0" max="100" step=".1" value={rate||String(state.settings?.cashback??4)} onChange={e=>setRate(e.target.value)} data-testid="input-admin-rate"/></label>
-        <label style={{flex:1}}><span className="subtle">{lang==='ar'?'عمولة التطبيق (%)':lang==='fr'?'Commission de l’application (%)':'Platform commission (%)'}</span><input className="field" type="number" min="0" max="100" step=".1" value={platformCommissionRate||String(state.settings?.platformCommission??2)} onChange={e=>setPlatformCommissionRate(e.target.value)} data-testid="input-admin-platform-commission"/></label>
-        <button className="btn btn-primary" onClick={saveRate} data-testid="button-admin-save-rate"><Percent size={17}/>{t('save')}</button>
-      </div>
-    </section>
-    <section className="surface" style={{padding:18,display:'grid',gap:12}}>
-      <div><strong>{t('categoriesManager')}</strong><p className="subtle" style={{margin:'4px 0 0'}}>{t('categoriesHint')}</p></div>
-      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:8}}>
-        {browseCategories.map(category=><label key={category} className="surface" style={{padding:'10px 12px',display:'flex',alignItems:'center',gap:8,cursor:'pointer'}}>
-          <input type="checkbox" checked={selectedCategories.includes(category)} onChange={event=>setSelectedCategories(current=>event.target.checked?[...current,category]:current.filter(item=>item!==category))} data-testid={`toggle-category-${category}`}/>
-          <span>{t(`cat_${category}`)}</span>
-        </label>)}
-      </div>
-      {!selectedCategories.length&&<small role="alert" className="subtle">{t('categoriesAtLeastOne')}</small>}
-      <button className="btn btn-primary" disabled={!selectedCategories.length} onClick={()=>saveCategories(selectedCategories)} data-testid="button-save-categories"><Check size={17}/>{t('save')}</button>
-    </section>
-    <ReviewList title={t('merchantQueue')} empty={newMerchants.length===0?t('noPending'):''}>
-      {newMerchants.map(m=><div className="surface" key={m.id} data-testid={`review-merchant-${m.id}`} style={{padding:16,display:'grid',gap:12}}>
-        <div style={{display:'flex',gap:13,alignItems:'center'}}>
-          <MediaImage id={m.logoId} alt={m.name} style={{width:64,height:64,objectFit:'cover',borderRadius:12}}/>
-          <div>
-            <strong style={{fontSize:18}}>{m.name}</strong>
-            <div className="subtle">{m.cat?t(`cat_${m.cat}`):t('merchant')} · {localizeCity(m.city,lang)}, {t(m.country==='Libya'?'libya':'algeria')}</div>
-            <div className="subtle">{m.address}</div>
-            {m.mapsUrl&&<a href={m.mapsUrl} target="_blank" rel="noreferrer" style={{color:'hsl(var(--primary))'}}>{t('shopOpen')}</a>}
-          </div>
-        </div>
-        <Field label={t('rejectionReason')} value={reason} onChange={setReason} testId={`input-reason-merchant-${m.id}`}/>
-        <div style={{display:'flex',gap:9}}>
-          <button className="btn btn-primary" onClick={()=>decideShop(m,true)} data-testid={`button-approve-merchant-${m.id}`}><Check size={17}/>{t('approve')}</button>
-          <button className="btn btn-outline" onClick={()=>decideShop(m,false)} data-testid={`button-reject-merchant-${m.id}`}><X size={17}/>{t('decline')}</button>
-        </div>
-      </div>)}
-    </ReviewList>
-    <ReviewList title={t('receiptQueue')} empty={newClaims.length===0?t('noPending'):''}>
-      {newClaims.map(c=>{
-        const shop=merchants.find(m=>m.id===c.mid);
-        return <div className="surface" key={c.id} data-testid={`review-receipt-${c.id}`} style={{padding:16,display:'grid',gap:12}}>
-          <div><strong>{shop?.name||t('merchantId')}</strong><div className="subtle">{c.invoiceNumber||c.date||'—'} · {formatMoney(c.amount,shop?.country)}</div><div className="subtle">{t('receiptCustomer')}: {state.customers?.find(customer=>customer.id===c.cid)?.name||c.cid} · {t('submittedAt')}: {c.created?new Date(c.created).toLocaleString(lang==='ar'?'ar-DZ':lang==='fr'?'fr-FR':'en'):'—'}{c.submitIp?` · ${t('submittedIp')}: ${c.submitIp}`:''}</div>{c.possibleDuplicate&&<strong style={{color:'hsl(var(--destructive))',fontSize:13}}>{t('possibleDuplicate')}</strong>}</div>
-          {c.photoId&&<MediaImage id={c.photoId} alt={t('receipt')} style={{width:'100%',maxHeight:280,objectFit:'contain',background:'hsl(var(--muted))',borderRadius:12}}/>}
-          <Field label={t('rejectionReason')} value={reason} onChange={setReason} testId={`input-reason-receipt-${c.id}`}/>
-          <div style={{display:'flex',gap:9}}>
-            <button className="btn btn-primary" onClick={()=>decideClaim(c,true)} data-testid={`button-approve-receipt-${c.id}`}><Check size={17}/>{t('approve')}</button>
-            <button className="btn btn-outline" onClick={()=>decideClaim(c,false)} data-testid={`button-reject-receipt-${c.id}`}><X size={17}/>{t('decline')}</button>
-          </div>
-        </div>;
-      })}
-    </ReviewList>
-    <ReviewList title={t('allReceipts')} empty={claims.length===0?t('noReceipts'):''}>
-      <input className="field" value={receiptSearch} onChange={event=>setReceiptSearch(event.target.value)} placeholder={t('searchReceipts')} aria-label={t('searchReceipts')} data-testid="input-search-receipts"/>
-      {receiptHistory.length===0?<div className="surface" style={{padding:16}}>{t('noReceipts')}</div>:receiptHistory.map(claim=>{
-        const shop=merchants.find(m=>m.id===claim.mid);
-        const customer=state.customers?.find(entry=>entry.id===claim.cid);
-        const label=claim.status==='approved'?t('approved'):claim.status==='rejected'?t('rejected'):claim.status==='cancelled'?t('cancelled'):t('pending');
-        return <article className="surface" key={claim.id} data-testid={`history-receipt-${claim.id}`} style={{padding:14,display:'grid',gap:8}}>
-          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:10,flexWrap:'wrap'}}>
-            <strong>{shop?.name||t('merchantId')}</strong><span className="status-pill">{label}</span>
-          </div>
-          <div className="subtle">{claim.invoiceNumber||claim.date||'—'} · {formatMoney(claim.amount,shop?.country)} · {t('receiptCustomer')}: {customer?.name||claim.cid}</div>
-          <div className="subtle">{t('submittedAt')}: {claim.created?new Date(claim.created).toLocaleString(lang==='ar'?'ar-DZ':lang==='fr'?'fr-FR':'en'):'—'}{claim.submitIp?` · ${t('submittedIp')}: ${claim.submitIp}`:''}</div>
-          {claim.possibleDuplicate&&<strong style={{color:'hsl(var(--destructive))',fontSize:13}}>{t('possibleDuplicate')}</strong>}
-          {claim.photoId&&<MediaImage id={claim.photoId} alt={t('receipt')} style={{width:'100%',maxHeight:240,objectFit:'contain',background:'hsl(var(--muted))',borderRadius:12}}/>}
-          {claim.reason&&<p className="subtle" style={{margin:0}}>{t('reason')}: {claim.reason}</p>}
-        </article>;
-      })}
-    </ReviewList>
-  </div>;
+  return <AdminConsole merchants={merchants} claims={claims} state={state as unknown as Record<string,unknown>} t={t} lang={lang}
+    reason={reason} setReason={setReason} decideShop={(m,approved)=>decideShop(m as Merchant,approved)}
+    decideClaim={(c,approved)=>decideClaim(c as Claim,approved)} rate={rate} setRate={setRate}
+    platformCommissionRate={platformCommissionRate} setPlatformCommissionRate={setPlatformCommissionRate}
+    saveRate={saveRate} saveCategories={saveCategories} reversePayment={reversePayment}
+    reversalPending={reversalPending} notice={notice} error={error} onRefresh={onRefresh}/>;
 }
 function PaymentReversalList({payments,merchants,customers,lang,t,reversePayment,pending}:{payments:NonNullable<Session['state']['cbpays']>;merchants:Merchant[];customers:NonNullable<Session['state']['customers']>;lang:Lang;t:(key:string)=>string;reversePayment:(id:string,reason:string)=>Promise<void>;pending:boolean}) {
   const [editingId,setEditingId]=useState('');

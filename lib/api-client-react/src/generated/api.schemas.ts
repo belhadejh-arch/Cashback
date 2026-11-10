@@ -626,6 +626,77 @@ export interface CashbackRateUpdate {
   platformCommissionRate?: number;
 }
 
+export type CashbackAccountStatusUpdateStatus = typeof CashbackAccountStatusUpdateStatus[keyof typeof CashbackAccountStatusUpdateStatus];
+
+
+export const CashbackAccountStatusUpdateStatus = {
+  active: 'active',
+  suspended: 'suspended',
+} as const;
+
+export interface CashbackAccountStatusUpdate {
+  status: CashbackAccountStatusUpdateStatus;
+}
+
+export type CashbackMerchantCategoryUpdateCategory = typeof CashbackMerchantCategoryUpdateCategory[keyof typeof CashbackMerchantCategoryUpdateCategory];
+
+
+export const CashbackMerchantCategoryUpdateCategory = {
+  restaurants: 'restaurants',
+  cafes: 'cafes',
+  clothing: 'clothing',
+  electronics: 'electronics',
+  malls: 'malls',
+  groceries: 'groceries',
+  perfume: 'perfume',
+  gifts: 'gifts',
+  shops: 'shops',
+} as const;
+
+export interface CashbackMerchantCategoryUpdate {
+  category: CashbackMerchantCategoryUpdateCategory;
+}
+
+export type CashbackSystemSettingsUpdateEnabledCurrenciesItem = typeof CashbackSystemSettingsUpdateEnabledCurrenciesItem[keyof typeof CashbackSystemSettingsUpdateEnabledCurrenciesItem];
+
+
+export const CashbackSystemSettingsUpdateEnabledCurrenciesItem = {
+  DZD: 'DZD',
+  LYD: 'LYD',
+} as const;
+
+export type CashbackSystemSettingsUpdateEnabledLanguagesItem = typeof CashbackSystemSettingsUpdateEnabledLanguagesItem[keyof typeof CashbackSystemSettingsUpdateEnabledLanguagesItem];
+
+
+export const CashbackSystemSettingsUpdateEnabledLanguagesItem = {
+  ar: 'ar',
+  en: 'en',
+  fr: 'fr',
+} as const;
+
+export interface CashbackSystemSettingsUpdate {
+  /**
+     * @minimum 1
+     * @maximum 8760
+     */
+  claimHours?: number;
+  /**
+     * @minimum 1000
+     * @maximum 100000000
+     */
+  minimumTopupDzd?: number;
+  /**
+     * @minimum 10
+     * @maximum 100000000
+     */
+  minimumTopupLyd?: number;
+  /** @minItems 1 */
+  enabledCurrencies?: CashbackSystemSettingsUpdateEnabledCurrenciesItem[];
+  /** @minItems 1 */
+  enabledLanguages?: CashbackSystemSettingsUpdateEnabledLanguagesItem[];
+  notificationsEnabled?: boolean;
+}
+
 export interface MerchantCommissionRatesUpdate {
   /**
      * @minimum 0

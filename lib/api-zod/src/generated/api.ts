@@ -721,6 +721,101 @@ export const UpdateCashbackMerchantCommissionRatesResponse = zod.record(zod.stri
 
 
 /**
+ * @summary Suspend or reactivate a customer account
+ */
+export const updateCashbackCustomerStatusPathIdMax = 100;
+
+
+
+export const UpdateCashbackCustomerStatusParams = zod.object({
+  "id": zod.coerce.string().min(1).max(updateCashbackCustomerStatusPathIdMax)
+})
+
+export const UpdateCashbackCustomerStatusBody = zod.object({
+  "status": zod.enum(['active', 'suspended'])
+})
+
+export const UpdateCashbackCustomerStatusResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
+ * @summary Suspend or reactivate a merchant store
+ */
+export const updateCashbackMerchantStatusPathIdMax = 100;
+
+
+
+export const UpdateCashbackMerchantStatusParams = zod.object({
+  "id": zod.coerce.string().min(1).max(updateCashbackMerchantStatusPathIdMax)
+})
+
+export const UpdateCashbackMerchantStatusBody = zod.object({
+  "status": zod.enum(['active', 'suspended'])
+})
+
+export const UpdateCashbackMerchantStatusResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
+ * @summary Change a merchant category as an administrator
+ */
+export const updateCashbackMerchantCategoryPathIdMax = 100;
+
+
+
+export const UpdateCashbackMerchantCategoryParams = zod.object({
+  "id": zod.coerce.string().min(1).max(updateCashbackMerchantCategoryPathIdMax)
+})
+
+export const UpdateCashbackMerchantCategoryBody = zod.object({
+  "category": zod.enum(['restaurants', 'cafes', 'clothing', 'electronics', 'malls', 'groceries', 'perfume', 'gifts', 'shops'])
+})
+
+export const UpdateCashbackMerchantCategoryResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
+ * @summary Revoke the old merchant QR and generate a new one
+ */
+export const rotateCashbackMerchantQrPathIdMax = 100;
+
+
+
+export const RotateCashbackMerchantQrParams = zod.object({
+  "id": zod.coerce.string().min(1).max(rotateCashbackMerchantQrPathIdMax)
+})
+
+export const RotateCashbackMerchantQrResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
+ * @summary Update receipt, currency, language, and notification settings
+ */
+export const updateCashbackSystemSettingsBodyClaimHoursMax = 8760;
+
+export const updateCashbackSystemSettingsBodyMinimumTopupDzdMin = 1000;
+export const updateCashbackSystemSettingsBodyMinimumTopupDzdMax = 100000000;
+
+export const updateCashbackSystemSettingsBodyMinimumTopupLydMin = 10;
+export const updateCashbackSystemSettingsBodyMinimumTopupLydMax = 100000000;
+
+
+
+
+
+export const UpdateCashbackSystemSettingsBody = zod.object({
+  "claimHours": zod.number().int().min(1).max(updateCashbackSystemSettingsBodyClaimHoursMax).optional(),
+  "minimumTopupDzd": zod.number().min(updateCashbackSystemSettingsBodyMinimumTopupDzdMin).max(updateCashbackSystemSettingsBodyMinimumTopupDzdMax).optional(),
+  "minimumTopupLyd": zod.number().min(updateCashbackSystemSettingsBodyMinimumTopupLydMin).max(updateCashbackSystemSettingsBodyMinimumTopupLydMax).optional(),
+  "enabledCurrencies": zod.array(zod.enum(['DZD', 'LYD'])).min(1).optional(),
+  "enabledLanguages": zod.array(zod.enum(['ar', 'en', 'fr'])).min(1).optional(),
+  "notificationsEnabled": zod.boolean().optional()
+})
+
+export const UpdateCashbackSystemSettingsResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
  * @summary Update the active merchant categories
  */
 export const updateCashbackCategoriesBodyCategoriesMax = 9;

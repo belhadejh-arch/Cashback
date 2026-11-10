@@ -7,6 +7,8 @@
  */
 
 export * from './actionResult';
+export * from './cashbackAccountStatusUpdate';
+export * from './cashbackAccountStatusUpdateStatus';
 export * from './cashbackCategoriesUpdate';
 export * from './cashbackCategoriesUpdateCategoriesItem';
 export * from './cashbackLogin';
@@ -15,6 +17,8 @@ export * from './cashbackMerchantAssetUpload';
 export * from './cashbackMerchantAssetUploadInput';
 export * from './cashbackMerchantAssetUploadInputAsset';
 export * from './cashbackMerchantAssetUploadInputContentType';
+export * from './cashbackMerchantCategoryUpdate';
+export * from './cashbackMerchantCategoryUpdateCategory';
 export * from './cashbackMerchantDecision';
 export * from './cashbackMerchantRating';
 export * from './cashbackMerchantSensitiveChangeDecision';
@@ -51,6 +55,9 @@ export * from './cashbackRegistrationCountry';
 export * from './cashbackRegistrationRole';
 export * from './cashbackSession';
 export * from './cashbackState';
+export * from './cashbackSystemSettingsUpdate';
+export * from './cashbackSystemSettingsUpdateEnabledCurrenciesItem';
+export * from './cashbackSystemSettingsUpdateEnabledLanguagesItem';
 export * from './cashbackWithdrawalProofUploadInput';
 export * from './cashbackWithdrawalProofUploadInputContentType';
 export * from './healthStatus';

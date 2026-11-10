@@ -86,6 +86,7 @@ function getParamId(req: any): string {
 }
 
 function addNote(state: CashbackState, to: string, text: string): void {
+  if (state.settings?.notificationsEnabled === false) return;
   state.notes ??= [];
   state.notes.unshift({ id: randomUUID(), to, text, t: Date.now(), read: false });
   state.notes.length = Math.min(state.notes.length, 300);
@@ -315,6 +316,12 @@ router.patch("/cashback/admin/store-change-requests/:id/decision", async (req, r
       request.reviewedBy = profile.uid;
       request.reason = reason || undefined;
       if (parsed.data.approved) {
+        if (request.changes.country && Array.isArray(state.settings?.enabledCurrencies)) {
+          const requestedCurrency = request.changes.country === "Libya" ? "LYD" : "DZD";
+          if (!state.settings.enabledCurrencies.includes(requestedCurrency)) {
+            throw new CashbackError(400, "CURRENCY_DISABLED");
+          }
+        }
         if (request.changes.country) merchant.country = request.changes.country;
         if (request.changes.category) merchant.cat = request.changes.category;
         merchant.legalData = {
@@ -354,7 +361,9 @@ router.post("/cashback/merchant/topups", async (req, res) => {
     const { state } = await getState();
     const merchant = (state.merchants ?? []).find((entry: any) => entry.id === profile.eid);
     if (!merchant || merchant.status !== "active") throw new CashbackError(403, "MERCHANT_NOT_ACTIVE");
-    const minimum = merchant.country === "Libya" ? 10 : 1000;
+    const minimum = merchant.country === "Libya"
+      ? Number(state.settings?.minimumTopupLyd ?? 10)
+      : Number(state.settings?.minimumTopupDzd ?? 1000);
     const amount = roundMoney(parsed.data.amount);
     if (!Number.isFinite(amount) || !Number.isSafeInteger(Math.round(amount * 100))) {
       throw new CashbackError(400, "INVALID_TOPUP_AMOUNT");
@@ -385,7 +394,9 @@ router.post("/cashback/merchant/topups", async (req, res) => {
       if (!currentMerchant || currentMerchant.status !== "active") {
         throw new CashbackError(403, "MERCHANT_NOT_ACTIVE");
       }
-      const currentMinimum = currentMerchant.country === "Libya" ? 10 : 1000;
+      const currentMinimum = currentMerchant.country === "Libya"
+        ? Number(state.settings?.minimumTopupLyd ?? 10)
+        : Number(state.settings?.minimumTopupDzd ?? 1000);
       if (amount < currentMinimum) throw new CashbackError(400, "TOPUP_BELOW_MINIMUM");
       const currentMaximumRaw = currentMerchant.country === "Libya"
         ? state.settings?.maxTopupAmountLyd

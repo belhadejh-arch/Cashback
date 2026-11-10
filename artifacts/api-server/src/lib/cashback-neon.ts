@@ -45,6 +45,11 @@ const emptyState = (): CashbackState => ({
     cashback: 4,
     platformCommission: 2,
     claimHours: 720,
+    minimumTopupDzd: 1000,
+    minimumTopupLyd: 10,
+    enabledCurrencies: ["DZD", "LYD"],
+    enabledLanguages: ["ar", "en", "fr"],
+    notificationsEnabled: true,
     paymentMethods: [],
     maxTopupAmountDzd: null,
     maxTopupAmountLyd: null,
@@ -68,6 +73,11 @@ function normalizeState(state: CashbackState): CashbackState {
   state.settings.cashback ??= 4;
   state.settings.platformCommission ??= 2;
   state.settings.claimHours ??= 720;
+  state.settings.minimumTopupDzd ??= 1000;
+  state.settings.minimumTopupLyd ??= 10;
+  state.settings.enabledCurrencies ??= ["DZD", "LYD"];
+  state.settings.enabledLanguages ??= ["ar", "en", "fr"];
+  state.settings.notificationsEnabled ??= true;
   state.settings.paymentMethods ??= [];
   state.settings.maxTopupAmountDzd ??= null;
   state.settings.maxTopupAmountLyd ??= null;
@@ -86,6 +96,7 @@ function normalizeState(state: CashbackState): CashbackState {
   state.customers.forEach((customer: any) => {
     customer.wallet = Number(customer.wallet ?? 0);
     customer.cbm ??= {};
+    customer.status ??= "active";
   });
   return state;
 }

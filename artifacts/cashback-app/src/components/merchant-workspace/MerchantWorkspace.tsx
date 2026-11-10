@@ -279,7 +279,9 @@ export function MerchantWorkspace(props: MerchantWorkspaceProps) {
   const [busy, setBusy] = useState(false);
   const merchantCountry = countryCode(shop.country);
   const settingsRecord = state.settings && typeof state.settings === 'object' ? state.settings as RecordLike : {};
-  const topupMinimum = merchantCountry === 'Libya' ? 10 : 1000;
+  const topupMinimum = merchantCountry === 'Libya'
+    ? num(first((state.settings ?? {}) as RecordLike, 'minimumTopupLyd') ?? 10)
+    : num(first((state.settings ?? {}) as RecordLike, 'minimumTopupDzd') ?? 1000);
   const topupMaximumRaw = settingsRecord[merchantCountry === 'Libya' ? 'maxTopupAmountLyd' : 'maxTopupAmountDzd'];
   const topupMaximum = topupMaximumRaw == null ? undefined : num(topupMaximumRaw);
   const currency = str(first(shop, 'currency'), merchantCountry === 'Libya' ? 'LYD' : 'DZD');
