@@ -48,6 +48,7 @@ import type {
   CashbackRedemption,
   CashbackRegistration,
   CashbackSession,
+  CashbackWithdrawalProofUploadInput,
   HealthStatus,
   ProfilePhotoFinalizeInput,
   ProfilePhotoResult,
@@ -1788,6 +1789,95 @@ export const useUpdateCashbackMerchantWithdrawal = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getUpdateCashbackMerchantWithdrawalMutationOptions(options));
+    }
+
+export const getCreateCashbackAdminWithdrawalProofUploadUrl = (id: string,) => {
+
+
+
+
+  return `/api/cashback/admin/withdrawals/${id}/proof-upload-url`
+}
+
+/**
+ * @summary Create an admin-bound transfer receipt upload for a merchant withdrawal
+ */
+export const createCashbackAdminWithdrawalProofUpload = async (id: string,
+    cashbackWithdrawalProofUploadInput: CashbackWithdrawalProofUploadInput, options?: Parameters<typeof customFetch>[1]): Promise<CashbackMerchantAssetUpload> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<CashbackMerchantAssetUpload>(getCreateCashbackAdminWithdrawalProofUploadUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(cashbackWithdrawalProofUploadInput)
+  }
+);}
+
+
+
+
+
+export const getCreateCashbackAdminWithdrawalProofUploadMutationKey = () => ['createCashbackAdminWithdrawalProofUpload'] as const;
+
+export const getCreateCashbackAdminWithdrawalProofUploadMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCashbackAdminWithdrawalProofUpload>>, TError,CreateCashbackAdminWithdrawalProofUploadMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createCashbackAdminWithdrawalProofUpload>>, TError,CreateCashbackAdminWithdrawalProofUploadMutationVariables, TContext> => {
+
+const mutationKey = getCreateCashbackAdminWithdrawalProofUploadMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createCashbackAdminWithdrawalProofUpload>>, CreateCashbackAdminWithdrawalProofUploadMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createCashbackAdminWithdrawalProofUpload(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateCashbackAdminWithdrawalProofUploadMutationResult = NonNullable<Awaited<ReturnType<typeof createCashbackAdminWithdrawalProofUpload>>>
+    export type CreateCashbackAdminWithdrawalProofUploadMutationBody = BodyType<CashbackWithdrawalProofUploadInput>
+    export type CreateCashbackAdminWithdrawalProofUploadMutationError = ErrorType<unknown>
+    export type CreateCashbackAdminWithdrawalProofUploadMutationVariables = {id: string;data: BodyType<CashbackWithdrawalProofUploadInput>}
+
+    /**
+ * @summary Create an admin-bound transfer receipt upload for a merchant withdrawal
+ */
+export const useCreateCashbackAdminWithdrawalProofUpload = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCashbackAdminWithdrawalProofUpload>>, TError,CreateCashbackAdminWithdrawalProofUploadMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createCashbackAdminWithdrawalProofUpload>>,
+        TError,
+        CreateCashbackAdminWithdrawalProofUploadMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateCashbackAdminWithdrawalProofUploadMutationOptions(options));
     }
 
 export const getUpdateCashbackPaymentMethodsUrl = () => {

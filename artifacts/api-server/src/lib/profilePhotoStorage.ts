@@ -77,7 +77,7 @@ export async function createReceiptPhotoUpload(
 export async function createMerchantAssetUpload(
   uid: string,
   merchantId: string,
-  asset: "logo" | "cover" | "topup-proof",
+  asset: "logo" | "cover" | "topup-proof" | "withdrawal-proof",
   uploadId: string,
 ): Promise<{ uploadURL: string; objectPath: string }> {
   const fullPath = `${bucketPrefix()}/merchant-assets/${merchantId}/${asset}/${uid}/${uploadId}`;

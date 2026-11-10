@@ -11,6 +11,9 @@ import {
   DecideCashbackMerchantTopupParams,
   DecideCashbackMerchantTopupBody,
   CreateCashbackMerchantWithdrawalBody,
+  CreateCashbackAdminWithdrawalProofUploadParams,
+  CreateCashbackAdminWithdrawalProofUploadBody,
+  CreateCashbackAdminWithdrawalProofUploadResponse,
   UpdateCashbackMerchantWithdrawalParams,
   UpdateCashbackMerchantWithdrawalBody,
   UpdateCashbackPaymentMethodsBody,
@@ -91,9 +94,10 @@ function roundMoney(value: number): number {
 async function verifyMerchantUpload(
   uid: string,
   merchantId: string,
-  asset: "logo" | "cover" | "topup-proof",
+  asset: "logo" | "cover" | "topup-proof" | "withdrawal-proof",
   uploadId: string,
   objectPath: string,
+  expectedWithdrawalId?: string,
 ) {
   const uploadDoc = await getDocument(`merchant_asset_uploads/${uploadId}`);
   const upload = decodeCashbackFields(uploadDoc);
@@ -103,6 +107,7 @@ async function verifyMerchantUpload(
     upload.merchantId !== merchantId ||
     upload.asset !== asset ||
     upload.objectPath !== objectPath ||
+    (asset === "withdrawal-proof" && upload.withdrawalId !== expectedWithdrawalId) ||
     upload.finalizedAt ||
     Number(upload.expiresAt ?? 0) <= Date.now()
   ) {
@@ -519,8 +524,33 @@ router.patch("/cashback/admin/withdrawals/:id/update", async (req, res) => {
     if (!params.success || !parsed.success) throw new CashbackError(400, "INVALID_REQUEST");
     const reason = fieldString(parsed.data.reason);
     const transferReference = fieldString(parsed.data.transferReference);
+    const proofUploadId = fieldString(parsed.data.transferProofUploadId);
+    const proofObjectPath = fieldString(parsed.data.transferProofObjectPath);
     if (parsed.data.status === "rejected" && !reason) throw new CashbackError(400, "REJECTION_REASON_REQUIRED");
     if (parsed.data.status === "paid" && !transferReference) throw new CashbackError(400, "TRANSFER_REFERENCE_REQUIRED");
+    if (parsed.data.status === "paid" && (!proofUploadId || !proofObjectPath)) {
+      throw new CashbackError(400, "TRANSFER_PROOF_REQUIRED");
+    }
+    if (parsed.data.status !== "paid" && (proofUploadId || proofObjectPath)) {
+      throw new CashbackError(400, "INVALID_REQUEST");
+    }
+    let transferProof: Awaited<ReturnType<typeof verifyMerchantUpload>> | undefined;
+    if (parsed.data.status === "paid") {
+      const { state } = await getState();
+      const request = (state.merchantWithdrawals ?? []).find((entry: any) => entry.id === params.data.id);
+      if (!request) throw new CashbackError(404, "WITHDRAWAL_NOT_FOUND");
+      if (request.status !== "transferring") throw new CashbackError(409, "INVALID_WITHDRAWAL_TRANSITION");
+      const merchant = (state.merchants ?? []).find((entry: any) => entry.id === request.merchantId);
+      if (!merchant) throw new CashbackError(409, "MERCHANT_NOT_FOUND");
+      transferProof = await verifyMerchantUpload(
+        request.merchantUid,
+        merchant.id,
+        "withdrawal-proof",
+        proofUploadId,
+        proofObjectPath,
+        request.id,
+      );
+    }
     await mutateCashbackState((state) => {
       const request = (state.merchantWithdrawals ?? []).find((entry: any) => entry.id === params.data.id);
       if (!request) throw new CashbackError(404, "WITHDRAWAL_NOT_FOUND");
@@ -545,6 +575,8 @@ router.patch("/cashback/admin/withdrawals/:id/update", async (req, res) => {
           Math.max(0, Number(merchant.reservedWithdrawalBalance ?? 0) - Number(request.amount)),
         );
         request.transferReference = transferReference;
+        request.transferProofId = transferProof?.photoId;
+        request.transferProofObjectPath = proofObjectPath;
         request.paidAt = Date.now();
       }
       request.status = parsed.data.status;
@@ -564,13 +596,64 @@ router.patch("/cashback/admin/withdrawals/:id/update", async (req, res) => {
         merchantId: merchant.id,
         amount: request.amount,
         transferReference: transferReference || undefined,
+        transferProofId: transferProof?.photoId,
         adminUid: profile.uid,
         at: Date.now(),
         reason: reason || undefined,
       });
-      return { result: { id: request.id, status: request.status } };
+      return {
+        result: { id: request.id, status: request.status },
+        extraWrites: transferProof?.writes,
+      };
     });
     res.json({ ok: true });
+  } catch (error) {
+    respondError(res, error);
+  }
+});
+
+router.post("/cashback/admin/withdrawals/:id/proof-upload-url", async (req, res) => {
+  const profile = (req as unknown as AuthenticatedRequest).cashbackProfile;
+  try {
+    requireAdmin(profile);
+    const params = CreateCashbackAdminWithdrawalProofUploadParams.safeParse(req.params);
+    const parsed = CreateCashbackAdminWithdrawalProofUploadBody.safeParse(req.body);
+    if (!params.success || !parsed.success) throw new CashbackError(400, "INVALID_REQUEST");
+    const { state } = await getState();
+    const request = (state.merchantWithdrawals ?? []).find((entry: any) => entry.id === params.data.id);
+    if (!request) throw new CashbackError(404, "WITHDRAWAL_NOT_FOUND");
+    if (request.status !== "transferring") throw new CashbackError(409, "INVALID_WITHDRAWAL_TRANSITION");
+    const merchant = (state.merchants ?? []).find((entry: any) => entry.id === request.merchantId);
+    if (!merchant || !request.merchantUid) throw new CashbackError(409, "MERCHANT_NOT_FOUND");
+
+    const uploadId = `merchant_asset_${randomUUID().replaceAll("-", "")}`;
+    const upload = await createMerchantAssetUpload(
+      request.merchantUid,
+      merchant.id,
+      "withdrawal-proof",
+      uploadId,
+    );
+    const createdAt = Date.now();
+    const stored = await commit([
+      documentWrite("merchant_asset_uploads", uploadId, {
+        ownerUid: request.merchantUid,
+        requestedByUid: profile.uid,
+        merchantId: merchant.id,
+        asset: "withdrawal-proof",
+        objectPath: upload.objectPath,
+        contentType: parsed.data.contentType,
+        declaredSize: parsed.data.size,
+        withdrawalId: request.id,
+        createdAt,
+        expiresAt: createdAt + 10 * 60 * 1000,
+      }, false),
+    ]);
+    if (!stored) throw new CashbackError(409, "UPLOAD_ALREADY_EXISTS");
+    res.status(201).json(CreateCashbackAdminWithdrawalProofUploadResponse.parse({
+      uploadURL: upload.uploadURL,
+      objectPath: upload.objectPath,
+      uploadId,
+    }));
   } catch (error) {
     respondError(res, error);
   }

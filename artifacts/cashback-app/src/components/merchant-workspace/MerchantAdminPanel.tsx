@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
-  getGetCashbackSessionQueryKey, useDecideCashbackMerchantStoreChange,
+  getGetCashbackSessionQueryKey, useCreateCashbackAdminWithdrawalProofUpload, useDecideCashbackMerchantStoreChange,
   useDecideCashbackMerchantTopup, useUpdateCashbackMerchantWithdrawal,
   useUpdateCashbackPaymentMethods,
 } from '@workspace/api-client-react';
@@ -34,7 +34,7 @@ const copy:Record<Lang,Record<string,string>> = {
     approve:'Approve',reject:'Reject',reason:'Reason for rejection (required)',reasonPlaceholder:'Explain why this request is rejected',
     reasonNeeded:'A rejection reason is required.',approved:'Approved.',rejected:'Rejected.',
     noProfiles:'No pending profile change requests.',noTopups:'No pending top-ups.',noWithdrawals:'No withdrawal requests.',
-    merchant:'Merchant',requested:'Requested details',proof:'Payment proof',amount:'Amount',status:'Status',
+    merchant:'Merchant',requested:'Requested details',proof:'Payment proof',transferReceipt:'Transfer receipt',proofRequired:'Choose a transfer receipt image.',proofImageOnly:'Use a JPG, PNG, or WebP image up to 5 MB.',proofUploadFailed:'The receipt upload failed. Try again.',amount:'Amount',status:'Status',
     reference:'Transfer reference (required to mark paid)',advance:'Advance payout',markPaid:'Mark paid',
     transferring:'Mark transferring',review:'Review',unknown:'Unknown',method:'Payment method',
     error:'The action failed. Refresh and try again.',refresh:'Refresh',loading:'Saving…',openProof:'Open proof',
@@ -57,7 +57,7 @@ const copy:Record<Lang,Record<string,string>> = {
     approve:'Approuver',reject:'Refuser',reason:'Motif du refus (obligatoire)',reasonPlaceholder:'Expliquez le refus',
     reasonNeeded:'Un motif de refus est obligatoire.',approved:'Demande approuvée.',rejected:'Demande refusée.',
     noProfiles:'Aucune modification en attente.',noTopups:'Aucun rechargement en attente.',noWithdrawals:'Aucun retrait.',
-    merchant:'Commerce',requested:'Détails demandés',proof:'Justificatif',amount:'Montant',status:'Statut',
+    merchant:'Commerce',requested:'Détails demandés',proof:'Justificatif',transferReceipt:'Justificatif de virement',proofRequired:'Choisissez une image du justificatif de virement.',proofImageOnly:'Utilisez une image JPG, PNG ou WebP de 5 Mo maximum.',proofUploadFailed:'Échec du téléversement. Réessayez.',amount:'Montant',status:'Statut',
     reference:'Référence de virement (obligatoire pour payer)',advance:'Faire avancer',markPaid:'Marquer payé',
     transferring:'Marquer en transfert',review:'Vérifier',unknown:'Inconnu',method:'Mode de paiement',
     error:'Échec de l’action. Actualisez et réessayez.',refresh:'Actualiser',loading:'Enregistrement…',openProof:'Ouvrir la preuve',
@@ -80,7 +80,7 @@ const copy:Record<Lang,Record<string,string>> = {
     approve:'موافقة',reject:'رفض',reason:'سبب الرفض (مطلوب)',reasonPlaceholder:'وضح سبب رفض الطلب',
     reasonNeeded:'سبب الرفض مطلوب.',approved:'تمت الموافقة.',rejected:'تم الرفض.',
     noProfiles:'لا توجد طلبات تعديل معلقة.',noTopups:'لا توجد طلبات تمويل معلقة.',noWithdrawals:'لا توجد طلبات سحب.',
-    merchant:'التاجر',requested:'التفاصيل المطلوبة',proof:'إثبات الدفع',amount:'المبلغ',status:'الحالة',
+    merchant:'التاجر',requested:'التفاصيل المطلوبة',proof:'إثبات الدفع',transferReceipt:'وصل التحويل',proofRequired:'اختر صورة وصل التحويل.',proofImageOnly:'استخدم صورة JPG أو PNG أو WebP بحجم لا يتجاوز 5 ميغابايت.',proofUploadFailed:'تعذر رفع الوصل. حاول مجدداً.',amount:'المبلغ',status:'الحالة',
     reference:'مرجع التحويل (مطلوب لإتمام الدفع)',advance:'تحديث حالة السحب',markPaid:'تحديد كمدفوع',
     transferring:'بدء التحويل',review:'مراجعة',unknown:'غير معروف',method:'وسيلة الدفع',
     error:'تعذر تنفيذ الإجراء. حدّث الصفحة وحاول مجدداً.',refresh:'تحديث',loading:'جارٍ الحفظ…',openProof:'فتح الإثبات',
@@ -116,10 +116,12 @@ export function MerchantAdminPanel({state,merchants,lang,onRefresh}:MerchantAdmi
   const decideProfile = useDecideCashbackMerchantStoreChange();
   const decideTopup = useDecideCashbackMerchantTopup();
   const updateWithdrawal = useUpdateCashbackMerchantWithdrawal();
+  const createWithdrawalProofUpload = useCreateCashbackAdminWithdrawalProofUpload();
   const saveMethods = useUpdateCashbackPaymentMethods();
   const [methods,setMethods] = useState<PaymentMethod[]>([]);
   const [reasons,setReasons] = useState<Record<string,string>>({});
   const [references,setReferences] = useState<Record<string,string>>({});
+  const [proofFiles,setProofFiles] = useState<Record<string,File>>({});
   const [message,setMessage] = useState('');
   const [busy,setBusy] = useState(false);
   const [maxTopupAmountDzd,setMaxTopupAmountDzd] = useState('');
@@ -194,13 +196,28 @@ export function MerchantAdminPanel({state,merchants,lang,onRefresh}:MerchantAdmi
     const id=text(r.id);
     const reason=(reasons[id]??'').trim();
     const transferReference=(references[id]??'').trim();
+    const proofFile=proofFiles[id];
     if(status==='rejected'&&!reason){setMessage(t.reasonNeeded);return}
     if(status==='paid'&&!transferReference){setMessage(t.reference);return}
+    if(status==='paid'&&!proofFile){setMessage(t.proofRequired);return}
+    if(status==='paid'&&(!['image/jpeg','image/png','image/webp'].includes(proofFile.type)||proofFile.size<1||proofFile.size>5*1024*1024)){setMessage(t.proofImageOnly);return}
     setBusy(true);setMessage('');
     try {
-      await updateWithdrawal.mutateAsync({id,data:{status,...(status==='rejected'?{reason}:{}),...(status==='paid'?{transferReference}:{})}});
+      let proofFields:{transferProofUploadId:string;transferProofObjectPath:string}|undefined;
+      if(status==='paid'&&proofFile){
+        const upload=await createWithdrawalProofUpload.mutateAsync({id,data:{
+          contentType:proofFile.type as 'image/jpeg'|'image/png'|'image/webp',
+          size:proofFile.size,
+        }});
+        const uploaded=await fetch(upload.uploadURL,{method:'PUT',headers:{'Content-Type':proofFile.type},body:proofFile});
+        if(!uploaded.ok) throw new Error(t.proofUploadFailed);
+        proofFields={transferProofUploadId:upload.uploadId,transferProofObjectPath:upload.objectPath};
+      }
+      await updateWithdrawal.mutateAsync({id,data:{status,...(status==='rejected'?{reason}:{}),...(status==='paid'?{transferReference,...proofFields}:{})}});
       persist();setMessage(status==='rejected'?t.rejected:t.approved);
-    } catch {setMessage(t.error)} finally {setBusy(false)}
+      setReasons(prev=>({...prev,[id]:''}));
+      setProofFiles(prev=>{const next={...prev};delete next[id];return next});
+    } catch (error) {setMessage(error instanceof Error&&error.message===t.proofUploadFailed?t.proofUploadFailed:t.error)} finally {setBusy(false)}
   };
   const merchantName=(r:Row) => {
     const id=text(value(r,'merchantId','mid'));
@@ -260,7 +277,7 @@ export function MerchantAdminPanel({state,merchants,lang,onRefresh}:MerchantAdmi
             {['pending','approved','transferring'].includes(status)&&<div className="mw-card-actions">
               {status==='pending'&&<button className="mw-btn mw-btn-primary" onClick={()=>void updatePayout(r,'approved')} disabled={busy}>{t.approve}</button>}
               {status==='approved'&&<button className="mw-btn mw-btn-primary" onClick={()=>void updatePayout(r,'transferring')} disabled={busy}>{t.transferring}</button>}
-              {status==='transferring'&&<><input className="mw-input mw-reason" aria-label={t.reference} placeholder={t.reference} value={references[text(r.id)]??''} onChange={e=>setReferences({...references,[text(r.id)]:e.target.value})}/><button className="mw-btn mw-btn-primary" onClick={()=>void updatePayout(r,'paid')} disabled={busy}>{t.markPaid}</button></>}
+              {status==='transferring'&&<><input className="mw-input mw-reason" aria-label={t.reference} placeholder={t.reference} value={references[text(r.id)]??''} onChange={e=>setReferences({...references,[text(r.id)]:e.target.value})}/><label className="mw-field"><span>{t.transferReceipt}</span><input type="file" accept="image/jpeg,image/png,image/webp" className="mw-file" onChange={e=>{const file=e.target.files?.[0];if(file)setProofFiles(current=>({...current,[text(r.id)]:file}))}}/><small>{proofFiles[text(r.id)]?.name??t.proofRequired}</small></label><button className="mw-btn mw-btn-primary" onClick={()=>void updatePayout(r,'paid')} disabled={busy}>{t.markPaid}</button></>}
               {rejectionField(r)}<button className="mw-btn mw-btn-danger" onClick={()=>void updatePayout(r,'rejected')} disabled={busy}>{t.reject}</button>
             </div>}
           </article>

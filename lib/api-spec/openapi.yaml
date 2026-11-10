@@ -389,6 +389,29 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ActionResult"
+  /cashback/admin/withdrawals/{id}/proof-upload-url:
+    post:
+      operationId: createCashbackAdminWithdrawalProofUpload
+      tags: [cashback]
+      summary: Create an admin-bound transfer receipt upload for a merchant withdrawal
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 100 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CashbackWithdrawalProofUploadInput"
+      responses:
+        "201":
+          description: Transfer receipt upload URL created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CashbackMerchantAssetUpload"
   /cashback/settings/payment-methods:
     patch:
       operationId: updateCashbackPaymentMethods
@@ -762,6 +785,14 @@ components:
         status: { type: string, enum: [approved, transferring, paid, rejected] }
         reason: { type: ["string", "null"], maxLength: 300 }
         transferReference: { type: string, maxLength: 120 }
+        transferProofUploadId: { type: string, minLength: 1, maxLength: 100 }
+        transferProofObjectPath: { type: string, minLength: 1, maxLength: 500 }
+    CashbackWithdrawalProofUploadInput:
+      type: object
+      required: [contentType, size]
+      properties:
+        contentType: { type: string, enum: [image/jpeg, image/png, image/webp] }
+        size: { type: integer, minimum: 1, maximum: 5242880 }
     CashbackPaymentMethod:
       type: object
       required: [id, country, name, beneficiary, account, instructions, active]

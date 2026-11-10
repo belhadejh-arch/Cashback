@@ -444,15 +444,48 @@ export const updateCashbackMerchantWithdrawalBodyReasonMax = 300;
 
 export const updateCashbackMerchantWithdrawalBodyTransferReferenceMax = 120;
 
+export const updateCashbackMerchantWithdrawalBodyTransferProofUploadIdMax = 100;
+
+export const updateCashbackMerchantWithdrawalBodyTransferProofObjectPathMax = 500;
+
 
 
 export const UpdateCashbackMerchantWithdrawalBody = zod.object({
   "status": zod.enum(['approved', 'transferring', 'paid', 'rejected']),
   "reason": zod.string().max(updateCashbackMerchantWithdrawalBodyReasonMax).nullish(),
-  "transferReference": zod.string().max(updateCashbackMerchantWithdrawalBodyTransferReferenceMax).optional()
+  "transferReference": zod.string().max(updateCashbackMerchantWithdrawalBodyTransferReferenceMax).optional(),
+  "transferProofUploadId": zod.string().min(1).max(updateCashbackMerchantWithdrawalBodyTransferProofUploadIdMax).optional(),
+  "transferProofObjectPath": zod.string().min(1).max(updateCashbackMerchantWithdrawalBodyTransferProofObjectPathMax).optional()
 })
 
 export const UpdateCashbackMerchantWithdrawalResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
+ * @summary Create an admin-bound transfer receipt upload for a merchant withdrawal
+ */
+export const createCashbackAdminWithdrawalProofUploadPathIdMax = 100;
+
+
+
+export const CreateCashbackAdminWithdrawalProofUploadParams = zod.object({
+  "id": zod.coerce.string().min(1).max(createCashbackAdminWithdrawalProofUploadPathIdMax)
+})
+
+export const createCashbackAdminWithdrawalProofUploadBodySizeMax = 5242880;
+
+
+
+export const CreateCashbackAdminWithdrawalProofUploadBody = zod.object({
+  "contentType": zod.enum(['image/jpeg', 'image/png', 'image/webp']),
+  "size": zod.number().int().min(1).max(createCashbackAdminWithdrawalProofUploadBodySizeMax)
+})
+
+export const CreateCashbackAdminWithdrawalProofUploadResponse = zod.object({
+  "uploadURL": zod.string().url(),
+  "objectPath": zod.string(),
+  "uploadId": zod.string()
+})
 
 
 /**

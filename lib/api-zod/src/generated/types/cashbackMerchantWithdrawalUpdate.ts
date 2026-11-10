@@ -16,4 +16,14 @@ export interface CashbackMerchantWithdrawalUpdate {
   reason?: string | null;
   /** @maxLength 120 */
   transferReference?: string;
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  transferProofUploadId?: string;
+  /**
+     * @minLength 1
+     * @maxLength 500
+     */
+  transferProofObjectPath?: string;
 }

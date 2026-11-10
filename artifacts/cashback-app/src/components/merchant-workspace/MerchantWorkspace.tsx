@@ -60,7 +60,7 @@ const words: Record<Lang, Copy> = {
     visits:'Transactions', lastPurchase:'Last transaction', noCustomers:'No customers yet.',
     payoutHint:'Two separate balances, two separate purposes.', requestWithdrawal:'Request withdrawal',
     topupBalanceHint:'Top-up funds are separate from QR payments.', requestTopup:'Submit top-up request',
-    amountLabel:'Amount', paymentMethod:'Payment method', payerReference:'Payer reference', proof:'Payment proof',
+    amountLabel:'Amount', paymentMethod:'Payment method', payerReference:'Payer reference', proof:'Payment proof',transferReceipt:'Transfer receipt',
     accountDetails:'Receiving account details', submit:'Submit request', noMethods:'No active payment methods are available.',
     formError:'Complete all required fields.', requestError:'Request could not be submitted.', submitted:'Request submitted.',
     withdrawalsHint:'Track each payout request from review through payment.', topupsHint:'Funding requests and their review status.',
@@ -116,7 +116,7 @@ const words: Record<Lang, Copy> = {
     visits:'Transactions', lastPurchase:'Dernière opération', noCustomers:'Aucun client pour le moment.',
     payoutHint:'Deux soldes distincts, deux usages différents.', requestWithdrawal:'Demander un retrait',
     topupBalanceHint:'Les fonds alimentés sont séparés des paiements QR.', requestTopup:'Demander un rechargement',
-    amountLabel:'Montant', paymentMethod:'Mode de paiement', payerReference:'Référence du payeur', proof:'Justificatif',
+    amountLabel:'Montant', paymentMethod:'Mode de paiement', payerReference:'Référence du payeur', proof:'Justificatif',transferReceipt:'Justificatif de virement',
     accountDetails:'Coordonnées de réception', submit:'Envoyer la demande', noMethods:'Aucun moyen de paiement actif.',
     formError:'Veuillez remplir les champs obligatoires.', requestError:'La demande n’a pas pu être envoyée.', submitted:'Demande envoyée.',
     withdrawalsHint:'Suivez chaque retrait, de la vérification au paiement.', topupsHint:'Demandes de financement et leur statut.',
@@ -172,7 +172,7 @@ const words: Record<Lang, Copy> = {
     visits:'المعاملات', lastPurchase:'آخر معاملة', noCustomers:'لا يوجد زبائن بعد.',
     payoutHint:'رصيدان منفصلان واستخدامان مختلفان.', requestWithdrawal:'طلب سحب',
     topupBalanceHint:'الرصيد الممول منفصل عن مدفوعات QR.', requestTopup:'إرسال طلب تمويل',
-    amountLabel:'المبلغ', paymentMethod:'طريقة الدفع', payerReference:'مرجع الدافع', proof:'إثبات الدفع',
+    amountLabel:'المبلغ', paymentMethod:'طريقة الدفع', payerReference:'مرجع الدافع', proof:'إثبات الدفع',transferReceipt:'وصل التحويل',
     accountDetails:'تفاصيل حساب الاستلام', submit:'إرسال الطلب', noMethods:'لا توجد وسائل دفع نشطة.',
     formError:'أكمل جميع الحقول المطلوبة.', requestError:'تعذر إرسال الطلب.', submitted:'تم إرسال الطلب.',
     withdrawalsHint:'تابع طلبات السحب من المراجعة إلى الدفع.', topupsHint:'طلبات التمويل وحالة مراجعتها.',
@@ -488,11 +488,12 @@ export function MerchantWorkspace(props: MerchantWorkspaceProps) {
       const customerId = str(first(r,'cid','customerId'));
       const customerRecord = customerById.get(customerId);
       const resolvedCustomerName = str(customerRecord?.name, str(first(r,'customerName'), customerId || '—'));
+    const transferProofId = str(first(r,'transferProofId'));
       return <tr key={str(r.id, `${kind}-${i}`)} data-testid={`row-${kind}-${str(r.id,String(i))}`}>
         <td>{str(first(r,'invoiceNumber','reference','id'), '—')}</td>
-        <td>{kind === 'invoice' ? <span>{resolvedCustomerName}{customerRecord?.phone ? <small className="mw-table-secondary">{str(customerRecord.phone)}</small> : null}</span> : str(first(r,'method','paymentMethodName','payerReference'), kind === 'qr' ? t.QR : t.method)}</td>
+        <td>{kind === 'invoice' ? <span>{resolvedCustomerName}{customerRecord?.phone ? <small className="mw-table-secondary">{str(customerRecord.phone)}</small> : null}</span> : kind === 'withdrawal' ? str(first(r,'transferReference'),str(first(r,'method'),t.method)) : str(first(r,'method','paymentMethodName','payerReference'), kind === 'qr' ? t.QR : t.method)}</td>
         <td>{dateOf(r)}</td><td>{money(num(first(r,'amount','total')))}</td>
-        {kind === 'invoice' && <td>{money(num(first(r,'cashback','rewardAmount')))}</td>}<td>{statusPill(status)}{kind === 'topup' && status === 'rejected' && str(first(r,'reason')) && <small className="mw-table-secondary">{t.rejectionReason}: {str(r.reason)}</small>}</td>
+        {kind === 'invoice' && <td>{money(num(first(r,'cashback','rewardAmount')))}</td>}<td>{statusPill(status)}{kind === 'topup' && status === 'rejected' && str(first(r,'reason')) && <small className="mw-table-secondary">{t.rejectionReason}: {str(r.reason)}</small>}{kind === 'withdrawal' && transferProofId && <a className="mw-table-secondary" href={`/api/cashback/media/${encodeURIComponent(transferProofId)}`} target="_blank" rel="noreferrer">{t.transferReceipt}</a>}</td>
       </tr>;
     })}</tbody></table></div>;
   };

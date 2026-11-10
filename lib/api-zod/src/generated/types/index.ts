@@ -51,6 +51,8 @@ export * from './cashbackRegistrationCountry';
 export * from './cashbackRegistrationRole';
 export * from './cashbackSession';
 export * from './cashbackState';
+export * from './cashbackWithdrawalProofUploadInput';
+export * from './cashbackWithdrawalProofUploadInputContentType';
 export * from './healthStatus';
 export * from './profilePhotoFinalizeInput';
 export * from './profilePhotoResult';

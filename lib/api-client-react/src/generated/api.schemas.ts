@@ -360,6 +360,34 @@ export interface CashbackMerchantWithdrawalUpdate {
   reason?: string | null;
   /** @maxLength 120 */
   transferReference?: string;
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  transferProofUploadId?: string;
+  /**
+     * @minLength 1
+     * @maxLength 500
+     */
+  transferProofObjectPath?: string;
+}
+
+export type CashbackWithdrawalProofUploadInputContentType = typeof CashbackWithdrawalProofUploadInputContentType[keyof typeof CashbackWithdrawalProofUploadInputContentType];
+
+
+export const CashbackWithdrawalProofUploadInputContentType = {
+  'image/jpeg': 'image/jpeg',
+  'image/png': 'image/png',
+  'image/webp': 'image/webp',
+} as const;
+
+export interface CashbackWithdrawalProofUploadInput {
+  contentType: CashbackWithdrawalProofUploadInputContentType;
+  /**
+     * @minimum 1
+     * @maximum 5242880
+     */
+  size: number;
 }
 
 export type CashbackPaymentMethodCountry = typeof CashbackPaymentMethodCountry[keyof typeof CashbackPaymentMethodCountry];
