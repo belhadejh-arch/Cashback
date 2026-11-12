@@ -31,6 +31,7 @@ import {
   CashbackError,
   commit,
   createSession,
+  createSessionGrant,
   decodeCashbackFields,
   documentWrite,
   emailLookupId,
@@ -568,6 +569,7 @@ router.post("/cashback/register", async (req, res) => {
     const image = input.logoData ? validateImageData(input.logoData) : null;
     const id = `${isMerchant ? "m" : "c"}_${randomUUID().replaceAll("-", "").slice(0, 16)}`;
     const uid = `u_${randomUUID().replaceAll("-", "").slice(0, 24)}`;
+    const sessionGrant = createSessionGrant(uid);
     const mediaId = image ? `logo_${id}` : undefined;
     const password = hashPassword(input.password);
     const profileDocument = {
@@ -647,10 +649,10 @@ router.post("/cashback/register", async (req, res) => {
       ];
       return {
         result: { id },
-        extraWrites: [...accountWrites, ...photoWrite],
+        extraWrites: [...accountWrites, ...photoWrite, sessionGrant.write],
       };
     });
-    const sessionToken = await createSession(uid);
+    const sessionToken = sessionGrant.token;
     res.cookie(sessionCookieName(), sessionToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -668,6 +670,19 @@ router.post("/cashback/register", async (req, res) => {
       preferences: { language: "ar", theme: "dark" },
     });
   } catch (error) {
+    if (!(error instanceof CashbackError)) {
+      const dbError = error as { code?: unknown; table?: unknown; constraint?: unknown };
+      req.log.error({
+        errorName: error instanceof Error ? error.name : "UnknownError",
+        databaseCode: typeof dbError?.code === "string" && /^[0-9A-Z]{5}$/.test(dbError.code)
+          ? dbError.code
+          : undefined,
+        databaseTable: typeof dbError?.table === "string" ? dbError.table : undefined,
+        databaseConstraint: typeof dbError?.constraint === "string"
+          ? dbError.constraint
+          : undefined,
+      }, "CASH BACK registration failed");
+    }
     respondError(res, error);
   }
 });

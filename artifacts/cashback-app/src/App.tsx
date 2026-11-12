@@ -396,6 +396,12 @@ function AppInner() {
     const code = (caught as { data?: { error?: string } })?.data?.error;
     if (code === 'EMAIL_ALREADY_REGISTERED') {
       setError(lang==='ar'?'هذا البريد الإلكتروني مسجل مسبقاً.':lang==='fr'?'Cette adresse e-mail est déjà utilisée.':'This email is already registered.');
+    } else if (code === 'PHONE_ALREADY_REGISTERED') {
+      setError(lang==='ar'?'رقم الهاتف مستخدم مسبقاً. استخدم رقماً آخر أو سجّل الدخول.':lang==='fr'?'Ce numéro de téléphone est déjà utilisé. Essayez-en un autre ou connectez-vous.':'This phone number is already registered. Use another number or sign in.');
+    } else if (code === 'INVALID_LOCATION') {
+      setError(lang==='ar'?'رابط الموقع غير صالح. أدخل رابط خرائط يبدأ بـ https:// أو إحداثيات مثل 36.7,3.1.':lang==='fr'?'Le lien de localisation est invalide. Utilisez un lien https:// ou des coordonnées comme 36.7,3.1.':'The location link is invalid. Use an https:// Maps link or coordinates like 36.7,3.1.');
+    } else if (code === 'MERCHANT_LOGO_REQUIRED' || code === 'INVALID_IMAGE') {
+      setError(lang==='ar'?'تعذر اعتماد صورة المتجر. اختر صورة JPG أو PNG أو WebP واضحة.':lang==='fr'?'La photo du commerce est invalide. Choisissez une image JPG, PNG ou WebP.':'The shop image is invalid. Choose a clear JPG, PNG, or WebP image.');
     } else if (code === 'INVALID_CREDENTIALS') {
       setError(t('authError'));
     } else if (code === 'ACCOUNT_SUSPENDED') {
@@ -416,6 +422,8 @@ function AppInner() {
       setError(t('imageUploadError'));
     } else if (code === 'INVALID_REQUEST' || code === 'INVALID_PROFILE' || code === 'MERCHANT_FIELDS_REQUIRED') {
       setError(t('incomplete'));
+    } else if (code === 'WRITE_CONFLICT') {
+      setError(lang==='ar'?'تعذر حفظ الطلب بسبب تحديث متزامن. أعد المحاولة.':lang==='fr'?'La demande n’a pas pu être enregistrée. Réessayez.':'The request could not be saved. Please try again.');
     } else {
       setError(t('genericError'));
     }
@@ -470,10 +478,10 @@ function AppInner() {
   }
   async function beginRegistration() {
     clearMessages();
-    if (!name || !email || !password || password.length < 8 || (registerRole==='merchant' && (!phone || !country || !city || !address || !mapsUrl || !category || !logoData))) { setError(t('incomplete')); return; }
+    if (!name.trim() || !email.trim() || !password || password.length < 8 || (registerRole==='merchant' && (!phone.trim() || !country || !city.trim() || !address.trim() || !mapsUrl.trim() || !category || !logoData))) { setError(t('incomplete')); return; }
     if (password !== confirm) { setError(t('passwordsDiffer')); return; }
     try {
-      await register.mutateAsync({ data: { role: registerRole, name, phone: phone || null, email, password, ...(registerRole==='merchant' ? { country: country as 'Algeria'|'Libya', city, address, mapsUrl, category, logoData } : {}) } });
+      await register.mutateAsync({ data: { role: registerRole, name: name.trim(), phone: phone.trim() || null, email: email.trim().toLowerCase(), password, ...(registerRole==='merchant' ? { country: country as 'Algeria'|'Libya', city: city.trim(), address: address.trim(), mapsUrl: mapsUrl.trim(), category, logoData } : {}) } });
       if (registerRole==='merchant') setNotice(t('applyPending'));
       client.clear(); await refetch(); setLocation('/');
     } catch(e) { showErr(e); }
@@ -504,9 +512,33 @@ function AppInner() {
       if ((caught as DOMException)?.name !== 'AbortError') setError(t('genericError'));
     }
   }
-  const fileToData = (file: File) => new Promise<string>((resolve,reject)=>{
+  const fileToData = (file: File, maxDataUrlLength?: number) => new Promise<string>((resolve,reject)=>{
     const source=URL.createObjectURL(file); const image=new Image();
-    image.onload=()=>{ URL.revokeObjectURL(source); const scale=Math.min(1,1500/Math.max(image.width,image.height)); const canvas=document.createElement('canvas'); canvas.width=Math.max(1,Math.round(image.width*scale)); canvas.height=Math.max(1,Math.round(image.height*scale)); const context=canvas.getContext('2d'); if(!context){reject(new Error('IMAGE_PROCESSING_FAILED'));return;} context.drawImage(image,0,0,canvas.width,canvas.height); canvas.toBlob(blob=>{if(!blob){reject(new Error('IMAGE_PROCESSING_FAILED'));return;}const reader=new FileReader();reader.onload=()=>resolve(String(reader.result)||'');reader.onerror=reject;reader.readAsDataURL(blob);},'image/jpeg',.78); };
+    image.onload=()=>{
+      URL.revokeObjectURL(source);
+      const canvas=document.createElement('canvas'); const context=canvas.getContext('2d');
+      if(!context){reject(new Error('IMAGE_PROCESSING_FAILED'));return;}
+      let scale=Math.min(1,1500/Math.max(image.width,image.height));
+      const encode=(quality:number,attempt:number)=>{
+        canvas.width=Math.max(1,Math.round(image.width*scale)); canvas.height=Math.max(1,Math.round(image.height*scale));
+        context.drawImage(image,0,0,canvas.width,canvas.height);
+        canvas.toBlob(blob=>{
+          if(!blob){reject(new Error('IMAGE_PROCESSING_FAILED'));return;}
+          const reader=new FileReader();
+          reader.onload=()=>{
+            const result=String(reader.result)||'';
+            if(maxDataUrlLength&&result.length>maxDataUrlLength){
+              if(attempt>=8){reject(new Error('IMAGE_TOO_LARGE'));return;}
+              scale*=.82; encode(Math.max(.42,quality-.06),attempt+1); return;
+            }
+            resolve(result);
+          };
+          reader.onerror=()=>reject(new Error('IMAGE_PROCESSING_FAILED'));
+          reader.readAsDataURL(blob);
+        },'image/jpeg',quality);
+      };
+      encode(.78,0);
+    };
     image.onerror=()=>{URL.revokeObjectURL(source);reject(new Error('IMAGE_PROCESSING_FAILED'));}; image.src=source;
   });
   function stopReceiptCamera() {
@@ -590,7 +622,13 @@ function AppInner() {
       setError(t('genericError'));
     }
   }
-  async function saveLogo(file?: File) { if (!file) return; try { setLogoData(await fileToData(file)); } catch { setError(t('genericError')); } }
+  async function saveLogo(file?: File) {
+    if (!file) return;
+    try { setLogoData(await fileToData(file,600_000)); }
+    catch {
+      setError(lang==='ar'?'تعذر تجهيز الصورة. اختر صورة أخرى بصيغة JPG أو PNG أو WebP.':lang==='fr'?'Impossible de préparer l’image. Choisissez un fichier JPG, PNG ou WebP.':'Could not prepare the image. Choose a JPG, PNG, or WebP file.');
+    }
+  }
   async function saveReceipt() {
     clearMessages();
     if (!receiptStore || !receiptFile) { setError(t('uploadRequired')); return; }
@@ -821,7 +859,7 @@ function AppInner() {
               <Field label={t('location')} value={address} onChange={setAddress} testId="input-address" required/>
               <Field label={t('mapLink')} value={mapsUrl} onChange={setMapsUrl} testId="input-map" placeholder={t('mapNote')} required/>
               <label style={{display:'grid',gap:6,fontSize:14,fontWeight:600}}>{t('category')}<select className="field" value={category} onChange={e=>setCategory(e.target.value)} data-testid="input-category" required><option value="">—</option>{merchantApplicationCategories.map(key=><option key={key} value={key}>{t(`cat_${key}`)}</option>)}</select></label>
-              <label style={{ display:'grid',gap:6,fontSize:14,fontWeight:600 }}>{t('logo')}<input className="field" type="file" accept="image/*" onChange={e=>void saveLogo(e.target.files?.[0])} data-testid="input-shop-logo"/>{logoData && <span className="subtle">✓ {t('choose')}</span>}</label>
+              <label style={{ display:'grid',gap:6,fontSize:14,fontWeight:600 }}>{t('logo')}<input className="field" type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>void saveLogo(e.target.files?.[0])} data-testid="input-shop-logo"/>{logoData && <span className="subtle">✓ {t('choose')}</span>}</label>
             </>}
             <button type="submit" className="btn btn-primary" disabled={register.isPending} data-testid="button-register">{register.isPending?t('loading'):t('continue')} <ArrowRight size={17}/></button>
             <button type="button" className="btn" style={{ background:'transparent',color:'hsl(var(--muted-foreground))' }} onClick={()=>{setAuthMode('login');clearMessages()}} data-testid="button-existing-account">{t('haveAccount')} {t('login')}</button>

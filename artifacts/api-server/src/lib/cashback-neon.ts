@@ -357,15 +357,21 @@ export async function mutateCashbackState<T>(
   throw new CashbackError(409, "WRITE_CONFLICT");
 }
 
-export async function createSession(uid: string): Promise<string> {
+export function createSessionGrant(uid: string): { token: string; write: any } {
   const token = randomBytes(32).toString("base64url");
   const tokenHash = createHash("sha256").update(token).digest("hex");
   const expiresAt = Date.now() + SESSION_LIFETIME_MS;
-  const saved = await commit([
-    documentWrite("sessions", tokenHash, { uid, expiresAt }, false),
-  ]);
+  return {
+    token,
+    write: documentWrite("sessions", tokenHash, { uid, expiresAt }, false),
+  };
+}
+
+export async function createSession(uid: string): Promise<string> {
+  const grant = createSessionGrant(uid);
+  const saved = await commit([grant.write]);
   if (!saved) throw new CashbackError(503, "SESSION_CREATE_FAILED");
-  return token;
+  return grant.token;
 }
 
 export function sessionCookieName(): string {
