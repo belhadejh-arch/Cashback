@@ -86,9 +86,9 @@ const featureTranslations: Record<Lang, Dict> = {
   },
 };
 const extraTranslations: Record<Lang, Dict> = {
-  en: { categories: 'Categories', accountSection: 'My account', claimHistory: 'Receipt history', rewardShops: 'Shops with rewards', transactions: 'Transactions', myDetails: 'Personal details', quickAccess: 'Your account', interfacePrefs: 'Preferences', helloProfile: 'Your local rewards, at a glance.', approvedReceipts: 'Approved receipts', profileSettingsTitle: 'Profile & settings', inviteFriends: 'Invite friends', inviteMessage: 'Join me on CASH BACK and earn rewards at local shops.', inviteCopied: 'Invitation link copied.', shareUnavailable: 'Sharing is unavailable in this browser.', changePhoto:'Change profile photo', photoUploading:'Uploading photo…', photoSaved:'Profile photo updated.', photoInvalidType:'Choose a JPEG, PNG or WebP image.', photoTooLarge:'Photo must be 5 MB or smaller.', photoUploadError:'Could not update your photo. Please try again.', noTransactions:'No transactions yet', historyLoad:'Loading your history…', receiptHistoryIntro:'Every receipt you have sent for review.', transactionHistoryIntro:'Every reward earned and redeemed across your shops.', payAtShop:'Pay at this shop', shopHistory:'Recent activity', viewShopHistory:'View shop history', myShopBalances:'My balances at shops' },
-  fr: { categories: 'Catégories', accountSection: 'Mon compte', claimHistory: 'Historique des reçus', rewardShops: 'Commerces avec récompenses', transactions: 'Transactions', myDetails: 'Informations personnelles', quickAccess: 'Votre compte', interfacePrefs: 'Préférences', helloProfile: 'Vos récompenses locales, en un coup d’œil.', approvedReceipts: 'Reçus approuvés', profileSettingsTitle: 'Profil et paramètres', inviteFriends: 'Inviter des amis', inviteMessage: 'Rejoignez CASH BACK et gagnez des récompenses dans les commerces locaux.', inviteCopied: 'Lien d’invitation copié.', shareUnavailable: 'Le partage est indisponible dans ce navigateur.', changePhoto:'Modifier la photo de profil', photoUploading:'Envoi de la photo…', photoSaved:'Photo de profil mise à jour.', photoInvalidType:'Choisissez une image JPEG, PNG ou WebP.', photoTooLarge:'La photo doit faire 5 Mo maximum.', photoUploadError:'Impossible de modifier la photo. Réessayez.', noTransactions:'Aucune transaction pour le moment', historyLoad:'Chargement de l’historique…', receiptHistoryIntro:'Tous les reçus envoyés pour vérification.', transactionHistoryIntro:'Toutes les récompenses gagnées et utilisées dans vos commerces.', payAtShop:'Payer dans ce commerce', shopHistory:'Activité récente', viewShopHistory:'Voir l’historique', myShopBalances:'Mes soldes par commerce' },
-  ar: { categories: 'التصنيفات', accountSection: 'حسابي', claimHistory: 'سجل الفواتير', rewardShops: 'متاجر لديها مكافآت', transactions: 'المعاملات', myDetails: 'البيانات الشخصية', quickAccess: 'حسابك', interfacePrefs: 'التفضيلات', helloProfile: 'مكافآتك المحلية، في لمحة.', approvedReceipts: 'الفواتير المقبولة', profileSettingsTitle: 'الملف الشخصي والإعدادات', inviteFriends: 'دعوة الأصدقاء', inviteMessage: 'انضم إليّ في CASH BACK واكسب مكافآت من المتاجر المحلية.', inviteCopied: 'تم نسخ رابط الدعوة.', shareUnavailable: 'المشاركة غير متاحة في هذا المتصفح.', changePhoto:'تغيير الصورة الشخصية', photoUploading:'جارٍ رفع الصورة…', photoSaved:'تم تحديث الصورة الشخصية.', photoInvalidType:'اختر صورة JPEG أو PNG أو WebP.', photoTooLarge:'يجب ألا يتجاوز حجم الصورة 5 ميغابايت.', photoUploadError:'تعذر تحديث الصورة. يرجى المحاولة مجدداً.', noTransactions:'لا توجد معاملات بعد', historyLoad:'جارٍ تحميل السجل…', receiptHistoryIntro:'كل الإيصالات التي أرسلتها للمراجعة.', transactionHistoryIntro:'كل المكافآت المكتسبة والمستخدمة لدى متاجرك.', payAtShop:'ادفع لدى هذا المتجر', shopHistory:'آخر العمليات', viewShopHistory:'عرض سجل المتجر', myShopBalances:'أرصدتي لدى المحلات' },
+  en: { categories: 'Categories', accountSection: 'My account', claimHistory: 'Receipt history', rewardShops: 'Shops with rewards', transactions: 'Transactions', myDetails: 'Personal details', quickAccess: 'Your account', interfacePrefs: 'Preferences', helloProfile: 'Your local rewards, at a glance.', approvedReceipts: 'Approved receipts', profileSettingsTitle: 'Profile & settings', inviteFriends: 'Invite friends', inviteMessage: 'Join me on CASH BACK and earn rewards at local shops.', inviteCopied: 'Invitation link copied.', shareUnavailable: 'Sharing is unavailable in this browser.', changePhoto:'Change profile photo', photoUploading:'Uploading photo…', photoSaved:'Profile photo updated.', photoInvalidType:'Choose a JPEG, PNG or WebP image.', photoTooLarge:'Photo must be 5 MB or smaller.', photoUploadError:'Could not update your photo. Please try again.', noTransactions:'No transactions yet', historyLoad:'Loading your history…', receiptHistoryIntro:'Every receipt you have sent for review.', transactionHistoryIntro:'Every reward earned and redeemed across your shops.', payAtShop:'Pay at this shop', shopHistory:'Recent activity', viewShopHistory:'View shop history', myShopBalances:'My balances at shops', receiptPhotoTooLarge:'This receipt photo is too large. Take it again with the camera.', receiptUploadFailed:'Could not upload the receipt photo. Check your connection and try again.', receiptSubmitFailed:'The receipt could not be saved for review. Please try again.' },
+  fr: { categories: 'Catégories', accountSection: 'Mon compte', claimHistory: 'Historique des reçus', rewardShops: 'Commerces avec récompenses', transactions: 'Transactions', myDetails: 'Informations personnelles', quickAccess: 'Votre compte', interfacePrefs: 'Préférences', helloProfile: 'Vos récompenses locales, en un coup d’œil.', approvedReceipts: 'Reçus approuvés', profileSettingsTitle: 'Profil et paramètres', inviteFriends: 'Inviter des amis', inviteMessage: 'Rejoignez CASH BACK et gagnez des récompenses dans les commerces locaux.', inviteCopied: 'Lien d’invitation copié.', shareUnavailable: 'Le partage est indisponible dans ce navigateur.', changePhoto:'Modifier la photo de profil', photoUploading:'Envoi de la photo…', photoSaved:'Photo de profil mise à jour.', photoInvalidType:'Choisissez une image JPEG, PNG ou WebP.', photoTooLarge:'La photo doit faire 5 Mo maximum.', photoUploadError:'Impossible de modifier votre photo. Réessayez.', noTransactions:'Aucune transaction pour le moment', historyLoad:'Chargement de l’historique…', receiptHistoryIntro:'Tous les reçus envoyés pour vérification.', transactionHistoryIntro:'Toutes les récompenses gagnées et utilisées dans vos commerces.', payAtShop:'Payer dans ce commerce', shopHistory:'Activité récente', viewShopHistory:'Voir l’historique', myShopBalances:'Mes soldes par commerce', receiptPhotoTooLarge:'La photo du reçu est trop volumineuse. Reprenez-la avec l’appareil photo.', receiptUploadFailed:'Impossible d’envoyer la photo du reçu. Vérifiez votre connexion.', receiptSubmitFailed:'Impossible d’enregistrer le reçu pour vérification. Réessayez.' },
+  ar: { categories: 'التصنيفات', accountSection: 'حسابي', claimHistory: 'سجل الفواتير', rewardShops: 'متاجر لديها مكافآت', transactions: 'المعاملات', myDetails: 'البيانات الشخصية', quickAccess: 'حسابك', interfacePrefs: 'التفضيلات', helloProfile: 'مكافآتك المحلية، في لمحة.', approvedReceipts: 'الفواتير المقبولة', profileSettingsTitle: 'الملف الشخصي والإعدادات', inviteFriends: 'دعوة الأصدقاء', inviteMessage: 'انضم إليّ في CASH BACK واكسب مكافآت من المتاجر المحلية.', inviteCopied: 'تم نسخ رابط الدعوة.', shareUnavailable: 'المشاركة غير متاحة في هذا المتصفح.', changePhoto:'تغيير الصورة الشخصية', photoUploading:'جارٍ رفع الصورة…', photoSaved:'تم تحديث الصورة الشخصية.', photoInvalidType:'اختر صورة JPEG أو PNG أو WebP.', photoTooLarge:'يجب ألا يتجاوز حجم الصورة 5 ميغابايت.', photoUploadError:'تعذر تحديث الصورة. يرجى المحاولة مجدداً.', noTransactions:'لا توجد معاملات بعد', historyLoad:'جارٍ تحميل السجل…', receiptHistoryIntro:'كل الإيصالات التي أرسلتها للمراجعة.', transactionHistoryIntro:'كل المكافآت المكتسبة والمستخدمة لدى متاجرك.', payAtShop:'ادفع لدى هذا المتجر', shopHistory:'آخر العمليات', viewShopHistory:'عرض سجل المتجر', myShopBalances:'أرصدتي لدى المحلات', receiptPhotoTooLarge:'حجم صورة الفاتورة كبير. أعد تصويرها بالكاميرا.', receiptUploadFailed:'تعذر رفع صورة الفاتورة. تحقق من اتصال الإنترنت ثم حاول مجدداً.', receiptSubmitFailed:'تعذر حفظ الفاتورة للمراجعة. حاول مجدداً.' },
 };
 const cameraTranslations: Record<Lang, Dict> = {
   en: {
@@ -603,7 +603,7 @@ function AppInner() {
         return;
       }
       try {
-        const photo = await fileToData(new File([blob], 'receipt.jpg', { type: 'image/jpeg' }));
+        const photo = await fileToData(new File([blob], 'receipt.jpg', { type: 'image/jpeg' }), 6_990_000);
         setReceiptFile(photo);
         setReceiptCameraError('');
         stopReceiptCamera();
@@ -615,11 +615,11 @@ function AppInner() {
   async function handleReceiptPhotoFile(file?: File) {
     if (!file) return;
     try {
-      setReceiptFile(await fileToData(file));
+      setReceiptFile(await fileToData(file, 6_990_000));
       setReceiptCameraError('');
       stopReceiptCamera();
-    } catch {
-      setError(t('genericError'));
+    } catch (caught) {
+      setError((caught as Error)?.message === 'IMAGE_TOO_LARGE' ? t('receiptPhotoTooLarge') : t('genericError'));
     }
   }
   async function saveLogo(file?: File) {
@@ -633,22 +633,39 @@ function AppInner() {
     clearMessages();
     if (!receiptStore || !receiptFile) { setError(t('uploadRequired')); return; }
     if (!Number(purchaseAmount) || Number(purchaseAmount) <= 0 || !purchaseDate) { setError(t('incomplete')); return; }
+    let stage: 'upload' | 'submit' = 'upload';
     try {
       const blob = await (await fetch(receiptFile)).blob();
       const contentType = blob.type as 'image/jpeg'|'image/png'|'image/webp';
-      if (!['image/jpeg','image/png','image/webp'].includes(contentType) || blob.size <= 0 || blob.size > 5 * 1024 * 1024) {
+      if (!['image/jpeg','image/png','image/webp'].includes(contentType) || blob.size <= 0) {
         throw new Error('INVALID_RECEIPT_IMAGE');
       }
+      if (blob.size > 5 * 1024 * 1024) throw new Error('RECEIPT_PHOTO_TOO_LARGE');
       const upload = await receiptPhotoUpload.mutateAsync({ data: { contentType, size: blob.size } });
-      const stored = await fetch(upload.uploadURL, { method:'PUT', headers:{'Content-Type':contentType}, body:blob });
+      const uploadUrl = new URL(upload.uploadURL, window.location.origin);
+      const stored = await fetch(uploadUrl, {
+        method:'PUT',
+        headers:{'Content-Type':contentType},
+        body:blob,
+        credentials:uploadUrl.origin === window.location.origin ? 'same-origin' : 'omit',
+        cache:'no-store',
+      });
       if (!stored.ok) throw new Error('RECEIPT_PHOTO_UPLOAD_FAILED');
+      stage = 'submit';
       await submitReceipt.mutateAsync({ data: { merchantId:receiptStore.id, invoiceNumber: invoice || null, amount:Number(purchaseAmount), date:purchaseDate, uploadId:upload.uploadId, objectPath:upload.objectPath } });
       invalidate(); stopReceiptCamera(); setLocation('/receipts'); setNotice(t('sendReceipt')); setReceiptFile(''); setInvoice(''); setPurchaseAmount('');
     } catch (caught) {
-      const code = (caught as { data?: { error?: string } })?.data?.error || (caught as Error)?.message;
+      const error = caught as { data?: { error?: string }; message?: string; status?: number };
+      const code = error?.data?.error || error?.message;
       if (code === 'DUPLICATE_RECEIPT') setError(t('duplicateReceipt'));
       else if (code === 'RECEIPT_TOO_OLD') setError(t('receiptTooOld'));
-      else if (code === 'INVALID_RECEIPT_IMAGE' || code === 'RECEIPT_IMAGE_REQUIRED' || code === 'RECEIPT_PHOTO_UPLOAD_FAILED') setError(t('imageUploadError'));
+      else if (code === 'RECEIPT_PHOTO_TOO_LARGE') setError(t('receiptPhotoTooLarge'));
+      else if (code === 'INVALID_RECEIPT_IMAGE' || code === 'RECEIPT_IMAGE_REQUIRED') setError(t('imageUploadError'));
+      else if (code === 'RECEIPT_PHOTO_UPLOAD_FAILED') setError(stage === 'upload' ? t('receiptUploadFailed') : t('receiptSubmitFailed'));
+      else if (code === 'INVALID_AMOUNT' || code === 'INVALID_RECEIPT_DATE' || code === 'INVALID_REQUEST') setError(t('incomplete'));
+      else if (code === 'MERCHANT_UNAVAILABLE') setError(lang==='ar'?'هذا المتجر غير متاح حالياً. اختر متجراً مشاركاً آخر.':lang==='fr'?'Ce commerce n’est pas disponible. Choisissez un autre commerce participant.':'This shop is unavailable. Choose another participating shop.');
+      else if (code === 'INTERNAL_ERROR' || (error?.status ?? 0) >= 500) setError(stage === 'upload' ? t('receiptUploadFailed') : t('receiptSubmitFailed'));
+      else if (code === 'Failed to fetch' || code === 'NetworkError') setError(stage === 'upload' ? t('receiptUploadFailed') : t('receiptSubmitFailed'));
       else showErr(caught);
     }
   }

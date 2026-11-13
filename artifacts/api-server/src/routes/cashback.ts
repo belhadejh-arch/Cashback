@@ -151,6 +151,32 @@ function respondError(res: Response, error: unknown): void {
   res.status(500).json({ error: "INTERNAL_ERROR" });
 }
 
+function logReceiptFailure(req: any, operation: string, error: unknown): void {
+  const value = error as {
+    code?: unknown;
+    constraint?: unknown;
+    table?: unknown;
+    column?: unknown;
+  } | null;
+  const context = {
+    operation,
+    errorName: error instanceof Error ? error.name : "UnknownError",
+    errorCode: error instanceof CashbackError
+      ? error.code
+      : typeof value?.code === "string"
+        ? value.code
+        : undefined,
+    constraint: typeof value?.constraint === "string" ? value.constraint : undefined,
+    table: typeof value?.table === "string" ? value.table : undefined,
+    column: typeof value?.column === "string" ? value.column : undefined,
+  };
+  if (error instanceof CashbackError && error.status < 500) {
+    req.log.warn(context, "CASH BACK receipt request rejected");
+  } else {
+    req.log.error(context, "CASH BACK receipt request failed");
+  }
+}
+
 router.get("/cashback/health", async (_req, res) => {
   try {
     await verifyNeonConnection();
@@ -780,41 +806,46 @@ router.post("/cashback/auth/logout", async (req, res) => {
 });
 
 router.post("/cashback/receipts/upload-url", async (req, res) => {
-  const profile = (req as unknown as AuthenticatedRequest).cashbackProfile;
-  unauthorizedRole(profile, "customer");
-  const parsed = CreateCashbackReceiptPhotoUploadBody.safeParse(req.body);
-  if (!parsed.success) {
-    throw new CashbackError(400, "INVALID_RECEIPT_IMAGE");
-  }
-  const uploadId = `receipt_${randomUUID()}`;
-  const upload = await createReceiptPhotoUpload(
-    profile.uid,
-    uploadId,
-    parsed.data.contentType,
-    parsed.data.size,
-  );
-  const saved = await commit([
-    documentWrite(
-      "receipt_uploads",
+  try {
+    const profile = (req as unknown as AuthenticatedRequest).cashbackProfile;
+    unauthorizedRole(profile, "customer");
+    const parsed = CreateCashbackReceiptPhotoUploadBody.safeParse(req.body);
+    if (!parsed.success) {
+      throw new CashbackError(400, "INVALID_RECEIPT_IMAGE");
+    }
+    const uploadId = `receipt_${randomUUID()}`;
+    const upload = await createReceiptPhotoUpload(
+      profile.uid,
       uploadId,
-      {
-        ownerUid: profile.uid,
+      parsed.data.contentType,
+      parsed.data.size,
+    );
+    const saved = await commit([
+      documentWrite(
+        "receipt_uploads",
+        uploadId,
+        {
+          ownerUid: profile.uid,
+          objectPath: upload.objectPath,
+          contentType: parsed.data.contentType,
+          requestedSize: parsed.data.size,
+          expiresAt: Date.now() + 15 * 60 * 1000,
+        },
+        false,
+      ),
+    ]);
+    if (!saved) throw new CashbackError(409, "UPLOAD_ALREADY_EXISTS");
+    res.json(
+      CreateCashbackReceiptPhotoUploadResponse.parse({
+        uploadURL: upload.uploadURL,
         objectPath: upload.objectPath,
-        contentType: parsed.data.contentType,
-        requestedSize: parsed.data.size,
-        expiresAt: Date.now() + 15 * 60 * 1000,
-      },
-      false,
-    ),
-  ]);
-  if (!saved) throw new CashbackError(409, "UPLOAD_ALREADY_EXISTS");
-  res.json(
-    CreateCashbackReceiptPhotoUploadResponse.parse({
-      uploadURL: upload.uploadURL,
-      objectPath: upload.objectPath,
-      uploadId,
-    }),
-  );
+        uploadId,
+      }),
+    );
+  } catch (error) {
+    logReceiptFailure(req, "receipt-upload-url", error);
+    respondError(res, error);
+  }
 });
 
 router.post("/cashback/receipts", async (req, res) => {
@@ -992,6 +1023,7 @@ router.post("/cashback/receipts", async (req, res) => {
     });
     res.status(201).json(receipt);
   } catch (error) {
+    logReceiptFailure(req, "receipt-submit", error);
     if (
       suspiciousReceipt &&
       error instanceof CashbackError &&
