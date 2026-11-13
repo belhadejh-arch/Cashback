@@ -17,10 +17,10 @@ import {
   ArrowDownLeft, ArrowLeft, ArrowRight, BadgeCheck, Banknote, Bell, Camera, Check, ChevronDown, Home,
   CircleHelp, Clock3, Compass, Coffee, FileCheck2, FilePlus2, Gift, Globe2, Laptop, LogOut, MapPin, Moon, Share2,
   Plus, ReceiptText, Search, Settings, ShieldCheck, Store, Sun, UserRound, Wallet,
-  X, RefreshCw, LockKeyhole, Percent, LocateFixed, MoreHorizontal, Shirt, ShoppingBag, Star, Tag, Utensils, Download, Printer, ScanLine, RotateCcw, FileDown, CheckCheck,
+  X, RefreshCw, LockKeyhole, Percent, LocateFixed, MoreHorizontal, Shirt, ShoppingBag, Star, Tag, Utensils, Download, ScanLine, RotateCcw, CheckCheck,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { deliverFile } from '@/lib/fileDelivery';
+import { downloadFileDirect } from '@/lib/fileDelivery';
 import { Route, Switch, Router as WouterRouter } from 'wouter';
 import NotFound from '@/pages/not-found';
 import { MerchantWorkspace } from '@/components/merchant-workspace/MerchantWorkspace';
@@ -1057,9 +1057,7 @@ function AppInner() {
         <span className="qr-eyebrow">{t('merchantActive')}</span><strong>{t('qrCode')}</strong>
         <div className="subtle">{t('merchantId')}: {shop.publicId||'—'}</div>
         <div className="merchant-qr-controls">
-          <button className="btn btn-outline" type="button" onClick={()=>void downloadMerchantQr('png',t,shop.name,shop.publicId||'')} disabled={!shop.qrValue}><Download size={16}/>{qrFileActionLabel(lang,'png')}</button>
-          <button className="btn btn-outline" type="button" onClick={()=>void downloadMerchantQr('pdf',t,shop.name,shop.publicId||'')} disabled={!shop.qrValue}><FileDown size={16}/>{qrFileActionLabel(lang,'pdf')}</button>
-          <button className="btn btn-outline" type="button" onClick={()=>printMerchantQr(t,shop.name,shop.publicId||'')} disabled={!shop.qrValue}><Printer size={16}/>{t('qrPrint')}</button>
+          <button className="btn btn-primary" type="button" onClick={()=>void downloadMerchantQr(t,shop.name,shop.publicId||'')} disabled={!shop.qrValue} data-testid="button-merchant-qr-download"><Download size={16}/>{qrDownloadLabels[lang]}</button>
         </div>
       </div>
       {shop.publicId&&shop.qrValue
@@ -1408,9 +1406,7 @@ function MerchantDashboard({shop,state,claims,t,lang,notice,error,onRefresh}:{sh
         <span className="qr-eyebrow">{t('merchantActive')}</span><strong>{t('qrCode')}</strong>
         <div className="subtle">{t('merchantId')}: {shop?.publicId||'—'}</div>
         <div className="merchant-qr-controls">
-          <button className="btn btn-outline" type="button" onClick={()=>void downloadMerchantQr('png',t,shop?.name||'',shop?.publicId||'')} disabled={!shop?.qrValue}><Download size={16}/>{qrFileActionLabel(lang,'png')}</button>
-          <button className="btn btn-outline" type="button" onClick={()=>void downloadMerchantQr('pdf',t,shop?.name||'',shop?.publicId||'')} disabled={!shop?.qrValue}><FileDown size={16}/>{qrFileActionLabel(lang,'pdf')}</button>
-          <button className="btn btn-outline" type="button" onClick={()=>printMerchantQr(t,shop?.name||'',shop?.publicId||'')} disabled={!shop?.qrValue}><Printer size={16}/>{t('qrPrint')}</button>
+          <button className="btn btn-primary" type="button" onClick={()=>void downloadMerchantQr(t,shop?.name||'',shop?.publicId||'')} disabled={!shop?.qrValue} data-testid="button-merchant-qr-download"><Download size={16}/>{qrDownloadLabels[lang]}</button>
         </div>
       </div>
       {shop?.publicId&&shop.qrValue?<div className="merchant-qr-sheet" id="merchant-payment-qr" data-testid="merchant-payment-qr"><QRCodeSVG value={shop.qrValue} size={220} bgColor="#ffffff" fgColor="#140b05" level="M" includeMargin aria-label={t('qrCode')}/><strong className="merchant-qr-name">{shop.name}</strong><span dir="ltr">{shop.publicId}</span></div>:<p className="subtle">{t('qrExportError')}</p>}
@@ -1431,94 +1427,39 @@ function MerchantDashboard({shop,state,claims,t,lang,notice,error,onRefresh}:{sh
   </div>;
 }
 function readMerchantQrSvg() { return document.querySelector<SVGSVGElement>('#merchant-payment-qr svg'); }
-function qrFileActionLabel(lang:Lang,format:'png'|'pdf') {
-  const type=format.toUpperCase();
-  if(lang==='ar')return `مشاركة أو تنزيل ${type}`;
-  if(lang==='fr')return `Partager ou télécharger ${type}`;
-  return `Share or download ${type}`;
-}
-async function downloadMerchantQr(kind:'png'|'pdf',t:(key:string)=>string,shopName:string,shopId:string):Promise<void> {
+const qrDownloadLabels:Record<Lang,string> = {
+  ar:'تنزيل QR بصيغة PDF',
+  en:'Download QR as PDF',
+  fr:'Télécharger le QR en PDF',
+};
+async function downloadMerchantQr(t:(key:string)=>string,shopName:string,shopId:string):Promise<void> {
   try {
     const svg=readMerchantQrSvg();
     if(!svg)throw new Error('QR_NOT_FOUND');
     const markup=new XMLSerializer().serializeToString(svg);
-    if(kind==='pdf') {
-      const [{jsPDF}]=await Promise.all([import('jspdf'),import('svg2pdf.js')]);
-      const pdf=new jsPDF({orientation:'portrait',unit:'pt',format:'a4'});
-      const svgElement=new DOMParser().parseFromString(markup,'image/svg+xml').documentElement as unknown as SVGSVGElement;
-      const size=260;
-      const vectorPdf=pdf as typeof pdf & {svg:(element:SVGSVGElement,options:{x:number;y:number;width:number;height:number})=>Promise<unknown>};
-      await vectorPdf.svg(svgElement,{x:(595.28-size)/2,y:90,width:size,height:size});
-      await document.fonts?.load('700 64px Changa',shopName);
-      const nameCanvas=document.createElement('canvas');
-      nameCanvas.width=2000;nameCanvas.height=180;
-      const nameContext=nameCanvas.getContext('2d');
-      if(!nameContext)throw new Error('PDF_TEXT_RENDER_FAILED');
-      nameContext.clearRect(0,0,nameCanvas.width,nameCanvas.height);
-      nameContext.fillStyle='#241307';
-      nameContext.font='700 64px Changa, sans-serif';
-      nameContext.textAlign='center';
-      nameContext.textBaseline='middle';
-      nameContext.direction='rtl';
-      nameContext.fillText(shopName,nameCanvas.width/2,nameCanvas.height/2,1900);
-      pdf.addImage(nameCanvas.toDataURL('image/png'),'PNG',60,365,475,43);
-      pdf.setFontSize(12);
-      pdf.text(`${t('merchantId')}: ${shopId}`,595.28/2,430,{align:'center'});
-      await deliverFile(pdf.output('blob'),'cashback-shop-qr.pdf');
-      return;
-    }
-    const blob=new Blob([markup],{type:'image/svg+xml;charset=utf-8'});
-    const url=URL.createObjectURL(blob);
-    const png=await new Promise<Blob>((resolve,reject)=>{
-      const image=new Image();
-      image.onload=()=>{
-        const canvas=document.createElement('canvas');
-        canvas.width=1200;
-        canvas.height=1200;
-        const context=canvas.getContext('2d');
-        if(!context){URL.revokeObjectURL(url);reject(new Error('QR_CANVAS_FAILED'));return;}
-        context.fillStyle='#ffffff';
-        context.fillRect(0,0,canvas.width,canvas.height);
-        context.drawImage(image,0,0,canvas.width,canvas.height);
-        canvas.toBlob(result=>{
-          URL.revokeObjectURL(url);
-          if(!result)reject(new Error('QR_PNG_FAILED'));
-          else resolve(result);
-        },'image/png');
-      };
-      image.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('QR_SVG_FAILED'));};
-      image.src=url;
-    });
-    await deliverFile(png,'cashback-shop-qr.png');
+    const [{jsPDF}]=await Promise.all([import('jspdf'),import('svg2pdf.js')]);
+    const pdf=new jsPDF({orientation:'portrait',unit:'pt',format:'a4'});
+    const svgElement=new DOMParser().parseFromString(markup,'image/svg+xml').documentElement as unknown as SVGSVGElement;
+    const size=260;
+    const vectorPdf=pdf as typeof pdf & {svg:(element:SVGSVGElement,options:{x:number;y:number;width:number;height:number})=>Promise<unknown>};
+    await vectorPdf.svg(svgElement,{x:(595.28-size)/2,y:90,width:size,height:size});
+    await document.fonts?.load('700 64px Changa',shopName);
+    const nameCanvas=document.createElement('canvas');
+    nameCanvas.width=2000;nameCanvas.height=180;
+    const nameContext=nameCanvas.getContext('2d');
+    if(!nameContext)throw new Error('PDF_TEXT_RENDER_FAILED');
+    nameContext.clearRect(0,0,nameCanvas.width,nameCanvas.height);
+    nameContext.fillStyle='#241307';
+    nameContext.font='700 64px Changa, sans-serif';
+    nameContext.textAlign='center';
+    nameContext.textBaseline='middle';
+    nameContext.direction='rtl';
+    nameContext.fillText(shopName,nameCanvas.width/2,nameCanvas.height/2,1900);
+    pdf.addImage(nameCanvas.toDataURL('image/png'),'PNG',60,365,475,43);
+    pdf.setFontSize(12);
+    pdf.text(`${t('merchantId')}: ${shopId}`,595.28/2,430,{align:'center'});
+    downloadFileDirect(pdf.output('blob'),'cashback-shop-qr.pdf');
   } catch { alert(t('qrExportError')); }
-}
-function printMerchantQr(t:(key:string)=>string,shopName:string,shopId:string) {
-  const svg=readMerchantQrSvg();
-  if(!svg){alert(t('qrExportError'));return;}
-  const popup=window.open('','_blank','width=520,height=640');
-  if(!popup){alert(t('qrExportError'));return;}
-  popup.document.open();
-  popup.document.write('<!doctype html><html><head><meta charset="utf-8"><title>CASH BACK</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Changa:wght@400;700&display=swap"><style>body{font-family:Changa,sans-serif;display:grid;place-items:center;min-height:95vh;color:#28190f}.sheet{text-align:center}.sheet svg{width:300px;height:300px}.id{font:14px monospace;margin-top:18px}</style></head><body></body></html>');
-  popup.document.close();
-  const sheet=popup.document.createElement('main');
-  sheet.className='sheet';
-  sheet.append(svg.cloneNode(true));
-  const name=popup.document.createElement('h1');
-  name.textContent=shopName;
-  name.style.fontSize='22px';
-  const id=popup.document.createElement('div');
-  id.className='id';
-  id.textContent=`${t('merchantId')}: ${shopId}`;
-  sheet.append(name);
-  sheet.append(id);
-  popup.document.body.append(sheet);
-  const closeAfterPrint=()=>{popup.close();};
-  popup.addEventListener('afterprint',closeAfterPrint,{once:true});
-  let printed=false;
-  const printNow=()=>{if(!printed&&!popup.closed){printed=true;popup.focus();popup.print();}};
-  void popup.document.fonts?.ready.then(printNow);
-  window.setTimeout(printNow,1500);
-  window.setTimeout(()=>{if(!popup.closed)popup.close();},20000);
 }
 function Metric({label,value,icon}:{label:string;value:string;icon:ReactNode}) { return <div className="surface" style={{padding:17}}><div style={{color:'hsl(var(--primary))'}}>{icon}</div><strong style={{fontSize:27,display:'block'}}>{value}</strong><span className="subtle">{label}</span></div>; }
 function AdminDashboard({merchants,claims,state,t,lang,reason,setReason,decideShop,decideClaim,rate,setRate,platformCommissionRate,setPlatformCommissionRate,saveRate,saveCategories,reversePayment,reversalPending,notice,error,onRefresh}:{merchants:Merchant[];claims:Claim[];state:Session['state'];t:(s:string)=>string;lang:Lang;reason:string;setReason:(s:string)=>void;decideShop:(m:Merchant,a:boolean)=>void;decideClaim:(c:Claim,a:boolean)=>void;rate:string;setRate:(s:string)=>void;platformCommissionRate:string;setPlatformCommissionRate:(s:string)=>void;saveRate:()=>void;saveCategories:(categories:string[])=>void;reversePayment:(id:string,reason:string)=>Promise<void>;reversalPending:boolean;notice:string;error:string;onRefresh:()=>void}) {
