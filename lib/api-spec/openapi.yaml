@@ -1060,6 +1060,7 @@ components:
       properties:
         approved: { type: boolean }
         reason: { type: ["string", "null"], maxLength: 300 }
+        approvedAmount: { type: number, exclusiveMinimum: 0, maximum: 1000000000000 }
     CashbackMerchantDecision:
       type: object
       required: [approved]

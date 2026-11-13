@@ -1096,18 +1096,48 @@ function getParamId(req: any): string {
 router.patch("/cashback/receipts/:id/decision", async (req, res) => {
   const profile = (req as unknown as AuthenticatedRequest).cashbackProfile;
   try {
-    requireAdmin(profile);
+    if (profile.role !== "admin" && profile.role !== "merchant") {
+      throw new CashbackError(403, "NO_PERMISSION");
+    }
     const id = getParamId(req);
     const parsed = DecideCashbackReceiptBody.safeParse(req.body);
     if (!parsed.success) throw new CashbackError(400, "INVALID_REQUEST");
+    if (profile.role === "merchant" && parsed.data.approvedAmount !== undefined) {
+      throw new CashbackError(403, "MERCHANT_CANNOT_CHANGE_INVOICE_AMOUNT");
+    }
+    const decisionReason = fieldString(parsed.data.reason ?? "");
+    if (!parsed.data.approved && decisionReason.length < 3) {
+      throw new CashbackError(400, "REJECTION_REASON_REQUIRED");
+    }
     await mutateState((state) => {
       const claim = (state.claims ?? []).find((entry: any) => entry.id === id);
       if (!claim) throw new CashbackError(404, "RECEIPT_NOT_FOUND");
       if (claim.status !== "pending") throw new CashbackError(409, "RECEIPT_ALREADY_REVIEWED");
+      if (profile.role === "merchant" && claim.mid !== profile.eid) {
+        throw new CashbackError(403, "INVOICE_NOT_OWNED_BY_MERCHANT");
+      }
       const merchant = (state.merchants ?? []).find((entry: any) => entry.id === claim.mid);
       const customer = (state.customers ?? []).find((entry: any) => entry.id === claim.cid);
       if (!merchant || !customer) throw new CashbackError(409, "RECEIPT_PROFILE_MISSING");
+      if (profile.role === "merchant" && merchant.status !== "active") {
+        throw new CashbackError(403, "MERCHANT_NOT_ACTIVE");
+      }
       if (parsed.data.approved) {
+        const submittedAmount = Number(claim.submittedAmount ?? claim.amount);
+        const verifiedAmount = Math.round(
+          (Number(profile.role === "admin" ? parsed.data.approvedAmount ?? claim.amount : claim.amount) + Number.EPSILON) * 100,
+        ) / 100;
+        if (
+          !Number.isFinite(verifiedAmount) ||
+          verifiedAmount <= 0 ||
+          verifiedAmount > 1_000_000_000_000 ||
+          !Number.isSafeInteger(Math.round(verifiedAmount * 100))
+        ) {
+          throw new CashbackError(400, "INVALID_APPROVED_INVOICE_AMOUNT");
+        }
+        claim.submittedAmount ??= submittedAmount;
+        claim.verifiedAmount = verifiedAmount;
+        claim.amount = verifiedAmount;
         const cashbackRate = Number(merchant.cashbackRate ?? state.settings?.cashback ?? 4);
         const platformCommissionRate = Number(
           merchant.platformCommissionRate ?? state.settings?.platformCommission ?? 2,
@@ -1122,7 +1152,7 @@ router.patch("/cashback/receipts/:id/decision", async (req, res) => {
           throw new CashbackError(409, "INVALID_COMMISSION_CONFIGURATION");
         }
         const amounts = calculateCommissionAmounts(
-          Number(claim.amount),
+          verifiedAmount,
           cashbackRate,
           platformCommissionRate,
         );
@@ -1137,7 +1167,8 @@ router.patch("/cashback/receipts/:id/decision", async (req, res) => {
           invoiceNumber: claim.invoiceNumber ?? null,
           country: merchant.country ?? null,
           currency: merchant.country === "Libya" ? "LYD" : "DZD",
-          invoiceAmount: claim.amount,
+          submittedInvoiceAmount: submittedAmount,
+          invoiceAmount: verifiedAmount,
           cashbackRate,
           platformCommissionRate,
           cashbackAmount: cashback,
@@ -1172,7 +1203,8 @@ router.patch("/cashback/receipts/:id/decision", async (req, res) => {
           commissionEntryId: commissionEntry.id,
           merchantId: merchant.id,
           customerId: customer.id,
-          invoiceAmount: claim.amount,
+          submittedInvoiceAmount: submittedAmount,
+          invoiceAmount: verifiedAmount,
           cashbackAmount: cashback,
           platformCommissionAmount: platformCommission,
           merchantObligationAmount: merchantObligation,
@@ -1188,7 +1220,7 @@ router.patch("/cashback/receipts/:id/decision", async (req, res) => {
           t: Date.now(),
           mid: merchant.id,
           cid: customer.id,
-          amount: claim.amount,
+          amount: verifiedAmount,
           cashback,
           method: "receipt",
           receiptId: claim.id,
@@ -1220,7 +1252,19 @@ router.patch("/cashback/receipts/:id/decision", async (req, res) => {
         claim.status = "rejected";
         claim.reviewedAt = Date.now();
         claim.reviewedBy = profile.uid;
-        claim.reason = fieldString(parsed.data.reason ?? "") || "RECEIPT_REJECTED";
+        claim.reason = decisionReason;
+        state.audit ??= [];
+        state.audit.unshift({
+          id: `audit_${randomUUID().replaceAll("-", "").slice(0, 18)}`,
+          action: "invoice_rejected",
+          receiptId: claim.id,
+          merchantId: merchant.id,
+          customerId: customer.id,
+          invoiceAmount: Number(claim.amount),
+          reason: decisionReason,
+          adminUid: profile.uid,
+          at: Date.now(),
+        });
         addCashbackNotification(state, customer.id, "customer.receipt.rejected", {
           merchant: merchant.name,
           reason: claim.reason,

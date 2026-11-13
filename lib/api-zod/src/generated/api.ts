@@ -233,11 +233,15 @@ export const DecideCashbackReceiptParams = zod.object({
 
 export const decideCashbackReceiptBodyReasonMax = 300;
 
+export const decideCashbackReceiptBodyApprovedAmountExclusiveMin = 0;
+export const decideCashbackReceiptBodyApprovedAmountMax = 1000000000000;
+
 
 
 export const DecideCashbackReceiptBody = zod.object({
   "approved": zod.boolean(),
-  "reason": zod.string().max(decideCashbackReceiptBodyReasonMax).nullish()
+  "reason": zod.string().max(decideCashbackReceiptBodyReasonMax).nullish(),
+  "approvedAmount": zod.number().gt(decideCashbackReceiptBodyApprovedAmountExclusiveMin).max(decideCashbackReceiptBodyApprovedAmountMax).optional()
 })
 
 export const DecideCashbackReceiptResponse = zod.record(zod.string(), zod.unknown())

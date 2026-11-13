@@ -21,7 +21,7 @@ type Row = Record<string, any>;
 type Props = {
   merchants: Row[]; claims: Row[]; state: Row; t: (key:string)=>string; lang:Lang;
   reason:string; setReason:(value:string)=>void; decideShop:(merchant:Row,approved:boolean)=>void;
-  decideClaim:(claim:Row,approved:boolean)=>void; rate:string; setRate:(value:string)=>void;
+  decideClaim:(claim:Row,approved:boolean,approvedAmount?:number,decisionReason?:string)=>void; rate:string; setRate:(value:string)=>void;
   platformCommissionRate:string; setPlatformCommissionRate:(value:string)=>void; saveRate:()=>void;
   saveCategories:(categories:string[])=>void; reversePayment:(id:string,reason:string)=>Promise<void>;
   reversalPending:boolean; notice:string; error:string; onRefresh:()=>void;
@@ -35,6 +35,11 @@ const overviewCopy:Record<Lang,Record<string,string>> = {
   en:{customers:'Distinct customers',totalCustomers:'Total customers',totalMerchants:'Total merchants',activeMerchants:'Active merchants',pendingMerchants:'Pending merchants',totalInvoices:'Total invoices',approvedInvoices:'Approved invoices',rejectedInvoices:'Rejected invoices',cashbackUsed:'Cashback redeemed',totalQr:'QR payments completed',totalQrCount:'Completed QR transactions',commissionCollected:'Commission collected',commissionDue:'Commission outstanding',withdrawalReserved:'Withdrawals in settlement',withdrawalsPaid:'Withdrawals paid',topupsTotal:'Total approved top-ups',merchantPayoutBalance:'Merchant payout balance',activityLog:'Activity log',receipts:'Invoices',payments:'Payments',noActivity:'No activity recorded.',suspendMerchantConfirm:'Suspend this merchant? The store will stop receiving new purchases.',suspendCustomerConfirm:'Suspend this customer account? The customer will lose access until reactivated.',categorySaved:'Category updated.',currencyScope:'Applies to new merchant applications; existing stores and balances continue.'},
   fr:{customers:'Clients distincts',totalCustomers:'Nombre total de clients',totalMerchants:'Nombre total de commerces',activeMerchants:'Commerces actifs',pendingMerchants:'Commerces en attente',totalInvoices:'Factures totales',approvedInvoices:'Factures approuvées',rejectedInvoices:'Factures refusées',cashbackUsed:'Récompenses utilisées',totalQr:'Paiements QR effectués',totalQrCount:'Transactions QR terminées',commissionCollected:'Commission encaissée',commissionDue:'Commission restante due',withdrawalReserved:'Retraits en règlement',withdrawalsPaid:'Retraits payés',topupsTotal:'Recharges approuvées',merchantPayoutBalance:'Solde de paiement marchand',activityLog:'Journal des opérations',receipts:'Factures',payments:'Paiements',noActivity:'Aucune opération enregistrée.',suspendMerchantConfirm:'Suspendre ce commerce ? Il ne pourra plus recevoir de nouveaux achats.',suspendCustomerConfirm:'Suspendre ce compte client ? Le client perdra l’accès jusqu’à sa réactivation.',categorySaved:'Catégorie modifiée.',currencyScope:'Concerne les nouvelles demandes de commerce ; les boutiques et soldes existants continuent.'},
   ar:{customers:'الزبائن المميزون',totalCustomers:'إجمالي الزبائن',totalMerchants:'إجمالي التجار',activeMerchants:'التجار النشطون',pendingMerchants:'التجار المعلقون',totalInvoices:'إجمالي الفواتير',approvedInvoices:'الفواتير المقبولة',rejectedInvoices:'الفواتير المرفوضة',cashbackUsed:'الكاش باك المستعمل',totalQr:'إجمالي مدفوعات QR',totalQrCount:'عمليات الدفع المكتملة عبر QR',commissionCollected:'العمولات المحصلة',commissionDue:'العمولات المستحقة',withdrawalReserved:'السحوبات قيد التسوية',withdrawalsPaid:'السحوبات المدفوعة',topupsTotal:'إجمالي الشحنات المقبولة',merchantPayoutBalance:'رصيد التاجر الناتج عن الدفع',activityLog:'سجل العمليات',receipts:'الفواتير',payments:'المدفوعات',noActivity:'لا توجد عمليات مسجلة.',suspendMerchantConfirm:'هل تريد تعليق المتجر؟ سيتوقف عن استقبال المشتريات الجديدة.',suspendCustomerConfirm:'هل تريد تعليق حساب الزبون؟ سيفقد الوصول حتى إعادة تفعيله.',categorySaved:'تم تغيير الفئة.',currencyScope:'ينطبق على طلبات انضمام التجار الجديدة فقط؛ تستمر المتاجر والأرصدة الحالية.'},
+};
+const invoiceReviewCopy:Record<Lang,Record<string,string>> = {
+  en:{verifiedAmount:'Approved amount after invoice review',reportedAmount:'Customer entered',invalidAmount:'Enter a valid amount greater than zero.',reasonRequired:'Enter a rejection reason of at least 3 characters.'},
+  fr:{verifiedAmount:'Montant validé après vérification',reportedAmount:'Montant saisi par le client',invalidAmount:'Saisissez un montant valide supérieur à zéro.',reasonRequired:'Saisissez un motif de refus d’au moins 3 caractères.'},
+  ar:{verifiedAmount:'المبلغ المعتمد بعد مراجعة الفاتورة',reportedAmount:'المبلغ الذي أدخله الزبون',invalidAmount:'أدخل مبلغاً صحيحاً أكبر من صفر.',reasonRequired:'اكتب سبب رفض لا يقل عن 3 أحرف.'},
 };
 const rows=(value:unknown):Row[]=>Array.isArray(value)?value.filter((x):x is Row=>!!x&&typeof x==='object'):[];
 const str=(value:unknown,fallback='')=>typeof value==='string'||typeof value==='number'?String(value):fallback;
@@ -64,6 +69,8 @@ export function AdminConsole(props:Props) {
   const updateCustomer=useUpdateCashbackCustomerStatus(),updateMerchant=useUpdateCashbackMerchantStatus(),rotateQr=useRotateCashbackMerchantQr(),updateSettings=useUpdateCashbackSystemSettings(),updateCategory=useUpdateCashbackMerchantCategory();
   const [tab,setTab]=useState('overview'),[period,setPeriod]=useState('month'),[group,setGroup]=useState('country'),[query,setQuery]=useState(''),[claimStatus,setClaimStatus]=useState('all'),[merchantFilter,setMerchantFilter]=useState('all'),[customerFilter,setCustomerFilter]=useState('all');
   const [flash,setFlash]=useState(''),[busy,setBusy]=useState(''),[selectedCountry,setSelectedCountry]=useState('all');
+  const [invoiceAmounts,setInvoiceAmounts]=useState<Record<string,string>>({});
+  const [invoiceReasons,setInvoiceReasons]=useState<Record<string,string>>({});
   const notificationResponse=notificationsQuery.data as {notifications?:Row[]}|undefined;
   const notificationRows=notificationResponse?.notifications ?? rows(state.notes).filter(note=>note.to==='admin');
   const unreadAdminNotifications=notificationRows.filter(note=>!note.read).length;
@@ -195,7 +202,41 @@ export function AdminConsole(props:Props) {
   }):empty(tx.noCustomers)}</div>;
   const viewInvoices=()=> <div className="ac-stack">
     <div className="ac-toolbar"><div className="ac-search"><Search size={16}/><input className="ac-input" placeholder={tx.search} value={query} onChange={e=>setQuery(e.target.value)} data-testid="input-invoice-search"/></div><label className="ac-filter"><Filter size={15}/><select className="ac-input" value={claimStatus} onChange={e=>setClaimStatus(e.target.value)} data-testid="select-invoice-status"><option value="all">{tx.view}</option>{['pending','approved','rejected','cancelled'].map(s=><option value={s} key={s}>{statusText(s)}</option>)}</select></label></div>
-    {visibleClaims.length?visibleClaims.map(c=>{const id=str(c.id),merchant=merchantById(str(c.mid)),customer=customerById(str(c.cid));return <article className="ac-panel ac-invoice" key={id} data-testid={`invoice-card-${id}`}><header><div><h3>{str(merchant?.name,'—')}</h3><p>{str(c.invoiceNumber,str(c.date,'—'))} · {tx.customer}: {str(customer?.name,str(c.cid))} · {str(customer?.phone,'—')}</p></div><span className={`ac-status is-${statusOf(c)}`}>{statusText(statusOf(c))}</span></header><div className="ac-invoice-meta"><span>{tx.amount}: {money(num(c.amount),currencyOfMerchant(merchant||{}))}</span><span>{tx.receiptDate}: {str(c.created,str(c.date,'—'))}</span>{c.possibleDuplicate&&<b className="ac-danger">{t('possibleDuplicate')}</b>}</div>{c.photoId&&<InvoiceImage id={str(c.photoId)} label={tx.original}/ >}{statusOf(c)==='pending'&&<><label className="ac-field">{tx.reason}<input className="ac-input" value={props.reason} onChange={e=>props.setReason(e.target.value)} data-testid={`input-invoice-reason-${id}`}/></label><div className="ac-actions"><button className="ac-button ac-button-primary" onClick={()=>props.decideClaim(c,true)} data-testid={`button-approve-invoice-${id}`}><Check size={15}/>{tx.approve}</button><button className="ac-button" onClick={()=>props.decideClaim(c,false)} data-testid={`button-reject-invoice-${id}`}><X size={15}/>{tx.reject}</button></div></>}</article>}):empty(tx.noInvoices)}
+     {visibleClaims.length?visibleClaims.map(c=>{
+       const id=str(c.id),merchant=merchantById(str(c.mid)),customer=customerById(str(c.cid));
+       const currency=currencyOfMerchant(merchant||{});
+       const status=statusOf(c);
+       const rejectionReason=(invoiceReasons[id]??'').trim();
+       return <article className="ac-panel ac-invoice" key={id} data-testid={`invoice-card-${id}`}>
+         <header><div><h3>{str(merchant?.name,'—')}</h3><p>{str(c.invoiceNumber,str(c.date,'—'))} · {tx.customer}: {str(customer?.name,str(c.cid))} · {str(customer?.phone,'—')}</p></div><span className={`ac-status is-${status}`}>{statusText(status)}</span></header>
+         <div className="ac-invoice-meta">
+           <span>{tx.amount}: {money(num(c.amount),currency)}</span>
+           <span>{tx.receiptDate}: {str(c.created,str(c.date,'—'))}</span>
+           {c.submittedAmount!==undefined&&num(c.submittedAmount)!==num(c.amount)&&<span>{invoiceReviewCopy[lang].reportedAmount}: {money(num(c.submittedAmount),currency)}</span>}
+           {c.possibleDuplicate&&<b className="ac-danger">{t('possibleDuplicate')}</b>}
+         </div>
+         {c.photoId&&<InvoiceImage id={str(c.photoId)} label={tx.original}/>}
+         {status==='pending'&&<>
+           <label className="ac-field">{invoiceReviewCopy[lang].verifiedAmount}
+             <input type="number" min="0.01" step="0.01" className="ac-input" value={invoiceAmounts[id]??String(c.amount??'')} onChange={e=>setInvoiceAmounts(values=>({...values,[id]:e.target.value}))} data-testid={`input-verified-invoice-amount-${id}`}/>
+           </label>
+           <label className="ac-field">{tx.reason}
+             <input className="ac-input" value={invoiceReasons[id]??''} onChange={e=>setInvoiceReasons(values=>({...values,[id]:e.target.value}))} data-testid={`input-invoice-reason-${id}`}/>
+           </label>
+           <div className="ac-actions">
+             <button className="ac-button ac-button-primary" onClick={()=>{
+               const amount=Number(invoiceAmounts[id]??c.amount);
+               if(!Number.isFinite(amount)||amount<=0){setFlash(invoiceReviewCopy[lang].invalidAmount);return}
+               props.decideClaim(c,true,amount);
+             }} data-testid={`button-approve-invoice-${id}`}><Check size={15}/>{tx.approve}</button>
+             <button className="ac-button" onClick={()=>{
+               if(rejectionReason.length<3){setFlash(invoiceReviewCopy[lang].reasonRequired);return}
+               props.decideClaim(c,false,undefined,rejectionReason);
+             }} data-testid={`button-reject-invoice-${id}`}><X size={15}/>{tx.reject}</button>
+           </div>
+         </>}
+       </article>;
+     }):empty(tx.noInvoices)}
   </div>;
   const viewOperations=()=> <div className="ac-stack">
     <section className="ac-panel">{sectionTitle(tx.operations,tx.separate)}<div className="ac-currency-grid">{(['DZD','LYD'] as const).map(c=>{const x=countryTotals(c);return <div className="ac-fund-card" key={c}><h3>{c} · {c==='DZD'?(lang==='ar'?'الجزائر':lang==='fr'?'Algérie':'Algeria'):(lang==='ar'?'ليبيا':lang==='fr'?'Libye':'Libya')}</h3><p><span>{tx.funded}</span><b>{money(x.topups,c)} · {labels.topupsTotal}: {money(x.topupsTotal,c)}</b></p><p><span>{tx.qr}</span><b>{money(x.qrTotal,c)} · {labels.merchantPayoutBalance}: {money(x.qr,c)}</b></p><p><span>{tx.withdrawal}</span><b>{money(x.withdrawalAvailable,c)}</b></p><p><span>{labels.withdrawalReserved}</span><b>{money(x.reserved,c)}</b></p><p><span>{labels.withdrawalsPaid}</span><b>{money(x.paidWithdrawals,c)}</b></p><p><span>{labels.commissionDue}</span><b>{money(x.outstanding,c)}</b></p><p><span>{labels.commissionCollected}</span><b>{money(x.commissionSettled,c)}</b></p></div>})}</div></section>

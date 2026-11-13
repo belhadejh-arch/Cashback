@@ -31,7 +31,7 @@ import { notificationCopy } from '@/components/notifications/notification-copy';
 type Lang = 'en' | 'fr' | 'ar';
 type Theme = 'dark' | 'light';
 type Merchant = { id: string; name: string; cat?: string; status?: string; country?: string; city?: string; address?: string; mapsUrl?: string; lat?: number; lng?: number; cashbackRate?: number|null; platformCommissionRate?: number|null; logoId?: string; coverId?: string; publicId?: string; qrValue?: string; description?: string; phone?: string; openingHours?: string; legalData?: Record<string, string>; rating?: number; ratingCount?: number; userRating?: number; payoutBalance?: number; payoutDebt?: number; topupBalance?: number; reservedWithdrawalBalance?: number };
-type Claim = { id: string; mid: string; cid: string; invoiceNumber?: string; date?: string; amount: number; photoId?: string; status: string; created?: string; cashback?: number; cashbackRate?: number; platformCommission?: number; platformCommissionRate?: number; merchantObligation?: number; netSale?: number; commissionOutstanding?: number; commissionSettled?: number; reason?: string; submitIp?: string; submittedByUid?: string; possibleDuplicate?: boolean };
+type Claim = { id: string; mid: string; cid: string; invoiceNumber?: string; date?: string; amount: number; submittedAmount?: number; verifiedAmount?: number; photoId?: string; status: string; created?: string; cashback?: number; cashbackRate?: number; platformCommission?: number; platformCommissionRate?: number; merchantObligation?: number; netSale?: number; commissionOutstanding?: number; commissionSettled?: number; reason?: string; submitIp?: string; submittedByUid?: string; possibleDuplicate?: boolean };
 type Txn = { id: string; t?: string; mid: string; cid: string; amount: number; cashback?: number; method?: string };
 type CashbackNote = { id: string; to?: string; text: string; t?: number; read?: boolean };
 type Session = { profile: { uid: string; role: string; eid: string; name: string; phone?: string; email?: string; country?: 'Algeria'|'Libya'; avatarUpdatedAt?: number; preferences?: { language?: Lang; theme?: Theme }; status?: string; rejectionReason?: string }; state: { settings?: { cashback?: number; platformCommission?: number; claimHours?: number; minimumTopupDzd?: number; minimumTopupLyd?: number; enabledCurrencies?: ('DZD'|'LYD')[]; enabledLanguages?: Lang[]; notificationsEnabled?: boolean; paymentMethods?: Record<string, unknown>[] }; categories?: string[]; merchants?: Merchant[]; customers?: { id: string; name: string; phone?: string; email?: string; country?: 'Algeria'|'Libya'; status?: string; cbm?: Record<string, number> }[]; claims?: Claim[]; merchantCommissionLedger?: Record<string, unknown>[]; merchantCommissionSettlements?: Record<string, unknown>[]; txns?: Txn[]; cbpays?: { id: string; cid: string; mid: string; amount: number; status: string; at?: string|number; reference?: string; method?: string; reversalReason?: string }[]; merchantTopups?: Record<string, unknown>[]; merchantWithdrawals?: Record<string, unknown>[]; merchantStoreChangeRequests?: Record<string, unknown>[]; notes?: CashbackNote[] } };
@@ -286,7 +286,13 @@ function AppInner() {
   const [receiptMerchantId, setReceiptMerchantId] = useState(''); const [receiptFile, setReceiptFile] = useState(''); const [invoice, setInvoice] = useState(''); const [purchaseAmount, setPurchaseAmount] = useState(''); const [purchaseDate, setPurchaseDate] = useState(new Date().toISOString().slice(0,10));
   const [reason, setReason] = useState(''); const [rateValue, setRateValue] = useState(''); const [platformCommissionValue, setPlatformCommissionValue] = useState('');
     const t = (key: string) => adminBootstrapTranslations[lang][key] || paymentTranslations[lang][key] || homeNavTranslations[lang][key] || cameraTranslations[lang][key] || authStatusTranslations[lang][key] || featureTranslations[lang][key] || extraTranslations[lang][key] || dictionaries[lang][key] || (key.startsWith('cat_') ? key.slice(4) : key);
-  const { data: session, isLoading, isError, error: queryError, refetch } = useGetCashbackSession({ query: { queryKey: getGetCashbackSessionQueryKey(), enabled: authReady, retry: false, refetchOnWindowFocus: false } });
+  const { data: session, isLoading, isError, error: queryError, refetch } = useGetCashbackSession({ query: {
+    queryKey: getGetCashbackSessionQueryKey(),
+    enabled: authReady,
+    retry: false,
+    refetchOnWindowFocus: true,
+    refetchInterval: query => ['merchant','admin'].includes((query.state.data as Session|undefined)?.profile?.role ?? '') ? 4000 : false,
+  } });
   const sessionHttpStatus = getHttpStatus(queryError);
    const register = useRegisterCashbackProfile(); const submitReceipt = useSubmitCashbackReceipt(); const receiptPhotoUpload = useCreateCashbackReceiptPhotoUpload(); const cancelReceiptRequest = useCancelCashbackReceipt(); const decideReceipt = useDecideCashbackReceipt();
    const decideMerchant = useDecideCashbackMerchant(); const redeem = useRedeemMerchantCashback(); const createPaymentSession = useCreateCashbackPaymentSession(); const reversePayment = useReverseCashbackPayment(); const preferences = useUpdateCashbackPreferences(); const updateRate = useUpdateCashbackRate();
@@ -731,8 +737,8 @@ function AppInner() {
       <button className="btn btn-primary" onClick={()=>void saveReceipt()} disabled={submitReceipt.isPending||receiptPhotoUpload.isPending||activeMerchants.length===0} data-testid="button-submit-receipt"><ReceiptText size={17}/>{submitReceipt.isPending||receiptPhotoUpload.isPending?t('loading'):t('submit')}</button>
     </div>
   </section>;
-  async function decideClaim(claim: Claim, approved: boolean) {
-    try { await decideReceipt.mutateAsync({ id:claim.id, data:{ approved, ...(reason ? {reason} : {}) } }); invalidate(); setReason(''); setNotice(t('success')); }
+  async function decideClaim(claim: Claim, approved: boolean, approvedAmount?:number, decisionReason?:string) {
+    try { await decideReceipt.mutateAsync({ id:claim.id, data:{ approved, ...(approved && approvedAmount !== undefined ? {approvedAmount} : {}), ...(decisionReason ? {reason:decisionReason} : {}) } }); invalidate(); setReason(''); setNotice(t('success')); }
     catch { setError(t('genericError')); }
   }
   async function beginQrPayment(merchantId:string, qrValue:string) {
@@ -1462,10 +1468,10 @@ async function downloadMerchantQr(t:(key:string)=>string,shopName:string,shopId:
   } catch { alert(t('qrExportError')); }
 }
 function Metric({label,value,icon}:{label:string;value:string;icon:ReactNode}) { return <div className="surface" style={{padding:17}}><div style={{color:'hsl(var(--primary))'}}>{icon}</div><strong style={{fontSize:27,display:'block'}}>{value}</strong><span className="subtle">{label}</span></div>; }
-function AdminDashboard({merchants,claims,state,t,lang,reason,setReason,decideShop,decideClaim,rate,setRate,platformCommissionRate,setPlatformCommissionRate,saveRate,saveCategories,reversePayment,reversalPending,notice,error,onRefresh}:{merchants:Merchant[];claims:Claim[];state:Session['state'];t:(s:string)=>string;lang:Lang;reason:string;setReason:(s:string)=>void;decideShop:(m:Merchant,a:boolean)=>void;decideClaim:(c:Claim,a:boolean)=>void;rate:string;setRate:(s:string)=>void;platformCommissionRate:string;setPlatformCommissionRate:(s:string)=>void;saveRate:()=>void;saveCategories:(categories:string[])=>void;reversePayment:(id:string,reason:string)=>Promise<void>;reversalPending:boolean;notice:string;error:string;onRefresh:()=>void}) {
+function AdminDashboard({merchants,claims,state,t,lang,reason,setReason,decideShop,decideClaim,rate,setRate,platformCommissionRate,setPlatformCommissionRate,saveRate,saveCategories,reversePayment,reversalPending,notice,error,onRefresh}:{merchants:Merchant[];claims:Claim[];state:Session['state'];t:(s:string)=>string;lang:Lang;reason:string;setReason:(s:string)=>void;decideShop:(m:Merchant,a:boolean)=>void;decideClaim:(c:Claim,a:boolean,amount?:number,decisionReason?:string)=>void;rate:string;setRate:(s:string)=>void;platformCommissionRate:string;setPlatformCommissionRate:(s:string)=>void;saveRate:()=>void;saveCategories:(categories:string[])=>void;reversePayment:(id:string,reason:string)=>Promise<void>;reversalPending:boolean;notice:string;error:string;onRefresh:()=>void}) {
   return <AdminConsole merchants={merchants} claims={claims} state={state as unknown as Record<string,unknown>} t={t} lang={lang}
     reason={reason} setReason={setReason} decideShop={(m,approved)=>decideShop(m as Merchant,approved)}
-    decideClaim={(c,approved)=>decideClaim(c as Claim,approved)} rate={rate} setRate={setRate}
+     decideClaim={(c,approved,amount,decisionReason)=>decideClaim(c as Claim,approved,amount,decisionReason)} rate={rate} setRate={setRate}
     platformCommissionRate={platformCommissionRate} setPlatformCommissionRate={setPlatformCommissionRate}
     saveRate={saveRate} saveCategories={saveCategories} reversePayment={reversePayment}
     reversalPending={reversalPending} notice={notice} error={error} onRefresh={onRefresh}/>;

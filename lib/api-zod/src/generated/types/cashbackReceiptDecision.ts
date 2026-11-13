@@ -13,4 +13,9 @@ export interface CashbackReceiptDecision {
      * @nullable
      */
   reason?: string | null;
+  /**
+     * @maximum 1000000000000
+     * @exclusiveMinimum 0
+     */
+  approvedAmount?: number;
 }

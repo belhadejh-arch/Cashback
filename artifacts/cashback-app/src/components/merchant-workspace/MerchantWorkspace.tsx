@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import {
   useCreateCashbackMerchantAssetUpload, useUpdateCashbackMerchantStore,
   useCreateCashbackMerchantStoreChangeRequest, useCreateCashbackMerchantWithdrawal,
-  useCreateCashbackMerchantTopup, getGetCashbackSessionQueryKey,
+  useCreateCashbackMerchantTopup, useDecideCashbackReceipt, getGetCashbackSessionQueryKey,
   getGetCashbackNotificationsQueryKey, useGetCashbackNotifications,
   useMarkCashbackNotificationsRead,
 } from '@workspace/api-client-react';
@@ -239,6 +239,11 @@ const categoryTranslationKey: Record<string,string> = {
   restaurants:'catRestaurants', cafes:'catCafes', clothing:'catClothing', electronics:'catElectronics',
   malls:'catMalls', groceries:'catGroceries', perfume:'catPerfume', gifts:'catGifts', shops:'catShops', other:'catOther',
 };
+const invoiceReviewWords:Record<Lang,Record<string,string>> = {
+  en:{title:'Invoices awaiting your review',amount:'Invoice amount',reason:'Reason for rejection',reasonRequired:'Enter a rejection reason of at least 3 characters.',approve:'Approve invoice',reject:'Reject invoice',approved:'Invoice approved and rewards credited.',rejected:'Invoice rejected.',customerAmount:'Customer entered'},
+  fr:{title:'Factures à vérifier',amount:'Montant validé',reason:'Motif du refus',reasonRequired:'Saisissez un motif d’au moins 3 caractères.',approve:'Approuver la facture',reject:'Refuser la facture',approved:'Facture approuvée et récompense créditée.',rejected:'Facture refusée.',customerAmount:'Montant saisi par le client'},
+  ar:{title:'فواتير بانتظار مراجعتك',amount:'قيمة الفاتورة',reason:'سبب رفض الفاتورة',reasonRequired:'اكتب سبب رفض لا يقل عن 3 أحرف.',approve:'الموافقة على الفاتورة',reject:'رفض الفاتورة',approved:'تمت الموافقة وإضافة المكافأة.',rejected:'تم رفض الفاتورة.',customerAmount:'المبلغ الذي أدخله الزبون'},
+};
 const dateOf = (r: RecordLike): string => {
   const value = first(r, 'date', 'at', 'createdAt', 'created', 't', 'timestamp');
   if (value === undefined) return '—';
@@ -268,6 +273,7 @@ export function MerchantWorkspace(props: MerchantWorkspaceProps) {
   const changeRequest = useCreateCashbackMerchantStoreChangeRequest();
   const createWithdrawal = useCreateCashbackMerchantWithdrawal();
   const createTopup = useCreateCashbackMerchantTopup();
+  const decideReceipt = useDecideCashbackReceipt();
   const notificationQuery = useGetCashbackNotifications({ query: {
     queryKey: getGetCashbackNotificationsQueryKey(),
     refetchInterval: 15000,
@@ -288,6 +294,7 @@ export function MerchantWorkspace(props: MerchantWorkspaceProps) {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
   const [form, setForm] = useState<Record<string,string>>({});
+  const [invoiceReasons, setInvoiceReasons] = useState<Record<string,string>>({});
   const [logo, setLogo] = useState<File | null>(null);
   const [cover, setCover] = useState<File | null>(null);
   const [proof, setProof] = useState<File | null>(null);
@@ -302,6 +309,7 @@ export function MerchantWorkspace(props: MerchantWorkspaceProps) {
   const currency = str(first(shop, 'currency'), merchantCountry === 'Libya' ? 'LYD' : 'DZD');
   const money = (v: number) => new Intl.NumberFormat(lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr-FR' : 'en', { style:'currency', currency, maximumFractionDigits:2 }).format(v);
   const claims = asRows(state.claims).filter(r => str(first(r, 'mid', 'merchantId', 'shopId')) === str(shop.id));
+  const reviewPendingClaims = claims.filter(r => statusOf(r) === 'pending').sort((a,b)=>timeOf(b)-timeOf(a));
   const txns = asRows(state.txns).filter(r => str(first(r, 'mid', 'merchantId', 'shopId')) === str(shop.id));
   const cbpays = asRows(state.cbpays).filter(r => str(first(r, 'mid', 'merchantId', 'shopId')) === str(shop.id));
   const customers = asRows(state.customers);
@@ -367,6 +375,18 @@ export function MerchantWorkspace(props: MerchantWorkspaceProps) {
     void queryClient.invalidateQueries({ queryKey:getGetCashbackSessionQueryKey() });
     void queryClient.invalidateQueries({ queryKey:getGetCashbackNotificationsQueryKey() });
     onRefresh();
+  };
+  const decideInvoice = async (claim:RecordLike,approved:boolean) => {
+    const id=str(claim.id);
+    const reason=(invoiceReasons[id]??'').trim();
+    if(!approved&&reason.length<3){setMessage(invoiceReviewWords[lang].reasonRequired);return}
+    setBusy(true);setMessage('');
+    try{
+      await decideReceipt.mutateAsync({id,data:{approved,...(!approved?{reason}:{})}});
+      invalidating();
+      setInvoiceReasons(current=>({...current,[id]:''}));
+      setMessage(approved?invoiceReviewWords[lang].approved:invoiceReviewWords[lang].rejected);
+    }catch{setMessage(t.requestError)}finally{setBusy(false)}
   };
   const notificationAction = async () => {
     setMessage('');
@@ -696,6 +716,26 @@ export function MerchantWorkspace(props: MerchantWorkspaceProps) {
       const kind = currentPath === '/merchant/invoices' || currentPath === '/merchant/rewards' ? 'invoice' : currentPath === '/merchant/transfers' ? 'withdrawal' : 'qr';
       return <>
         {heading(currentTitle,currentPath === '/merchant/rewards' ? t.earnedHint : currentPath === '/merchant/payments' ? t.qrHint : currentPath === '/merchant/transfers' ? t.transfersHint : t.invoiceSales)}
+        {currentPath==='/merchant/invoices'&&reviewPendingClaims.length>0&&<section className="mw-card" data-testid="merchant-invoice-review-queue">
+          <div className="mw-card-head"><div><h2>{invoiceReviewWords[lang].title}</h2><p>{t.invoiceSales}</p></div><span className="mw-status is-pending">{reviewPendingClaims.length}</span></div>
+          <div className="mw-grid">
+            {reviewPendingClaims.map(claim=>{
+              const id=str(claim.id),customerId=str(first(claim,'cid','customerId'));
+              const customer=customerById.get(customerId);
+              const photoId=str(first(claim,'photoId','receiptPhotoId'));
+              return <article className="mw-card" key={id} data-testid={`merchant-review-invoice-${id}`}>
+                <div className="mw-row"><div className="mw-row-copy"><strong>{str(customer?.name,t.unknown)}</strong><small>{str(first(claim,'invoiceNumber','no'),id)} · {dateOf(claim)}</small></div><span className="mw-status is-pending">{t.pending}</span></div>
+                <p>{invoiceReviewWords[lang].customerAmount}: <strong>{money(num(claim.amount))}</strong></p>
+                {photoId?<a href={`/api/cashback/media/${encodeURIComponent(photoId)}`} target="_blank" rel="noreferrer"><img className="mw-proof" src={`/api/cashback/media/${encodeURIComponent(photoId)}`} alt={invoiceReviewWords[lang].title}/></a>:<div className="mw-banner">{t.noActivity}</div>}
+                <label className="mw-field"><span>{invoiceReviewWords[lang].reason}</span><input className="mw-input" value={invoiceReasons[id]??''} onChange={e=>setInvoiceReasons(current=>({...current,[id]:e.target.value}))} data-testid={`merchant-invoice-reason-${id}`}/></label>
+                <div className="mw-actions">
+                  <button className="mw-btn mw-btn-primary" onClick={()=>void decideInvoice(claim,true)} disabled={busy} data-testid={`merchant-approve-invoice-${id}`}><Check size={14}/>{invoiceReviewWords[lang].approve}</button>
+                  <button className="mw-btn" onClick={()=>void decideInvoice(claim,false)} disabled={busy} data-testid={`merchant-reject-invoice-${id}`}><X size={14}/>{invoiceReviewWords[lang].reject}</button>
+                </div>
+              </article>;
+            })}
+          </div>
+        </section>}
         <div className="mw-toolbar"><div><input className="mw-input" placeholder={t.search} value={search} onChange={e=>setSearch(e.target.value)} aria-label={t.search}/><select className="mw-select" style={{width:'auto'}} value={filter} onChange={e=>setFilter(e.target.value)}><option value="all">{t.all}</option>{['approved','pending','rejected','paid','transferring','funded'].map(s=><option value={s} key={s}>{formatStatus(s)}</option>)}</select></div>
           {currentPath === '/merchant/rewards' && <span className="mw-status is-approved">{money(cashbacks)} · {t.cashback}</span>}
           {currentPath === '/merchant/payments' && <span className="mw-status is-approved">{money(qrNet)} · {t.net}</span>}
