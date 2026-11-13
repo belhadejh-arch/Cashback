@@ -18,6 +18,14 @@ export const CashbackProfileRole = {
   admin: 'admin',
 } as const;
 
+export type CashbackProfileCountry = typeof CashbackProfileCountry[keyof typeof CashbackProfileCountry];
+
+
+export const CashbackProfileCountry = {
+  Algeria: 'Algeria',
+  Libya: 'Libya',
+} as const;
+
 export type CashbackProfilePreferences = { [key: string]: unknown };
 
 export interface CashbackProfile {
@@ -31,6 +39,7 @@ export interface CashbackProfile {
   email?: string | null;
   /** @nullable */
   avatarUpdatedAt?: number | null;
+  country?: CashbackProfileCountry;
   preferences?: CashbackProfilePreferences;
 }
 
@@ -601,9 +610,18 @@ export const CashbackPreferencesTheme = {
   light: 'light',
 } as const;
 
+export type CashbackPreferencesCountry = typeof CashbackPreferencesCountry[keyof typeof CashbackPreferencesCountry];
+
+
+export const CashbackPreferencesCountry = {
+  Algeria: 'Algeria',
+  Libya: 'Libya',
+} as const;
+
 export interface CashbackPreferences {
   language: CashbackPreferencesLanguage;
   theme: CashbackPreferencesTheme;
+  country?: CashbackPreferencesCountry;
 }
 
 export type ProfilePhotoUploadInputContentType = typeof ProfilePhotoUploadInputContentType[keyof typeof ProfilePhotoUploadInputContentType];

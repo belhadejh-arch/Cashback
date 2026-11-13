@@ -2640,7 +2640,7 @@ export const getUpdateCashbackPreferencesUrl = () => {
 }
 
 /**
- * @summary Save account language and theme preferences
+ * @summary Save account country, language, and theme preferences
  */
 export const updateCashbackPreferences = async (cashbackPreferences: CashbackPreferences, options?: Parameters<typeof customFetch>[1]): Promise<CashbackProfile> => {
 
@@ -2706,7 +2706,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type UpdateCashbackPreferencesMutationVariables = {data: BodyType<CashbackPreferences>}
 
     /**
- * @summary Save account language and theme preferences
+ * @summary Save account country, language, and theme preferences
  */
 export const useUpdateCashbackPreferences = <TError = ErrorType<unknown>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCashbackPreferences>>, TError,UpdateCashbackPreferencesMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}

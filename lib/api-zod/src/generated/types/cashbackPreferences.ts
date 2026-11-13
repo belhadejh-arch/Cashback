@@ -5,10 +5,12 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { CashbackPreferencesCountry } from './cashbackPreferencesCountry';
 import type { CashbackPreferencesLanguage } from './cashbackPreferencesLanguage';
 import type { CashbackPreferencesTheme } from './cashbackPreferencesTheme';
 
 export interface CashbackPreferences {
   language: CashbackPreferencesLanguage;
   theme: CashbackPreferencesTheme;
+  country?: CashbackPreferencesCountry;
 }

@@ -34,7 +34,7 @@ type Merchant = { id: string; name: string; cat?: string; status?: string; count
 type Claim = { id: string; mid: string; cid: string; invoiceNumber?: string; date?: string; amount: number; photoId?: string; status: string; created?: string; cashback?: number; cashbackRate?: number; platformCommission?: number; platformCommissionRate?: number; merchantObligation?: number; netSale?: number; commissionOutstanding?: number; commissionSettled?: number; reason?: string; submitIp?: string; submittedByUid?: string; possibleDuplicate?: boolean };
 type Txn = { id: string; t?: string; mid: string; cid: string; amount: number; cashback?: number; method?: string };
 type CashbackNote = { id: string; to?: string; text: string; t?: number; read?: boolean };
-type Session = { profile: { uid: string; role: string; eid: string; name: string; phone?: string; email?: string; avatarUpdatedAt?: number; preferences?: { language?: Lang; theme?: Theme }; status?: string; rejectionReason?: string }; state: { settings?: { cashback?: number; platformCommission?: number; claimHours?: number; minimumTopupDzd?: number; minimumTopupLyd?: number; enabledCurrencies?: ('DZD'|'LYD')[]; enabledLanguages?: Lang[]; notificationsEnabled?: boolean; paymentMethods?: Record<string, unknown>[] }; categories?: string[]; merchants?: Merchant[]; customers?: { id: string; name: string; phone?: string; email?: string; status?: string; cbm?: Record<string, number> }[]; claims?: Claim[]; merchantCommissionLedger?: Record<string, unknown>[]; merchantCommissionSettlements?: Record<string, unknown>[]; txns?: Txn[]; cbpays?: { id: string; cid: string; mid: string; amount: number; status: string; at?: string|number; reference?: string; method?: string; reversalReason?: string }[]; merchantTopups?: Record<string, unknown>[]; merchantWithdrawals?: Record<string, unknown>[]; merchantStoreChangeRequests?: Record<string, unknown>[]; notes?: CashbackNote[] } };
+type Session = { profile: { uid: string; role: string; eid: string; name: string; phone?: string; email?: string; country?: 'Algeria'|'Libya'; avatarUpdatedAt?: number; preferences?: { language?: Lang; theme?: Theme }; status?: string; rejectionReason?: string }; state: { settings?: { cashback?: number; platformCommission?: number; claimHours?: number; minimumTopupDzd?: number; minimumTopupLyd?: number; enabledCurrencies?: ('DZD'|'LYD')[]; enabledLanguages?: Lang[]; notificationsEnabled?: boolean; paymentMethods?: Record<string, unknown>[] }; categories?: string[]; merchants?: Merchant[]; customers?: { id: string; name: string; phone?: string; email?: string; country?: 'Algeria'|'Libya'; status?: string; cbm?: Record<string, number> }[]; claims?: Claim[]; merchantCommissionLedger?: Record<string, unknown>[]; merchantCommissionSettlements?: Record<string, unknown>[]; txns?: Txn[]; cbpays?: { id: string; cid: string; mid: string; amount: number; status: string; at?: string|number; reference?: string; method?: string; reversalReason?: string }[]; merchantTopups?: Record<string, unknown>[]; merchantWithdrawals?: Record<string, unknown>[]; merchantStoreChangeRequests?: Record<string, unknown>[]; notes?: CashbackNote[] } };
 type Dict = Record<string, string>;
 const CAMERA_REQUEST_TIMEOUT_MS = 15000;
 function requestCameraStream(): Promise<MediaStream> {
@@ -77,12 +77,15 @@ const dictionaries: Record<Lang, Dict> = {
 const featureTranslations: Record<Lang, Dict> = {
   en: {
     rating:'Rating', noRatings:'No ratings yet', ratingCount:'ratings', rateAfterPurchase:'Submit an approved receipt here to rate this shop.', ratingSaved:'Your rating was saved.', merchantInfo:'About this shop', merchantBalance:'Your balance at this shop', cancelReceipt:'Cancel receipt', receiptCancelled:'Receipt cancelled.', cancelled:'Cancelled', cancelReceiptConfirm:'Cancel this receipt submission?', receiptTooOld:'This receipt is outside the allowed submission period.', duplicateReceipt:'This invoice or photo was already submitted.', receiptCustomer:'Customer', submittedAt:'Submitted', submittedIp:'Submission IP', allReceipts:'All receipts', searchReceipts:'Search invoices, customers, or shops', categoriesManager:'Shop categories', categoriesHint:'Choose which categories are visible to customers.', categoriesSaved:'Shop categories saved.', categoriesAtLeastOne:'Keep at least one category active.', imageUploadError:'The receipt photo could not be uploaded. Please take a new photo and try again.', ratingRequiresApprovedReceipt:'You can rate a shop after one of your receipts is approved.', possibleDuplicate:'Possible duplicate: same shop, customer, date, and amount.', useMyLocation:'Sort by distance', nearbySorted:'Nearby shops are sorted by distance.', locationUnavailable:'Location is not available on this device.', locationDenied:'Location access was denied.', kmAway:'km away', allCountries:'All countries', allCities:'All cities',
+    countrySetupTitle:'Choose your account country', countrySetupHint:'You will only see participating shops in this country. You can change it later.', countrySetupSave:'Save country and continue', countrySaved:'Account country and shop listings updated.', countryRequired:'Choose your account country to continue.',
   },
   fr: {
     rating:'Note', noRatings:'Aucune note pour le moment', ratingCount:'avis', rateAfterPurchase:'Envoyez un reçu approuvé pour ce commerce afin de le noter.', ratingSaved:'Votre note a été enregistrée.', merchantInfo:'À propos du commerce', merchantBalance:'Votre solde dans ce commerce', cancelReceipt:'Annuler le reçu', receiptCancelled:'Reçu annulé.', cancelled:'Annulé', cancelReceiptConfirm:'Annuler l’envoi de ce reçu ?', receiptTooOld:'Ce reçu dépasse le délai autorisé.', duplicateReceipt:'Cette facture ou cette photo a déjà été envoyée.', receiptCustomer:'Client', submittedAt:'Envoyé', submittedIp:'IP d’envoi', allReceipts:'Tous les reçus', searchReceipts:'Rechercher une facture, un client ou un commerce', categoriesManager:'Catégories des commerces', categoriesHint:'Choisissez les catégories visibles par les clients.', categoriesSaved:'Catégories enregistrées.', categoriesAtLeastOne:'Gardez au moins une catégorie active.', imageUploadError:'La photo du reçu n’a pas pu être envoyée. Prenez une nouvelle photo et réessayez.', ratingRequiresApprovedReceipt:'Vous pouvez noter un commerce après l’approbation de l’un de vos reçus.', possibleDuplicate:'Doublon possible : même commerce, client, date et montant.', useMyLocation:'Trier par distance', nearbySorted:'Les commerces proches sont triés par distance.', locationUnavailable:'La position est indisponible sur cet appareil.', locationDenied:'L’accès à la position a été refusé.', kmAway:'km', allCountries:'Tous les pays', allCities:'Toutes les villes',
+    countrySetupTitle:'Choisissez le pays de votre compte', countrySetupHint:'Seuls les commerces participants de ce pays seront affichés. Vous pourrez le modifier plus tard.', countrySetupSave:'Enregistrer et continuer', countrySaved:'Le pays du compte et les commerces affichés ont été mis à jour.', countryRequired:'Choisissez le pays de votre compte pour continuer.',
   },
   ar: {
     rating:'التقييم', noRatings:'لا توجد تقييمات بعد', ratingCount:'تقييمات', rateAfterPurchase:'أرسل فاتورة مقبولة من هذا المتجر لتتمكن من تقييمه.', ratingSaved:'تم حفظ تقييمك.', merchantInfo:'معلومات المتجر', merchantBalance:'رصيدك لدى هذا المتجر', cancelReceipt:'إلغاء الفاتورة', receiptCancelled:'تم إلغاء الفاتورة.', cancelled:'ملغاة', cancelReceiptConfirm:'هل تريد إلغاء إرسال هذه الفاتورة؟', receiptTooOld:'تاريخ الفاتورة أقدم من المدة المسموح بها.', duplicateReceipt:'تم إرسال هذه الفاتورة أو صورتها من قبل.', receiptCustomer:'الزبون', submittedAt:'تاريخ الإرسال', submittedIp:'عنوان IP عند الإرسال', allReceipts:'كل الفواتير', searchReceipts:'ابحث برقم الفاتورة أو اسم الزبون أو المتجر', categoriesManager:'تصنيفات المتاجر', categoriesHint:'اختر التصنيفات التي تظهر للزبائن.', categoriesSaved:'تم حفظ تصنيفات المتاجر.', categoriesAtLeastOne:'يجب إبقاء تصنيف واحد على الأقل.', imageUploadError:'تعذر رفع صورة الفاتورة. التقط صورة جديدة ثم حاول مجدداً.', ratingRequiresApprovedReceipt:'يمكنك تقييم المتجر بعد قبول فاتورة واحدة على الأقل.', possibleDuplicate:'اشتباه بتكرار: المتجر والزبون والتاريخ والمبلغ متطابقة.', useMyLocation:'ترتيب حسب المسافة', nearbySorted:'تم ترتيب المتاجر الأقرب حسب المسافة.', locationUnavailable:'الموقع غير متاح على هذا الجهاز.', locationDenied:'لم تسمح بالوصول إلى الموقع.', kmAway:'كم', allCountries:'كل الدول', allCities:'كل المدن',
+    countrySetupTitle:'اختر دولة حسابك', countrySetupHint:'ستظهر لك المتاجر المشاركة في هذه الدولة فقط. يمكنك تغيير الدولة لاحقاً.', countrySetupSave:'حفظ الدولة والمتابعة', countrySaved:'تم تحديث دولة الحساب والمتاجر المعروضة.', countryRequired:'اختر دولة حسابك للمتابعة.',
   },
 };
 const extraTranslations: Record<Lang, Dict> = {
@@ -369,7 +372,6 @@ function AppInner() {
     <div className="notification-page-list">{profileNotifications.slice(0,8).map(note=>{const copy=notificationCopy(note,lang);return <article className={`surface home-notification-row ${note.read?'is-read':'is-unread'}`} key={note.id}><span className="home-notification-mark"><Bell size={17}/></span><div><p>{copy.title&&<strong>{copy.title}. </strong>}{copy.body}</p>{note.t&&<small className="subtle">{new Date(note.t).toLocaleString(lang==='ar'?'ar-DZ':lang==='fr'?'fr-FR':'en')}</small>}</div></article>})}</div>
   </section> : null;
    const availableCities = useMemo(()=>Array.from(new Set(activeMerchants.filter(m=>!countryFilter||m.country===countryFilter).map(m=>m.city).filter((value): value is string=>Boolean(value)))),[activeMerchants,countryFilter]);
-  const availableCountries = useMemo(()=>Array.from(new Set(activeMerchants.map(m=>m.country).filter((value): value is string=>Boolean(value)))),[activeMerchants]);
    const filtered = useMemo(()=>{
      const matches=activeMerchants.filter(m=>
        `${m.name} ${m.cat||''} ${m.city||''} ${m.address||''}`.toLowerCase().includes(search.toLowerCase()) &&
@@ -383,6 +385,28 @@ function AppInner() {
    }, [activeMerchants,search,selectedCategory,countryFilter,cityFilter,nearbyCoords]);
   const customer = profile?.role === 'customer'; const merchant = profile?.role === 'merchant'; const admin = profile?.role === 'admin';
   const clearMessages = () => { setError(''); setNotice(''); };
+  async function changeCustomerCountry(nextCountry: 'Algeria'|'Libya') {
+    if (!customer || !profile) return;
+    clearMessages();
+    setCountryFilter(nextCountry);
+    setCityFilter('');
+    setSelectedCategory('');
+    setSelectedMerchant(null);
+    try {
+      await preferences.mutateAsync({ data:{ language:lang, theme, country:nextCountry } });
+      await client.invalidateQueries({ queryKey:getGetCashbackSessionQueryKey() });
+      setNotice(t('countrySaved'));
+    } catch {
+      setCountryFilter(profile.country || '');
+      setError(t('genericError'));
+    }
+  }
+  useEffect(() => {
+    if (profile?.role === 'customer') {
+      setCountryFilter(profile.country || '');
+      setCityFilter('');
+    }
+  }, [profile?.uid, profile?.country, profile?.role]);
   function requestNearbySort() {
     clearMessages();
     if (!navigator.geolocation) { setError(t('locationUnavailable')); return; }
@@ -478,10 +502,10 @@ function AppInner() {
   }
   async function beginRegistration() {
     clearMessages();
-    if (!name.trim() || !email.trim() || !password || password.length < 8 || (registerRole==='merchant' && (!phone.trim() || !country || !city.trim() || !address.trim() || !mapsUrl.trim() || !category || !logoData))) { setError(t('incomplete')); return; }
+    if (!name.trim() || !email.trim() || !password || password.length < 8 || !country || (registerRole==='merchant' && (!phone.trim() || !city.trim() || !address.trim() || !mapsUrl.trim() || !category || !logoData))) { setError(t('incomplete')); return; }
     if (password !== confirm) { setError(t('passwordsDiffer')); return; }
     try {
-      await register.mutateAsync({ data: { role: registerRole, name: name.trim(), phone: phone.trim() || null, email: email.trim().toLowerCase(), password, ...(registerRole==='merchant' ? { country: country as 'Algeria'|'Libya', city: city.trim(), address: address.trim(), mapsUrl: mapsUrl.trim(), category, logoData } : {}) } });
+      await register.mutateAsync({ data: { role: registerRole, name: name.trim(), phone: phone.trim() || null, email: email.trim().toLowerCase(), password, country:country as 'Algeria'|'Libya', ...(registerRole==='merchant' ? { city: city.trim(), address: address.trim(), mapsUrl: mapsUrl.trim(), category, logoData } : {}) } });
       if (registerRole==='merchant') setNotice(t('applyPending'));
       client.clear(); await refetch(); setLocation('/');
     } catch(e) { showErr(e); }
@@ -838,6 +862,14 @@ function AppInner() {
   if (splash) return <div className="splash"><img src={`${import.meta.env.BASE_URL}splash.png`} alt="CASH BACK" /></div>;
   if (isLoading && !profile) return <div className="app-shell" style={{ minHeight:'100dvh', display:'grid', placeItems:'center', padding:22 }}><div className="surface" style={{ width:'min(100%,420px)', padding:30, textAlign:'center' }}><div style={{ width:52,height:52,borderRadius:16,background:'hsl(var(--muted))',margin:'0 auto 14px' }} /><div style={{ height:15,width:'60%',borderRadius:8,background:'hsl(var(--muted))',margin:'0 auto 9px' }}/><p className="subtle">{t('loading')}</p></div></div>;
   if (profile && isError) return shell(<div style={{ maxWidth:540, margin:'50px auto' }}>{noticeBox(t('loadError'),true)}<button className="btn btn-primary" onClick={()=>void refetch()} data-testid="button-retry">{t('retryLoad')} <RefreshCw size={16}/></button></div>);
+  if (customer && !profile.country) return shell(<section className="surface" style={{maxWidth:520,margin:'clamp(36px,10vh,100px) auto',padding:'clamp(24px,6vw,42px)',display:'grid',gap:16}}>
+    <div style={{width:54,height:54,borderRadius:17,display:'grid',placeItems:'center',background:'hsl(var(--primary) / .15)',color:'hsl(var(--primary))'}}><Globe2 size={25}/></div>
+    <h1 style={{fontSize:27,margin:0}}>{t('countrySetupTitle')}</h1>
+    <p className="subtle" style={{margin:0,lineHeight:1.7}}>{t('countrySetupHint')}</p>
+    <label style={{display:'grid',gap:7,fontWeight:600}}>{t('country')}<select className="field" value={country} onChange={event=>setCountry(event.target.value)} data-testid="select-customer-country-onboarding"><option value="Algeria">{t('algeria')}</option><option value="Libya">{t('libya')}</option></select></label>
+    {error&&noticeBox(error,true)}
+    <button type="button" className="btn btn-primary" disabled={preferences.isPending} onClick={()=>void changeCustomerCountry(country as 'Algeria'|'Libya')} data-testid="button-save-customer-country">{preferences.isPending?t('loading'):t('countrySetupSave')}<ArrowRight size={17}/></button>
+  </section>,false,false);
 
   if (!profile) {
     const activeAuth = authMode==='admin-bootstrap' ? t('adminSetupTitle') : authMode==='register' ? t('createAccount') : authMode==='reset' ? t('reset') : t('login');
@@ -870,8 +902,8 @@ function AppInner() {
             <Field label={t('email')} value={email} onChange={setEmail} testId="input-email" type="email" required/>
             <Field label={t('password')} value={password} onChange={setPassword} testId="input-password" type="password" required/>
             <Field label={t('confirmPassword')} value={confirm} onChange={setConfirm} testId="input-confirm-password" type="password" required/>
+            <label style={{display:'grid',gap:6,fontSize:14,fontWeight:600}}>{t('country')}<select className="field" value={country} onChange={e=>{setCountry(e.target.value);setCity('')}} data-testid="select-country"><option value="Algeria">{t('algeria')}</option><option value="Libya">{t('libya')}</option></select></label>
             {registerRole==='merchant' && <>
-              <label style={{display:'grid',gap:6,fontSize:14,fontWeight:600}}>{t('country')}<select className="field" value={country} onChange={e=>{setCountry(e.target.value);setCity('')}} data-testid="select-country"><option value="Algeria">{t('algeria')}</option><option value="Libya">{t('libya')}</option></select></label>
               <SelectField label={t('city')} value={city} onChange={setCity} options={country==='Algeria'?wilayas:libyanCities} testId="select-city" formatOption={(_option,index)=>lang==='ar'?(country==='Algeria'?wilayasArabic[index]:libyanCitiesArabic[index]):_option}/>
               <Field label={t('location')} value={address} onChange={setAddress} testId="input-address" required/>
               <Field label={t('mapLink')} value={mapsUrl} onChange={setMapsUrl} testId="input-map" placeholder={t('mapNote')} required/>
@@ -987,7 +1019,7 @@ function AppInner() {
     <PageTitle icon={<Store size={19}/>} title={t('stores')} eyebrow={t('nearby')}/>
     <div className="discovery-tools">
       <label className="shop-search"><Search size={17}/><input className="field" value={search} onChange={e=>setSearch(e.target.value)} placeholder={t('search')} aria-label={t('search')} data-testid="input-search-shops"/></label>
-      <label className="area-select"><span><Globe2 size={16}/>{t('country')}</span><select className="field" value={countryFilter||(availableCountries.length===1?availableCountries[0]:'')} onChange={e=>{setCountryFilter(e.target.value);setCityFilter('');}} aria-label={t('country')} data-testid="select-shop-country"><option value="">{t('allCountries')}</option>{availableCountries.map(country=><option key={country} value={country}>{t(country==='Libya'?'libya':'algeria')}</option>)}</select></label>
+      <label className="area-select"><span><Globe2 size={16}/>{t('country')}</span><select className="field" value={countryFilter||profile.country||'Algeria'} onChange={e=>void changeCustomerCountry(e.target.value as 'Algeria'|'Libya')} aria-label={t('country')} data-testid="select-shop-country"><option value="Algeria">{t('algeria')}</option><option value="Libya">{t('libya')}</option></select></label>
       <label className="area-select"><span><MapPin size={16}/>{t('city')}</span><select className="field" value={cityFilter} onChange={e=>setCityFilter(e.target.value)} aria-label={t('city')} data-testid="select-shop-area"><option value="">{t('allCities')}</option>{availableCities.map(city=><option key={city} value={city}>{localizeCity(city,lang)}</option>)}</select></label>
     </div>
     <section className="category-section">
@@ -995,7 +1027,7 @@ function AppInner() {
       <div className="category-rail" role="group" aria-label={t('categories')}>{activeCategories.map(cat=><button key={cat} className={`category-chip ${selectedCategory===cat?'is-active':''}`} onClick={()=>setSelectedCategory(selectedCategory===cat?'':cat)} aria-pressed={selectedCategory===cat} data-testid={`filter-category-${cat}`}><CategoryIcon category={cat}/>{t(`cat_${cat}`)}</button>)}</div>
     </section>
     <section className="home-shops-section">
-      <div className="home-section-head"><div><h2>{t('nearby')}</h2><p className="subtle">{cityFilter?localizeCity(cityFilter,lang):countryFilter?t(countryFilter==='Libya'?'libya':'algeria'):availableCountries.length===1?t(availableCountries[0]==='Libya'?'libya':'algeria'):t('allShops')}</p></div><div style={{display:'flex',gap:10}}><button className="text-link" onClick={requestNearbySort} aria-label={t('useMyLocation')} title={t('useMyLocation')} data-testid="button-sort-nearby"><LocateFixed size={17}/></button><button className="text-link" onClick={()=>{setSearch('');setCountryFilter('');setCityFilter('');setSelectedCategory('');}} data-testid="button-view-shops">{t('viewAll')}</button></div></div>
+      <div className="home-section-head"><div><h2>{t('nearby')}</h2><p className="subtle">{cityFilter?localizeCity(cityFilter,lang):t((countryFilter||profile.country)==='Libya'?'libya':'algeria')}</p></div><div style={{display:'flex',gap:10}}><button className="text-link" onClick={requestNearbySort} aria-label={t('useMyLocation')} title={t('useMyLocation')} data-testid="button-sort-nearby"><LocateFixed size={17}/></button><button className="text-link" onClick={()=>{setSearch('');setCityFilter('');setSelectedCategory('');}} data-testid="button-view-shops">{t('viewAll')}</button></div></div>
       {filtered.length===0 ? <Empty icon={<Compass size={30}/>} title={t('noShops')} text={t('noShopsHint')}/> : <div className="merchant-grid">{filtered.map(shop=><button key={shop.id} className="surface merchant-card" onClick={()=>nav(`/shop/${shop.id}`)} data-testid={`card-shop-${shop.id}`}>
         <div className="merchant-card-image"><MediaImage id={shop.logoId} alt={shop.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>{shop.cashbackRate!==undefined&&<span className="merchant-rate"><strong>{shop.cashbackRate}%</strong><small>{t('cashback')}</small></span>}</div>
         <div className="merchant-card-copy"><div className="merchant-card-title"><div><h3>{shop.name}</h3><span className="subtle">{shop.cat?t(`cat_${shop.cat}`):t('merchant')}</span></div><ArrowRight size={17}/></div>
@@ -1060,7 +1092,7 @@ function AppInner() {
     {shell(<>
       <div className="discovery-tools">
         <label className="shop-search"><Search size={17}/><input className="field" value={search} onChange={e=>setSearch(e.target.value)} placeholder={t('search')} aria-label={t('search')} data-testid="input-search-shops"/></label>
-        <label className="area-select"><span><Globe2 size={16}/>{t('country')}</span><select className="field" value={countryFilter||(availableCountries.length===1?availableCountries[0]:'')} onChange={e=>{setCountryFilter(e.target.value);setCityFilter('');}} aria-label={t('country')} data-testid="select-shop-country"><option value="">{t('allCountries')}</option>{availableCountries.map(country=><option key={country} value={country}>{t(country==='Libya'?'libya':'algeria')}</option>)}</select></label>
+        <label className="area-select"><span><Globe2 size={16}/>{t('country')}</span><select className="field" value={countryFilter||profile.country||'Algeria'} onChange={e=>void changeCustomerCountry(e.target.value as 'Algeria'|'Libya')} aria-label={t('country')} data-testid="select-shop-country"><option value="Algeria">{t('algeria')}</option><option value="Libya">{t('libya')}</option></select></label>
         <label className="area-select"><span><MapPin size={16}/>{t('city')}</span><select className="field" value={cityFilter} onChange={e=>setCityFilter(e.target.value)} aria-label={t('city')} data-testid="select-shop-area"><option value="">{t('allCities')}</option>{availableCities.map(city=><option key={city} value={city}>{localizeCity(city,lang)}</option>)}</select></label>
       </div>
       <section className="promo-banner home-promo">
@@ -1074,7 +1106,7 @@ function AppInner() {
         </div>
       </section>
       <section id="home-shops" className="home-shops-section">
-        <div className="home-section-head"><div><h2>{t('nearby')}</h2><p className="subtle">{cityFilter?localizeCity(cityFilter,lang):countryFilter?t(countryFilter==='Libya'?'libya':'algeria'):availableCountries.length===1?t(availableCountries[0]==='Libya'?'libya':'algeria'):t('allShops')}</p></div><div style={{display:'flex',gap:10}}><button className="text-link" onClick={requestNearbySort} aria-label={t('useMyLocation')} title={t('useMyLocation')} data-testid="button-sort-nearby"><LocateFixed size={17}/>{/* accessible location sort */}</button><button className="text-link" onClick={()=>nav('/shops')} data-testid="button-view-shops">{t('viewAll')}</button></div></div>
+      <div className="home-section-head"><div><h2>{t('nearby')}</h2><p className="subtle">{cityFilter?localizeCity(cityFilter,lang):t((countryFilter||profile.country)==='Libya'?'libya':'algeria')}</p></div><div style={{display:'flex',gap:10}}><button className="text-link" onClick={requestNearbySort} aria-label={t('useMyLocation')} title={t('useMyLocation')} data-testid="button-sort-nearby"><LocateFixed size={17}/>{/* accessible location sort */}</button><button className="text-link" onClick={()=>nav('/shops')} data-testid="button-view-shops">{t('viewAll')}</button></div></div>
         {filtered.length===0 ? <Empty icon={<Compass size={30}/>} title={t('noShops')} text={t('noShopsHint')}/> : <div className="merchant-grid">{filtered.map(shop=><button key={shop.id} className="surface merchant-card" onClick={()=>nav(`/shop/${shop.id}`)} data-testid={`card-shop-${shop.id}`}>
           <div className="merchant-card-image"><MediaImage id={shop.logoId} alt={shop.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/><span className="merchant-rate"><strong>{shop.cashbackRate??state.settings?.cashback??4}%</strong><small>{t('cashback')}</small></span></div>
           <div className="merchant-card-copy"><div className="merchant-card-title"><div><h3>{shop.name}</h3><span className="subtle">{shop.cat?t(`cat_${shop.cat}`):t('merchant')}</span></div><ArrowRight size={17}/></div>

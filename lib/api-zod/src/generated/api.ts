@@ -29,6 +29,7 @@ export const GetCashbackSessionResponse = zod.object({
   "phone": zod.string().nullish(),
   "email": zod.string().nullish(),
   "avatarUpdatedAt": zod.number().int().nullish(),
+  "country": zod.enum(['Algeria', 'Libya']).optional(),
   "preferences": zod.record(zod.string(), zod.unknown()).optional()
 }),
   "state": zod.record(zod.string(), zod.unknown())
@@ -90,6 +91,7 @@ export const RegisterCashbackProfileResponse = zod.object({
   "phone": zod.string().nullish(),
   "email": zod.string().nullish(),
   "avatarUpdatedAt": zod.number().int().nullish(),
+  "country": zod.enum(['Algeria', 'Libya']).optional(),
   "preferences": zod.record(zod.string(), zod.unknown()).optional()
 })
 
@@ -165,6 +167,7 @@ export const LoginCashbackResponse = zod.object({
   "phone": zod.string().nullish(),
   "email": zod.string().nullish(),
   "avatarUpdatedAt": zod.number().int().nullish(),
+  "country": zod.enum(['Algeria', 'Libya']).optional(),
   "preferences": zod.record(zod.string(), zod.unknown()).optional()
 })
 
@@ -674,11 +677,12 @@ export const ReverseCashbackPaymentResponse = zod.record(zod.string(), zod.unkno
 
 
 /**
- * @summary Save account language and theme preferences
+ * @summary Save account country, language, and theme preferences
  */
 export const UpdateCashbackPreferencesBody = zod.object({
   "language": zod.enum(['ar', 'en', 'fr']),
-  "theme": zod.enum(['dark', 'light'])
+  "theme": zod.enum(['dark', 'light']),
+  "country": zod.enum(['Algeria', 'Libya']).optional()
 })
 
 export const UpdateCashbackPreferencesResponse = zod.object({
@@ -689,6 +693,7 @@ export const UpdateCashbackPreferencesResponse = zod.object({
   "phone": zod.string().nullish(),
   "email": zod.string().nullish(),
   "avatarUpdatedAt": zod.number().int().nullish(),
+  "country": zod.enum(['Algeria', 'Libya']).optional(),
   "preferences": zod.record(zod.string(), zod.unknown()).optional()
 })
 

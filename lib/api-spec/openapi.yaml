@@ -580,7 +580,7 @@ paths:
     patch:
       operationId: updateCashbackPreferences
       tags: [cashback]
-      summary: Save account language and theme preferences
+      summary: Save account country, language, and theme preferences
       requestBody:
         required: true
         content:
@@ -852,6 +852,7 @@ components:
         phone: { type: ["string", "null"] }
         email: { type: ["string", "null"] }
         avatarUpdatedAt: { type: ["integer", "null"] }
+        country: { type: string, enum: [Algeria, Libya] }
         preferences:
           type: object
           additionalProperties: true
@@ -1110,6 +1111,7 @@ components:
       properties:
         language: { type: string, enum: [ar, en, fr] }
         theme: { type: string, enum: [dark, light] }
+        country: { type: string, enum: [Algeria, Libya] }
     ProfilePhotoUploadInput:
       type: object
       required: [contentType, size]

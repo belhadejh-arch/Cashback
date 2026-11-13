@@ -26,6 +26,7 @@ export type CashbackProfile = {
   phone?: string | null;
   email?: string | null;
   avatarUpdatedAt?: number;
+  country?: "Algeria" | "Libya";
   preferences?: { language?: "ar" | "en" | "fr"; theme?: "dark" | "light" };
 };
 export type CashbackState = Record<string, any>;
@@ -438,23 +439,40 @@ export async function authenticateRequest(req: Request): Promise<CashbackProfile
     phone: fields.phone ? String(fields.phone) : null,
     email: fields.email ? String(fields.email) : null,
     avatarUpdatedAt: Number(fields.avatarUpdatedAt ?? 0) || undefined,
+    country: fields.country === "Algeria" || fields.country === "Libya"
+      ? fields.country
+      : undefined,
     preferences: fields.preferences ?? { language: "ar", theme: "dark" },
   };
 }
 
 export async function savePreferences(
   profile: CashbackProfile,
-  preferences: { language: "ar" | "en" | "fr"; theme: "dark" | "light" },
+  preferences: {
+    language: "ar" | "en" | "fr";
+    theme: "dark" | "light";
+    country?: "Algeria" | "Libya";
+  },
 ): Promise<CashbackProfile> {
   const path = `users/${profile.uid}`;
   for (let attempt = 0; attempt < 4; attempt += 1) {
     const current = await getDocument(path);
     if (!current) throw new CashbackError(404, "PROFILE_NOT_FOUND");
     const fields = decodeFields(fieldsOf(current));
-    const next = { ...fields, preferences };
+    const next = {
+      ...fields,
+      preferences: { language: preferences.language, theme: preferences.theme },
+      ...(preferences.country ? { country: preferences.country } : {}),
+    };
     const write = documentWrite("users", profile.uid, next, true);
     write.currentDocument = { updateTime: current.updateTime };
-    if (await commit([write])) return { ...profile, preferences };
+    if (await commit([write])) {
+      return {
+        ...profile,
+        preferences: { language: preferences.language, theme: preferences.theme },
+        ...(preferences.country ? { country: preferences.country } : {}),
+      };
+    }
   }
   throw new CashbackError(409, "PROFILE_UPDATE_CONFLICT");
 }

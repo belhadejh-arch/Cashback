@@ -382,6 +382,13 @@ function isCurrencyEnabled(state: CashbackState, country: unknown): boolean {
   return !Array.isArray(enabled) || enabled.includes(currencyForCountry(country));
 }
 
+function normalizeCountry(country: unknown): "Algeria" | "Libya" | null {
+  const value = String(country ?? "").trim().toLowerCase();
+  if (["algeria", "algérie", "dz", "الجزائر"].includes(value)) return "Algeria";
+  if (["libya", "libye", "ly", "ليبيا"].includes(value)) return "Libya";
+  return null;
+}
+
 function projectState(
   profile: CashbackProfile,
   state: CashbackState,
@@ -416,10 +423,17 @@ function projectState(
   if (profile.role === "admin") return state;
   if (profile.role === "customer") {
     const customer = customers.find((entry: any) => entry.id === profile.eid);
-    const customerBalanceState = customer ? { ...customer } : null;
+    const customerCountry = normalizeCountry(customer?.country ?? profile.country);
+    const customerBalanceState = customer
+      ? { ...customer, country: customer.country ?? profile.country }
+      : null;
     if (customerBalanceState) delete customerBalanceState.wallet;
     const activeMerchants = merchants
-      .filter((merchant: any) => merchant.status === "active")
+      .filter((merchant: any) =>
+        merchant.status === "active" &&
+        customerCountry !== null &&
+        normalizeCountry(merchant.country) === customerCountry,
+      )
       .map((merchant: any) => {
         const merchantRatings = ratings.filter(
           (rating: any) => rating.mid === merchant.id,
@@ -512,6 +526,9 @@ router.get("/cashback/session", async (req, res) => {
       name: savedFields.name || profile.name,
       avatarUpdatedAt: Number(savedFields.avatarUpdatedAt ?? profile.avatarUpdatedAt ?? 0) || undefined,
       preferences: savedFields.preferences ?? profile.preferences,
+      ...(normalizeCountry(savedFields.country)
+        ? { country: normalizeCountry(savedFields.country) }
+        : {}),
       ...(profile.role === "merchant" && merchant
         ? { status: merchant.status, rejectionReason: merchant.rejectionReason ?? null }
         : {}),
@@ -605,6 +622,7 @@ router.post("/cashback/register", async (req, res) => {
       phone: phone || null,
       email,
       preferences: { language: "ar", theme: "dark" },
+      country: normalizeCountry(input.country),
       ...(phone ? { phoneVerified: false } : {}),
       ...(isMerchant ? { country: input.country, city: input.city, address: input.address } : {}),
     };
@@ -616,12 +634,15 @@ router.post("/cashback/register", async (req, res) => {
       );
       if (duplicate) throw new CashbackError(409, "PHONE_ALREADY_REGISTERED");
       if (input.role === "customer") {
+        const customerCountry = normalizeCountry(input.country);
+        if (!customerCountry) throw new CashbackError(400, "COUNTRY_REQUIRED");
         state.customers.push({
           id,
           profileUid: uid,
           name,
           phone: phone || null,
           email,
+          country: customerCountry,
           cbm: {},
           createdAt: Date.now(),
           status: "active",
@@ -917,10 +938,16 @@ router.post("/cashback/receipts", async (req, res) => {
         (entry: any) => entry.id === profile.eid,
       );
       if (!customer) throw new CashbackError(403, "PROFILE_INCOMPLETE");
+      const customerCountry = normalizeCountry(customer.country ?? profile.country);
       const merchant = (state.merchants ?? []).find(
         (entry: any) => entry.id === input.merchantId,
       );
-      if (!merchant || merchant.status !== "active") {
+      if (
+        !merchant ||
+        merchant.status !== "active" ||
+        !customerCountry ||
+        normalizeCountry(merchant.country) !== customerCountry
+      ) {
         throw new CashbackError(400, "MERCHANT_UNAVAILABLE");
       }
       const claimHours = Math.max(1, Number(state.settings?.claimHours ?? 720));
@@ -1298,6 +1325,13 @@ router.post("/cashback/merchants/:id/rating", async (req, res) => {
         (entry: any) => entry.id === merchantId && entry.status === "active",
       );
       if (!merchant) throw new CashbackError(404, "MERCHANT_UNAVAILABLE");
+      const customer = (state.customers ?? []).find(
+        (entry: any) => entry.id === profile.eid,
+      );
+      const customerCountry = normalizeCountry(customer?.country ?? profile.country);
+      if (!customerCountry || normalizeCountry(merchant.country) !== customerCountry) {
+        throw new CashbackError(404, "MERCHANT_UNAVAILABLE");
+      }
       const eligible = (state.claims ?? []).some(
         (claim: any) =>
           claim.mid === merchantId &&
@@ -1391,11 +1425,14 @@ router.post("/cashback/wallet/redemptions", async (req, res) => {
         (entry: any) => entry.id === paymentSession.merchantId,
       );
       if (!customer) throw new CashbackError(403, "PROFILE_INCOMPLETE");
+      const customerCountry = normalizeCountry(customer.country ?? profile.country);
       if (
         !merchant ||
         merchant.status !== "active" ||
         merchant.publicId !== paymentSession.publicId ||
-        merchant.qrValue !== paymentSession.qrValue
+        merchant.qrValue !== paymentSession.qrValue ||
+        !customerCountry ||
+        normalizeCountry(merchant.country) !== customerCountry
       ) {
         throw new CashbackError(400, "QR_MERCHANT_UNAVAILABLE");
       }
@@ -1515,6 +1552,10 @@ router.post("/cashback/wallet/payment-sessions", async (req, res) => {
         (entry: any) => entry.id === profile.eid,
       );
       if (!customer) throw new CashbackError(403, "PROFILE_INCOMPLETE");
+      const customerCountry = normalizeCountry(customer.country ?? profile.country);
+      if (!customerCountry || normalizeCountry(merchant.country) !== customerCountry) {
+        throw new CashbackError(400, "QR_INVALID_OR_WRONG_MERCHANT");
+      }
       const balance = Math.round(
         Number(customer.cbm?.[merchant.id] ?? 0) * 100,
       ) / 100;
@@ -1652,6 +1693,9 @@ router.patch("/cashback/profile/preferences", async (req, res) => {
   try {
     const parsed = UpdateCashbackPreferencesBody.safeParse(req.body);
     if (!parsed.success) throw new CashbackError(400, "INVALID_REQUEST");
+    if (parsed.data.country && profile.role !== "customer") {
+      throw new CashbackError(403, "CUSTOMER_COUNTRY_ONLY");
+    }
     const { state } = await getState();
     const languages = state.settings?.enabledLanguages;
     if (Array.isArray(languages) && !languages.includes(parsed.data.language)) {

@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { CashbackProfileCountry } from './cashbackProfileCountry';
 import type { CashbackProfilePreferences } from './cashbackProfilePreferences';
 import type { CashbackProfileRole } from './cashbackProfileRole';
 
@@ -19,5 +20,6 @@ export interface CashbackProfile {
   email?: string | null;
   /** @nullable */
   avatarUpdatedAt?: number | null;
+  country?: CashbackProfileCountry;
   preferences?: CashbackProfilePreferences;
 }
