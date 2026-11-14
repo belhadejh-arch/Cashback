@@ -492,7 +492,11 @@ function projectState(
     settings: {
       ...settings,
       platformCommission,
-      paymentMethods: (state.settings?.paymentMethods ?? []).filter((method: any) => method.active),
+      paymentMethods: (state.settings?.paymentMethods ?? []).filter((method: any) =>
+        method.active !== false &&
+        merchant !== undefined &&
+        normalizeCountry(method.country) === normalizeCountry(merchant.country),
+      ),
     },
     merchants: merchant ? [merchant] : [],
     customers: customers

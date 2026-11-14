@@ -100,6 +100,13 @@ function roundMoney(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
+function normalizeCountry(value: unknown): "Algeria" | "Libya" | null {
+  const country = String(value ?? "").trim().toLowerCase();
+  if (["algeria", "algérie", "dz", "الجزائر"].includes(country)) return "Algeria";
+  if (["libya", "libye", "ly", "ليبيا"].includes(country)) return "Libya";
+  return null;
+}
+
 async function verifyMerchantUpload(
   uid: string,
   merchantId: string,
@@ -401,7 +408,8 @@ router.post("/cashback/merchant/topups", async (req, res) => {
     }
     const method = (state.settings?.paymentMethods ?? []).find(
       (entry: any) => entry.id === parsed.data.paymentMethodId &&
-        entry.country === merchant.country && entry.active === true,
+        normalizeCountry(entry.country) === normalizeCountry(merchant.country) &&
+        entry.active !== false,
     );
     if (!method) throw new CashbackError(400, "PAYMENT_METHOD_UNAVAILABLE");
     const proof = await verifyMerchantUpload(
@@ -430,7 +438,8 @@ router.post("/cashback/merchant/topups", async (req, res) => {
       }
       const currentMethod = (state.settings?.paymentMethods ?? []).find(
         (entry: any) => entry.id === parsed.data.paymentMethodId &&
-          entry.country === currentMerchant.country && entry.active === true,
+          normalizeCountry(entry.country) === normalizeCountry(currentMerchant.country) &&
+          entry.active !== false,
       );
       if (!currentMethod) throw new CashbackError(400, "PAYMENT_METHOD_UNAVAILABLE");
       state.merchantTopups ??= [];
@@ -818,11 +827,13 @@ router.patch("/cashback/settings/payment-methods", async (req, res) => {
       state.settings.paymentMethods = parsed.data.methods.map((method) => ({
         ...method,
         id: method.id.trim(),
+        country: normalizeCountry(method.country) || method.country,
         name: method.name.trim(),
         beneficiary: method.beneficiary.trim(),
         account: method.account.trim(),
         phone: method.phone?.trim() ?? "",
         instructions: method.instructions.trim(),
+        active: method.active !== false,
       }));
       if (parsed.data.maxTopupAmountDzd !== undefined) {
         state.settings.maxTopupAmountDzd = parsed.data.maxTopupAmountDzd === null

@@ -145,7 +145,11 @@ export function MerchantAdminPanel({state,merchants,lang,onRefresh}:MerchantAdmi
     ])));
   },[rateSignature]);
   useEffect(()=>{
-    setMethods(serverMethods.map(m=>({...m})));
+    setMethods(serverMethods.map(m=>({
+      ...m,
+      country: normalizeCountry(m.country) || m.country,
+      active: m.active !== false,
+    })));
     setMaxTopupAmountDzd(value(settings,'maxTopupAmountDzd') == null ? '' : text(settings.maxTopupAmountDzd));
     setMaxTopupAmountLyd(value(settings,'maxTopupAmountLyd') == null ? '' : text(settings.maxTopupAmountLyd));
   },[stateRecord]);
