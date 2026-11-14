@@ -1145,9 +1145,11 @@ components:
         platformCommissionRate: { type: number, minimum: 0, maximum: 100 }
     CashbackAccountStatusUpdate:
       type: object
-      required: [status]
+      minProperties: 1
+      additionalProperties: false
       properties:
         status: { type: string, enum: [active, suspended] }
+        balanceFrozen: { type: boolean }
     CashbackMerchantCategoryUpdate:
       type: object
       required: [category]

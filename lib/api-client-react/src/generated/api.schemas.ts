@@ -692,7 +692,8 @@ export const CashbackAccountStatusUpdateStatus = {
 } as const;
 
 export interface CashbackAccountStatusUpdate {
-  status: CashbackAccountStatusUpdateStatus;
+  status?: CashbackAccountStatusUpdateStatus;
+  balanceFrozen?: boolean;
 }
 
 export type CashbackMerchantCategoryUpdateCategory = typeof CashbackMerchantCategoryUpdateCategory[keyof typeof CashbackMerchantCategoryUpdateCategory];

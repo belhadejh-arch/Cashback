@@ -155,6 +155,26 @@ const templates: Record<string, NotificationTemplate> = {
     en: { title: "Account reactivated", body: "The administration reactivated your account." },
     fr: { title: "Compte réactivé", body: "L’administration a réactivé votre compte." },
   },
+  "customer.balance.frozen": {
+    ar: { title: "تم تجميد رصيد المكافآت", body: "جمّدت الإدارة استخدام رصيد مكافآتك مؤقتاً. سيبقى رصيدك محفوظاً." },
+    en: { title: "Rewards balance frozen", body: "The administration temporarily froze spending your rewards. Your balance remains safe." },
+    fr: { title: "Solde de récompenses gelé", body: "L’administration a temporairement bloqué l’utilisation de vos récompenses. Votre solde reste conservé." },
+  },
+  "customer.balance.unfrozen": {
+    ar: { title: "أُعيد تفعيل رصيد المكافآت", body: "يمكنك الآن استخدام رصيد مكافآتك لدى المتاجر التي منحته." },
+    en: { title: "Rewards balance reactivated", body: "You can now spend your rewards at the shops that issued them." },
+    fr: { title: "Solde de récompenses réactivé", body: "Vous pouvez de nouveau utiliser vos récompenses dans les commerces qui les ont émises." },
+  },
+  "merchant.balance.frozen": {
+    ar: { title: "تم تجميد أرصدة المتجر", body: "أوقفت الإدارة السحوبات ومدفوعات QR واعتماد الفواتير مؤقتاً. ستبقى الأرصدة محفوظة." },
+    en: { title: "Store balances frozen", body: "Withdrawals, QR payments, and invoice approvals are temporarily paused. Your balances remain safe." },
+    fr: { title: "Soldes du commerce gelés", body: "Les retraits, paiements QR et validations de factures sont suspendus. Vos soldes restent conservés." },
+  },
+  "merchant.balance.unfrozen": {
+    ar: { title: "أُعيد تفعيل أرصدة المتجر", body: "أعادت الإدارة تفعيل العمليات المالية. تمت تسوية المستحقات المتاحة." },
+    en: { title: "Store balances reactivated", body: "The administration reactivated financial operations. Available outstanding amounts were settled." },
+    fr: { title: "Soldes du commerce réactivés", body: "L’administration a réactivé les opérations financières. Les montants dus disponibles ont été réglés." },
+  },
   "merchant.qr.rotated": {
     ar: { title: "تم تحديث رمز QR", body: "أصدرت الإدارة رمز QR جديداً وأبطلت الرمز السابق." },
     en: { title: "QR code updated", body: "The administration issued a new QR code and invalidated the previous one." },

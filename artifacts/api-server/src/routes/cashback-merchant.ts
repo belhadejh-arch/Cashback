@@ -495,7 +495,9 @@ router.patch("/cashback/admin/topups/:id/decision", async (req, res) => {
       request.reviewedBy = profile.uid;
       if (parsed.data.approved) {
         merchant.topupBalance = roundMoney(Number(merchant.topupBalance ?? 0) + Number(request.amount));
-        const settlement = settleMerchantCommissionObligations(state, merchant, request.id);
+        const settlement = merchant.balanceFrozen === true
+          ? { amount: 0, rewardAmount: 0, platformCommissionAmount: 0 }
+          : settleMerchantCommissionObligations(state, merchant, request.id);
         request.commissionSettlementAmount = settlement.amount;
         request.commissionRewardSettled = settlement.rewardAmount;
         request.commissionPlatformSettled = settlement.platformCommissionAmount;
@@ -546,6 +548,7 @@ router.post("/cashback/merchant/withdrawals", async (req, res) => {
     await mutateCashbackState((state) => {
       const merchant = (state.merchants ?? []).find((entry: any) => entry.id === profile.eid);
       if (!merchant || merchant.status !== "active") throw new CashbackError(403, "MERCHANT_NOT_ACTIVE");
+      if (merchant.balanceFrozen === true) throw new CashbackError(403, "MERCHANT_BALANCE_FROZEN");
       const commissionDue = getMerchantCommissionDue(state, merchant.id);
       const withdrawable = roundMoney(Math.max(0, Number(merchant.payoutBalance ?? 0) - commissionDue));
       if (amount > withdrawable) {
@@ -639,6 +642,9 @@ router.patch("/cashback/admin/withdrawals/:id/update", async (req, res) => {
       }
       const merchant = (state.merchants ?? []).find((entry: any) => entry.id === request.merchantId);
       if (!merchant) throw new CashbackError(409, "MERCHANT_NOT_FOUND");
+      if (merchant.balanceFrozen === true && parsed.data.status !== "rejected") {
+        throw new CashbackError(409, "MERCHANT_BALANCE_FROZEN");
+      }
       if (parsed.data.status === "rejected") {
         merchant.reservedWithdrawalBalance = roundMoney(
           Math.max(0, Number(merchant.reservedWithdrawalBalance ?? 0) - Number(request.amount)),

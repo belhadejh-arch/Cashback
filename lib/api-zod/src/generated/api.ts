@@ -804,7 +804,8 @@ export const UpdateCashbackCustomerStatusParams = zod.object({
 })
 
 export const UpdateCashbackCustomerStatusBody = zod.object({
-  "status": zod.enum(['active', 'suspended'])
+  "status": zod.enum(['active', 'suspended']).optional(),
+  "balanceFrozen": zod.boolean().optional()
 })
 
 export const UpdateCashbackCustomerStatusResponse = zod.record(zod.string(), zod.unknown())
@@ -822,7 +823,8 @@ export const UpdateCashbackMerchantStatusParams = zod.object({
 })
 
 export const UpdateCashbackMerchantStatusBody = zod.object({
-  "status": zod.enum(['active', 'suspended'])
+  "status": zod.enum(['active', 'suspended']).optional(),
+  "balanceFrozen": zod.boolean().optional()
 })
 
 export const UpdateCashbackMerchantStatusResponse = zod.record(zod.string(), zod.unknown())

@@ -8,5 +8,6 @@
 import type { CashbackAccountStatusUpdateStatus } from './cashbackAccountStatusUpdateStatus';
 
 export interface CashbackAccountStatusUpdate {
-  status: CashbackAccountStatusUpdateStatus;
+  status?: CashbackAccountStatusUpdateStatus;
+  balanceFrozen?: boolean;
 }

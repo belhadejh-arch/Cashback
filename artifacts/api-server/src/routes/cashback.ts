@@ -81,6 +81,8 @@ async function recordFailedPayment(
     "QR_MERCHANT_UNAVAILABLE",
     "QR_INVALID_OR_WRONG_MERCHANT",
     "INSUFFICIENT_MERCHANT_BALANCE",
+    "CUSTOMER_BALANCE_FROZEN",
+    "MERCHANT_BALANCE_FROZEN",
   ]);
   if (!allowedCodes.has(error.code)) return;
   try {
@@ -1119,6 +1121,9 @@ router.patch("/cashback/receipts/:id/decision", async (req, res) => {
       const merchant = (state.merchants ?? []).find((entry: any) => entry.id === claim.mid);
       const customer = (state.customers ?? []).find((entry: any) => entry.id === claim.cid);
       if (!merchant || !customer) throw new CashbackError(409, "RECEIPT_PROFILE_MISSING");
+      if (parsed.data.approved && merchant.balanceFrozen === true) {
+        throw new CashbackError(409, "MERCHANT_BALANCE_FROZEN");
+      }
       if (profile.role === "merchant" && merchant.status !== "active") {
         throw new CashbackError(403, "MERCHANT_NOT_ACTIVE");
       }
@@ -1469,6 +1474,8 @@ router.post("/cashback/wallet/redemptions", async (req, res) => {
         (entry: any) => entry.id === paymentSession.merchantId,
       );
       if (!customer) throw new CashbackError(403, "PROFILE_INCOMPLETE");
+      if (customer.balanceFrozen === true) throw new CashbackError(403, "CUSTOMER_BALANCE_FROZEN");
+      if (merchant?.balanceFrozen === true) throw new CashbackError(403, "MERCHANT_BALANCE_FROZEN");
       const customerCountry = normalizeCountry(customer.country ?? profile.country);
       if (
         !merchant ||
@@ -1583,6 +1590,7 @@ router.post("/cashback/wallet/payment-sessions", async (req, res) => {
       const merchant = (state.merchants ?? []).find(
         (entry: any) => entry.id === parsed.data.merchantId,
       );
+      if (merchant?.balanceFrozen === true) throw new CashbackError(403, "MERCHANT_BALANCE_FROZEN");
       if (
         !merchant ||
         merchant.status !== "active" ||
@@ -1596,6 +1604,7 @@ router.post("/cashback/wallet/payment-sessions", async (req, res) => {
         (entry: any) => entry.id === profile.eid,
       );
       if (!customer) throw new CashbackError(403, "PROFILE_INCOMPLETE");
+      if (customer.balanceFrozen === true) throw new CashbackError(403, "CUSTOMER_BALANCE_FROZEN");
       const customerCountry = normalizeCountry(customer.country ?? profile.country);
       if (!customerCountry || normalizeCountry(merchant.country) !== customerCountry) {
         throw new CashbackError(400, "QR_INVALID_OR_WRONG_MERCHANT");
@@ -1993,31 +2002,56 @@ router.patch("/cashback/admin/customers/:id/status", async (req, res) => {
     const id = getParamId(req);
     const parsed = UpdateCashbackCustomerStatusBody.safeParse(req.body);
     if (!parsed.success) throw new CashbackError(400, "INVALID_REQUEST");
+    if (parsed.data.status === undefined && parsed.data.balanceFrozen === undefined) {
+      throw new CashbackError(400, "INVALID_REQUEST");
+    }
     await mutateState((state) => {
       const customer = (state.customers ?? []).find((entry: any) => entry.id === id);
       if (!customer) throw new CashbackError(404, "CUSTOMER_NOT_FOUND");
-      const previousStatus = customer.status ?? "active";
-      customer.status = parsed.data.status;
-      customer.statusUpdatedAt = Date.now();
-      customer.statusUpdatedBy = profile.uid;
       state.audit ??= [];
-      state.audit.unshift({
-        id: `audit_${randomUUID().replaceAll("-", "").slice(0, 18)}`,
-        action: parsed.data.status === "suspended" ? "customer_suspended" : "customer_reactivated",
-        customerId: customer.id,
-        previousStatus,
-        status: customer.status,
-        adminUid: profile.uid,
-        at: Date.now(),
-      });
-      addCashbackNotification(
-        state,
-        customer.id,
-        parsed.data.status === "suspended" ? "customer.account.suspended" : "customer.account.reactivated",
-      );
-      return { result: { id: customer.id, status: customer.status } };
+      if (parsed.data.status !== undefined) {
+        const previousStatus = customer.status ?? "active";
+        customer.status = parsed.data.status;
+        customer.statusUpdatedAt = Date.now();
+        customer.statusUpdatedBy = profile.uid;
+        state.audit.unshift({
+          id: `audit_${randomUUID().replaceAll("-", "").slice(0, 18)}`,
+          action: parsed.data.status === "suspended" ? "customer_suspended" : "customer_reactivated",
+          customerId: customer.id,
+          previousStatus,
+          status: customer.status,
+          adminUid: profile.uid,
+          at: Date.now(),
+        });
+        addCashbackNotification(
+          state,
+          customer.id,
+          parsed.data.status === "suspended" ? "customer.account.suspended" : "customer.account.reactivated",
+        );
+      }
+      if (parsed.data.balanceFrozen !== undefined && customer.balanceFrozen !== parsed.data.balanceFrozen) {
+        const previousBalanceFrozen = customer.balanceFrozen === true;
+        customer.balanceFrozen = parsed.data.balanceFrozen;
+        customer.balanceFrozenAt = Date.now();
+        customer.balanceFrozenBy = profile.uid;
+        state.audit.unshift({
+          id: `audit_${randomUUID().replaceAll("-", "").slice(0, 18)}`,
+          action: parsed.data.balanceFrozen ? "customer_balance_frozen" : "customer_balance_unfrozen",
+          customerId: customer.id,
+          previousBalanceFrozen,
+          balanceFrozen: customer.balanceFrozen,
+          adminUid: profile.uid,
+          at: Date.now(),
+        });
+        addCashbackNotification(
+          state,
+          customer.id,
+          parsed.data.balanceFrozen ? "customer.balance.frozen" : "customer.balance.unfrozen",
+        );
+      }
+      return { result: { id: customer.id, status: customer.status ?? "active", balanceFrozen: customer.balanceFrozen === true } };
     });
-    res.json({ ok: true, status: parsed.data.status });
+    res.json({ ok: true });
   } catch (error) {
     respondError(res, error);
   }
@@ -2030,34 +2064,64 @@ router.patch("/cashback/admin/merchants/:id/status", async (req, res) => {
     const id = getParamId(req);
     const parsed = UpdateCashbackMerchantStatusBody.safeParse(req.body);
     if (!parsed.success) throw new CashbackError(400, "INVALID_REQUEST");
+    if (parsed.data.status === undefined && parsed.data.balanceFrozen === undefined) {
+      throw new CashbackError(400, "INVALID_REQUEST");
+    }
     await mutateState((state) => {
       const merchant = (state.merchants ?? []).find((entry: any) => entry.id === id);
       if (!merchant) throw new CashbackError(404, "MERCHANT_NOT_FOUND");
-      if (!["active", "suspended"].includes(merchant.status)) {
+      if (parsed.data.status !== undefined && !["active", "suspended"].includes(merchant.status)) {
         throw new CashbackError(409, "MERCHANT_NOT_ACTIVATED");
       }
-      const previousStatus = merchant.status;
-      merchant.status = parsed.data.status;
-      merchant.statusUpdatedAt = Date.now();
-      merchant.statusUpdatedBy = profile.uid;
       state.audit ??= [];
-      state.audit.unshift({
-        id: `audit_${randomUUID().replaceAll("-", "").slice(0, 18)}`,
-        action: parsed.data.status === "suspended" ? "merchant_suspended" : "merchant_reactivated",
-        merchantId: merchant.id,
-        previousStatus,
-        status: merchant.status,
-        adminUid: profile.uid,
-        at: Date.now(),
-      });
-      addCashbackNotification(
-        state,
-        merchant.id,
-        parsed.data.status === "suspended" ? "merchant.account.suspended" : "merchant.account.reactivated",
-      );
-      return { result: { id: merchant.id, status: merchant.status } };
+      if (parsed.data.status !== undefined) {
+        const previousStatus = merchant.status;
+        merchant.status = parsed.data.status;
+        merchant.statusUpdatedAt = Date.now();
+        merchant.statusUpdatedBy = profile.uid;
+        state.audit.unshift({
+          id: `audit_${randomUUID().replaceAll("-", "").slice(0, 18)}`,
+          action: parsed.data.status === "suspended" ? "merchant_suspended" : "merchant_reactivated",
+          merchantId: merchant.id,
+          previousStatus,
+          status: merchant.status,
+          adminUid: profile.uid,
+          at: Date.now(),
+        });
+        addCashbackNotification(
+          state,
+          merchant.id,
+          parsed.data.status === "suspended" ? "merchant.account.suspended" : "merchant.account.reactivated",
+        );
+      }
+      if (parsed.data.balanceFrozen !== undefined && merchant.balanceFrozen !== parsed.data.balanceFrozen) {
+        const previousBalanceFrozen = merchant.balanceFrozen === true;
+        merchant.balanceFrozen = parsed.data.balanceFrozen;
+        merchant.balanceFrozenAt = Date.now();
+        merchant.balanceFrozenBy = profile.uid;
+        let settlement: ReturnType<typeof settleMerchantCommissionObligations> | undefined;
+        if (!parsed.data.balanceFrozen) {
+          settlement = settleMerchantCommissionObligations(state, merchant, "merchant_balance_unfrozen");
+        }
+        state.audit.unshift({
+          id: `audit_${randomUUID().replaceAll("-", "").slice(0, 18)}`,
+          action: parsed.data.balanceFrozen ? "merchant_balance_frozen" : "merchant_balance_unfrozen",
+          merchantId: merchant.id,
+          previousBalanceFrozen,
+          balanceFrozen: merchant.balanceFrozen,
+          settlementAmount: settlement?.amount ?? 0,
+          adminUid: profile.uid,
+          at: Date.now(),
+        });
+        addCashbackNotification(
+          state,
+          merchant.id,
+          parsed.data.balanceFrozen ? "merchant.balance.frozen" : "merchant.balance.unfrozen",
+        );
+      }
+      return { result: { id: merchant.id, status: merchant.status, balanceFrozen: merchant.balanceFrozen === true } };
     });
-    res.json({ ok: true, status: parsed.data.status });
+    res.json({ ok: true });
   } catch (error) {
     respondError(res, error);
   }
